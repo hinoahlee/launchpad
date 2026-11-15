@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+
+# Tool caches
+.turbo/
+.vite/
+
+# Env files hold secrets; only the example is committed
+.env
+.env.*
+!.env.example
+
+# Terraform state and secret vars
+*.tfstate
+*.tfstate.*
+.terraform/
+*.secret.tfvars
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Personal Claude Code settings (the shared ones are .claude/settings.json)
+.claude/settings.local.json
+
+# The global gitignore on this machine hides these; this repo commits them on purpose
+!CLAUDE.md
+!.claude/
