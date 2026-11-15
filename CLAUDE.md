@@ -8,10 +8,22 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `docs/glossary.md`: every term introduced so far
 - `docs/decisions/`: decision notes (`NNN-title.md`, from `000-template.md`)
 - `.github/pull_request_template.md`: the PR description format
+- `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
 - References (read-only): `../turborepo`, `../mixmallow`
 
 ## Commands
-None yet. Workspace scripts arrive in step 0.2.
+Run from the repo root (Node 24, pnpm via Corepack; versions are enforced by `engines`).
+```bash
+pnpm install     # one install for every package
+pnpm dev         # turbo: every app in watch mode
+pnpm build       # turbo: build in dependency order (cached)
+pnpm typecheck   # turbo: tsc in every package
+pnpm lint        # biome check (lint + format check), no writes
+pnpm format      # biome check --write: fix formatting and safe lint fixes
+pnpm test        # turbo: tests in every package
+pnpm verify      # lint, then typecheck + test + build: "is this safe to merge?"
+```
+Shared versions live in the `catalog:` in `pnpm-workspace.yaml`; packages use `"catalog:"`.
 
 ## Git
 - `main` is protected: every change is a branch `p<N>.<step>-<slug>` and a squash-merged PR.

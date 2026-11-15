@@ -1,26 +1,26 @@
 {
-  "permissions": {
-    "deny": ["Read(./.env)", "Read(./.env.*)", "Read(./**/*.secret.tfvars)"],
-    "ask": [
-      "Bash(terraform apply:*)",
-      "Bash(terraform destroy:*)",
-      "Bash(terraform import:*)",
-      "Bash(terraform state:*)",
-      "Bash(aws:*)",
-      "Bash(gh pr merge:*)",
-      "Bash(gh repo create:*)"
-    ],
-    "allow": [
-      "Bash(pnpm:*)",
-      "Bash(git:*)",
-      "Bash(gh pr create:*)",
-      "Bash(gh pr view:*)",
-      "Bash(gh run:*)",
-      "Bash(docker:*)",
-      "Bash(terraform fmt:*)",
-      "Bash(terraform validate:*)",
-      "Bash(terraform plan:*)",
-      "Bash(terraform init:*)"
-    ]
-  }
+	"permissions": {
+		"deny": ["Read(./.env)", "Read(./.env.*)", "Read(./**/*.secret.tfvars)"],
+		"ask": [
+			"Bash(terraform apply:*)",
+			"Bash(terraform destroy:*)",
+			"Bash(terraform import:*)",
+			"Bash(terraform state:*)",
+			"Bash(aws:*)",
+			"Bash(gh pr merge:*)",
+			"Bash(gh repo create:*)"
+		],
+		"allow": [
+			"Bash(pnpm:*)",
+			"Bash(git:*)",
+			"Bash(gh pr create:*)",
+			"Bash(gh pr view:*)",
+			"Bash(gh run:*)",
+			"Bash(docker:*)",
+			"Bash(terraform fmt:*)",
+			"Bash(terraform validate:*)",
+			"Bash(terraform plan:*)",
+			"Bash(terraform init:*)"
+		]
+	}
 }
