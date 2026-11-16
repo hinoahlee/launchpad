@@ -77,8 +77,8 @@ Next: close this session. Open a new session in this folder, model Opus 5.5, and
 ## Conventions (change them with a decision note)
 - TypeScript strict; Node 24; the API runs `.ts` directly in dev and ships a tsdown bundle.
 - Enforce conventions with a check (lint rule, type, test), not prose. `biome.json` enforces: kebab-case file
-  names, named exports, no `../` imports (use the `#…` alias from
-  `src/` or a package name), `process.env` only in `config.ts`. See decision 007.
+  names, named exports, no `../` imports (use the `#…` alias from `src/` or a package name), `process.env`
+  only in `config.ts`. See decision 007.
 - Zod at every boundary: env, requests, responses parsed by the web app, external APIs, webhooks.
 - Env is parsed once in `config.ts`, validated at boot.
 - Errors: `reply.code(4xx); return { error: 'snake_case_code' }`.
@@ -125,5 +125,5 @@ Every platform depends only on this (`docs/deploy-contract.md` from phase 1):
 - Migrations are backward compatible with the previous release (expand/contract).
 
 ## `.claude/settings.json`
-The file is the source of truth. Permissions: deny reading secrets; ask before Terraform state changes, `aws`,
-merging PRs and creating repos. Hooks: Biome after every edit; `pnpm verify` before an agent stops (one retry).
+The file is the source of truth. Permissions: deny reading any `.env` and secret tfvars; ask before Terraform state changes, `aws`,
+`pnpm dlx`, merging PRs and creating repos. Hooks: Biome after every edit; `pnpm verify` before an agent stops (one retry).
