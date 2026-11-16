@@ -90,3 +90,14 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   environment with different values. (1.4)
 - **Stateless process** — keeps nothing on local disk or in memory that it would miss if replaced, so
   platforms can kill, restart and scale it freely. (1.4)
+- **Workflow** — a YAML file in `.github/workflows/` that GitHub Actions runs on events like a PR or a push.
+  (2.1)
+- **Job** — a group of steps in a workflow that runs on one machine; jobs run in parallel unless one `needs`
+  another. (2.1)
+- **Step** — one command (`run:`) or reusable action (`uses:`) inside a job, run in order. (2.1)
+- **Runner** — the fresh virtual machine a job runs on (`ubuntu-latest`), thrown away afterwards. (2.1)
+- **Cache (CI)** — files saved from one run and restored in the next, keyed on a hash (here, of
+  `pnpm-lock.yaml`), so installs skip re-downloading. (2.1)
+- **`GITHUB_TOKEN`** — a short-lived token GitHub gives each run; `permissions:` limits what it can do. (2.1)
+- **SHA pinning** — referencing an action by commit hash instead of a tag, because a tag can be moved to
+  different code. (2.1)
