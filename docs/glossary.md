@@ -68,3 +68,10 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   response (`no-cache` = check with the server first; `immutable` = never re-check). (1.1)
 - **Content hashing** — the build puts a hash of a file's contents in its name, so a changed file gets a new
   URL and old ones can be cached forever. (1.1)
+- **Bundler** — follows `import`s from an entry file and writes a few output files; tsdown also strips
+  TypeScript types. (1.2)
+- **Entrypoint** — a file a process starts from; the API has three: `server`, `worker`, `migrate`. (1.2)
+- **External dependency** — a package the bundle imports from `node_modules` at runtime instead of copying
+  it in; all npm packages stay external here. (1.2)
+- **Source map** — a `.map` file linking bundled code back to the original source, so stack traces show
+  `src/*.ts` lines (`node --enable-source-maps`). (1.2)
