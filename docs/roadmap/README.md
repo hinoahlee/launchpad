@@ -34,7 +34,7 @@ like you're shadowing a principal engineer.
 | 20 | [Later: mobile, enterprise](phases/20-later.md) | — |
 
 Follow-ups noticed along the way:
-- Build the image for `linux/amd64` explicitly in CI (`docker build --platform`) — phase 2.
+- None open.
 
 ## What we're building
 
