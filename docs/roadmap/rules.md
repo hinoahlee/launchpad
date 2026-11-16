@@ -113,16 +113,8 @@ e2e/                 Playwright journeys (phase 11)
 - Never weaken or delete a test to make it pass. A changed or removed test is explained in the PR.
 
 ## Deploy contract
-Every platform depends only on this (`docs/deploy-contract.md` from phase 1):
-- One image, non-root, `linux/amd64`.
-- `node dist/server.js` (default): SPA + `/api` on `$PORT`. `node dist/worker.js`: background jobs.
-  `node dist/migrate.js`: apply migrations, exit 0/1; run once before new code starts.
-- Config from environment variables only; invalid config exits non-zero at boot.
-- `/api/health` = process alive. `/api/ready` = can serve traffic (checks the DB).
-- On `SIGTERM`: stop taking work, finish or hand back what's in flight, exit within 25 s.
-- JSON logs to stdout with a request ID; no secrets.
-- No local state: files go to the bucket, everything else to Postgres.
-- Migrations are backward compatible with the previous release (expand/contract).
+[`docs/deploy-contract.md`](../deploy-contract.md) is the single source: what every platform depends on.
+Keep it true: a change to entrypoints, env vars, probes, signals or logging updates it in the same PR.
 
 ## `.claude/settings.json`
 The file is the source of truth. Permissions: deny reading any `.env` and secret tfvars; ask before Terraform state changes, `aws`,
