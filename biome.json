@@ -7,6 +7,6 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!**/*.md"]
+		"includes": ["**", "!**/*.md", "!**/*.svg"]
 	}
 }
