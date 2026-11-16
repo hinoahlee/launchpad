@@ -119,3 +119,18 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   the lockfile. (2.4)
 - **Release age (cooldown)** — waiting a few days before adopting a new release, so malicious or broken
   versions are usually caught and pulled first. (2.4)
+
+## Phase 3 — First deploy (Render)
+- **PaaS (platform as a service)** — you hand over code or an image; the platform runs the servers, TLS,
+  deploys and restarts. Render is one. (3.1)
+- **Registrar** — the company you rent a domain name from; it records which nameservers answer for it. (3.1)
+- **Nameserver** — the server the internet asks for a domain's DNS records; pointing a domain at Cloudflare's
+  nameservers puts Cloudflare in charge of them. (3.1)
+- **DNS zone** — the full set of DNS records for one domain, held by its nameservers. (3.1)
+- **Infrastructure as Code (IaC)** — servers and services described in files in the repo, reviewed in PRs and
+  applied by a tool, instead of clicked together in a dashboard. (3.2)
+- **Blueprint** — Render's IaC file (`render.yaml`); Render syncs the services it describes on every push. (3.2)
+- **Health check** — a request the platform makes to an instance (here `/api/ready`) to decide whether it may
+  receive traffic. (3.2)
+- **Zero-downtime deploy** — start the new version next to the old one, switch traffic only once it passes
+  its health check, then stop the old one. (3.2)

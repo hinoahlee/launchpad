@@ -1,0 +1,24 @@
+# Render Blueprint: the Render services for this repo, as code. Render reads this file on every push to main
+# (Blueprint auto-sync) and applies changes. Spec: https://render.com/docs/blueprint-spec
+# Why Render builds the Dockerfile itself: docs/decisions/003-render-builds-dockerfile.md
+services:
+  - type: web
+    name: launchpad
+    # Build the repo's Dockerfile (not Render's native Node runtime), so Render runs the same image as every
+    # other platform (docs/deploy-contract.md).
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: main
+    # Can't be changed after creation. Oregon is Render's default.
+    region: oregon
+    # 0.5 CPU / 512 MB, the plan formerly called "Starter". Always on, unlike `free`, which sleeps when idle.
+    plan: 0.5c-512mb
+    # Render sends traffic to a new deploy only once this returns 2xx; until then the old one keeps serving.
+    healthCheckPath: /api/ready
+    # Deploy a commit on main only after its GitHub checks (verify, image) pass.
+    autoDeployTrigger: checksPass
+    # NODE_ENV comes from the image; Render sets PORT. Only non-defaults go here.
+    envVars:
+      - key: LOG_LEVEL
+        value: info
