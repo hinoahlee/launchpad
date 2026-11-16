@@ -52,3 +52,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   changed and deleted together. (0.7)
 - **Testing trophy** — a test mix with most tests at the integration level, some unit tests for pure logic,
   and few E2E tests; fits when integration tests are cheap, as with `app.inject()`. (0.7)
+- **Hook** — a command Claude Code runs automatically at a set point (after an edit, before stopping); a
+  failing hook sends its output back to the agent to fix. (0.8)
+- **Feedback loop** — how quickly a mistake is reported to whoever made it; shorter loops make fixes
+  cheaper (on edit < before stopping < CI < review). (0.8)
