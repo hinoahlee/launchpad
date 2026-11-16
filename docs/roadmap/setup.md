@@ -8,9 +8,13 @@ Only what Phase 0 needs. Later accounts and tools are steps inside the phases, m
 |---|---|
 | Git | `git --version` |
 | GitHub CLI, then `gh auth login` | `gh auth status` |
-| fnm, then `fnm install 24` | `node -v` → v24.x |
-| Corepack (ships with Node), then `corepack enable` | `pnpm -v` |
+| fnm, then `fnm install 24`, then the shell setup below | `node -v` → v24.x |
+| pnpm: `npm install -g pnpm` (not Corepack: its Windows launcher hangs `turbo` on Ctrl+C) | `pnpm -v` |
 | Docker Desktop (WSL2 backend) | `docker version` |
+
+**fnm shell setup** (puts `node` on PATH in new terminals):
+- Git Bash: add `eval "$(fnm env --use-on-cd --shell bash)"` to `~/.bashrc`.
+- PowerShell: `New-Item -Force $PROFILE; Add-Content $PROFILE 'fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression'`
 
 ## 2. Pick a name
 A short template name, e.g. `launchpad`. It becomes the folder, the repo and the AWS resource prefix.

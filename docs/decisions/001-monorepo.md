@@ -14,8 +14,8 @@ API, web app, worker and shared packages must share types and ship in one image,
 
 ## Decision
 
-Option 3. Biome with defaults for lint + format (one fast tool, no style debates). Exact versions in the
-catalog. TypeScript 7 (the native compiler, ~10x faster checks); fall back to 6.x if a tool needs the old JS API.
+Option 3. Biome with defaults for lint + format (one fast tool, no style debates), except `*.md` is excluded
+(Biome 2.6 would reformat the roadmap). Exact versions in the catalog. TypeScript 7 (the native compiler, ~10x faster checks); fall back to 6.x if a tool needs the old JS API.
 
 ## Consequences
 

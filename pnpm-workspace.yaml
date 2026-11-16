@@ -2,25 +2,12 @@ packages:
   - "apps/*"
   - "packages/*"
 
-# Refuse to install on a Node/pnpm that doesn't match "engines" in package.json
 engineStrict: true
 
-# One version of each shared dependency. Packages refer to it as "catalog:".
-# Exact versions: upgrades are deliberate PRs, never a surprise on a fresh install.
 catalog:
-  "@biomejs/biome": 2.6.8
+  "@biomejs/biome": 2.6.7
+  "@types/node": 24.19.2
+  fastify: 5.12.8
   turbo: 2.11.11
   typescript: 7.0.2
-
-minimumReleaseAgeExclude:
-  - "@biomejs/biome@2.6.8"
-  - "@biomejs/cli-android-arm64@2.6.8"
-  - "@biomejs/cli-android-x64@2.6.8"
-  - "@biomejs/cli-darwin-arm64@2.6.8"
-  - "@biomejs/cli-darwin-x64@2.6.8"
-  - "@biomejs/cli-linux-arm64-musl@2.6.8"
-  - "@biomejs/cli-linux-arm64@2.6.8"
-  - "@biomejs/cli-linux-x64-musl@2.6.8"
-  - "@biomejs/cli-linux-x64@2.6.8"
-  - "@biomejs/cli-win32-arm64@2.6.8"
-  - "@biomejs/cli-win32-x64@2.6.8"
+  zod: 4.6.7
