@@ -3,19 +3,19 @@
 **Status:** accepted · **Date:** 2026-11-16
 
 ## Context
-Render can run our app three ways: its native Node runtime, building our `Dockerfile`, or pulling a prebuilt
-image from a registry. We have no registry yet (ECR comes in phase 6).
+Render can run the native Node runtime, build our `Dockerfile`, or pull an image CI already built. Render has
+no registry of its own; GitHub's (GHCR) is free today and CI could push to it with `GITHUB_TOKEN`.
 
 ## Options
-1. Native Node runtime: no Docker; but Render's build differs from AWS/VPS, breaking the deploy contract.
-2. `runtime: docker`: same Dockerfile everywhere; Render rebuilds the image CI already built.
-3. `runtime: image` from a registry: one artifact everywhere; needs a registry, push credentials, and a
-   deploy hook, since `autoDeployTrigger: checksPass` doesn't apply to prebuilt images.
+1. Native Node runtime: no Docker, but Render's build differs from AWS/VPS and breaks the deploy contract.
+2. `runtime: docker`: one YAML file, gated by `autoDeployTrigger: checksPass`; Render rebuilds what CI built.
+3. CI pushes to GHCR, Render pulls (`runtime: image`): the exact bytes CI built run; needs a push step, a
+   deploy job calling a Render deploy hook, and its secret (`checksPass` doesn't apply to image services).
 
 ## Decision
-Option 2. Same Dockerfile and contract as every platform, with Render's built-in "deploy after checks pass"
-and no registry to run. The pinned base image and frozen lockfile keep Render's build close to CI's.
+Option 2: fewest moving parts for our first deploy, and the same Dockerfile and contract as every platform.
 
 ## Consequences
-Two builds of one commit (CI, Render) instead of one artifact promoted. Revisit if they ever differ, or when
-ECR exists and promoting one image becomes cheap.
+Two builds of one commit can differ: the base image is pinned by tag, not digest, so a re-pushed tag reaches
+Render without CI building it (npm packages are fixed by the lockfile). Revisit in phase 7, where one image
+is built once and promoted.
