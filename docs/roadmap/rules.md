@@ -81,10 +81,35 @@ Next: close this session. Open a new session in this folder, model Opus 5.5, and
 - Zod at every boundary: env, requests, responses parsed by the web app, external APIs, webhooks.
 - Env is parsed once in `config.ts`, validated at boot.
 - Errors: `reply.code(4xx); return { error: 'snake_case_code' }`.
-- Tests hit a real Postgres. Every endpoint: 401 without a session, a validation failure, the happy path, and
-  "user A can't touch user B's (or org B's) data".
 - Decision notes (`docs/decisions/NNN-title.md`, ≤ 15 lines: context, options, decision, consequences) when a
   step names one. Runbooks in `docs/runbooks/` when a step names one.
+
+## Structure
+```
+apps/<app>/src/
+  (top level)        wiring only: app.ts, server.ts, config.ts | main.tsx, app.tsx
+  features/<name>/   everything for one feature: routes or components, logic, and their tests
+  lib/               helpers used by 2+ features; no feature logic
+  testing/           test helpers and setup (factories, fixtures)
+apps/web/src/routes/ pages (phase 11); apps/web/src/components/ui/: shared UI primitives
+packages/shared/     the API contract: Zod request/response schemas + types; depends only on zod
+packages/<name>/     code used by 2+ apps (db, ...); never imports from apps
+e2e/                 Playwright journeys (phase 11)
+```
+- Code moves to `lib/` or a package when its second user appears, not before.
+- A feature never imports another feature's files; move what they share to `lib/`.
+- Contract first: an endpoint the web app calls has its schemas in `packages/shared`, imported by both apps.
+  No local copies. Until `packages/shared` exists (11.1), add no such endpoint.
+
+## Tests
+- Next to the code: `foo.ts` → `foo.test.ts` in the same folder.
+- Test at the lowest level that can catch the bug, through the public interface (HTTP for the API, the
+  screen for E2E), never through private internals.
+  - **Unit:** pure logic with many cases (parsing, calculations, permission checks).
+  - **Integration (most tests):** every endpoint via `app.inject()` against a real Postgres: 401 without a
+    session, a validation failure, the happy path, and "user A can't touch user B's (or org B's) data".
+  - **E2E (few):** critical journeys only a browser can prove (sign in, upload, checkout).
+- Never weaken or delete a test to make it pass. A changed or removed test is explained in the PR.
 
 ## Deploy contract
 Every platform depends only on this (`docs/deploy-contract.md` from phase 1):
