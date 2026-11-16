@@ -101,3 +101,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **`GITHUB_TOKEN`** — a short-lived token GitHub gives each run; `permissions:` limits what it can do. (2.1)
 - **SHA pinning** — referencing an action by commit hash instead of a tag, because a tag can be moved to
   different code. (2.1)
+- **Status check** — a pass/fail result a CI job reports on a commit; shown as ✓/✗ on the PR. (2.2)
+- **Required check** — a status check that must pass before GitHub allows a merge. (2.2)
+- **Branch protection** — rules on a branch (here a GitHub *ruleset*) such as "no force-push" and "merge only
+  through a PR with green checks". (2.2)
