@@ -8,5 +8,38 @@
 	"files": {
 		"ignoreUnknown": true,
 		"includes": ["**", "!**/*.md", "!**/*.svg"]
-	}
+	},
+	"linter": {
+		"rules": {
+			"style": {
+				"noDefaultExport": "error",
+				"noProcessEnv": "error",
+				"useFilenamingConvention": {
+					"level": "error",
+					"options": { "filenameCases": ["kebab-case"] }
+				},
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"patterns": [
+							{
+								"group": ["../*", "../**"],
+								"message": "No '../' imports: use the package alias (#lib/...) or the other package's name."
+							}
+						]
+					}
+				}
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.config.ts"],
+			"linter": { "rules": { "style": { "noDefaultExport": "off" } } }
+		},
+		{
+			"includes": ["apps/api/src/config.ts"],
+			"linter": { "rules": { "style": { "noProcessEnv": "off" } } }
+		}
+	]
 }

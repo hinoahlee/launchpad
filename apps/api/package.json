@@ -3,6 +3,9 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
+	"imports": {
+		"#*": "./src/*"
+	},
 	"scripts": {
 		"dev": "node --watch-path=src src/server.ts",
 		"start": "node src/server.ts",

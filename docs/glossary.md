@@ -46,3 +46,5 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   parts together (here: a request through Fastify's real hooks and routes). (0.5)
 - **In-process HTTP injection** — `app.inject()` hands a fake request straight to the app's router: no port,
   no network, same code path as a real request. (0.5)
+- **Subpath imports** — the `"imports"` field in `package.json`: `#lib/x.ts` maps to `./src/lib/x.ts` for that
+  package only. Paths don't change when files move, and code can't reach into another package. (0.6)
