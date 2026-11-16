@@ -32,3 +32,12 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   `x-request-id` header, so one request can be traced end to end. (0.3)
 - **`SIGTERM`** — the signal a platform sends to ask a process to stop (Ctrl+C sends `SIGINT`); after a grace
   period it sends `SIGKILL`, which can't be caught. (0.3)
+- **SPA (single-page application)** — the browser loads one HTML page and JavaScript; React renders every
+  screen and only data comes from the API. (0.4)
+- **Dev server** — Vite's local server: serves source files on the fly while you develop; production uses the
+  built files in `dist/`. (0.4)
+- **Proxy** — a server that forwards requests elsewhere; Vite forwards `/api/*` to the API on port 3000. (0.4)
+- **HMR (hot module replacement)** — on save, the dev server swaps the changed module into the open page
+  without a reload, keeping state. (0.4)
+- **Origin** — scheme + host + port (`http://localhost:5173`). The browser isolates origins; one origin
+  means no CORS setup. (0.4)

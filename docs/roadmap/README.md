@@ -11,7 +11,7 @@ like you're shadowing a principal engineer.
 
 | # | Phase | Status |
 |---|---|---|
-| 0 | [Workspace](phases/00-workspace.md) | in progress (0.1–0.2 done) |
+| 0 | [Workspace](phases/00-workspace.md) | in progress (0.1–0.3 done) |
 | 1 | [Container](phases/01-container.md) | not started |
 | 2 | [Continuous integration](phases/02-ci.md) | not started |
 | 3 | [First deploy (Render)](phases/03-render.md) | not started |
