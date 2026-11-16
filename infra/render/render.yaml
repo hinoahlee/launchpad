@@ -12,8 +12,9 @@ services:
     branch: main
     # Can't be changed after creation. Oregon is Render's default.
     region: oregon
-    # 0.5 CPU / 512 MB, the plan formerly called "Starter". Always on, unlike `free`, which sleeps when idle.
-    plan: 0.5c-512mb
+    # Free: 0.1 CPU / 512 MB, spins down after 15 min idle (~1 min cold start), 750 h/month per workspace.
+    # Fine for a template. For an always-on app use `0.5c-512mb` (formerly "Starter", ~$7/mo).
+    plan: free
     # Render sends traffic to a new deploy only once this returns 2xx; until then the old one keeps serving.
     healthCheckPath: /api/ready
     # Deploy a commit on main only after its GitHub checks (verify, image) pass.
