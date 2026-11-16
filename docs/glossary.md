@@ -56,3 +56,15 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   failing hook sends its output back to the agent to fix. (0.8)
 - **Feedback loop** — how quickly a mistake is reported to whoever made it; shorter loops make fixes
   cheaper (on edit < before stopping < CI < review). (0.8)
+
+## Phase 1 — Container
+- **Same-origin policy** — a browser lets a page read responses only from its own origin (scheme + host +
+  port). (1.1)
+- **CORS** — headers a server sends to let pages from other origins read its responses; not needed when the
+  SPA and API share one origin. (1.1)
+- **SPA fallback** — the server answers browser navigations to unknown non-API paths with `index.html`, so
+  the client-side router can handle deep links like `/settings`. (1.1)
+- **`Cache-Control`** — response header telling browsers and CDNs whether and how long they may reuse a
+  response (`no-cache` = check with the server first; `immutable` = never re-check). (1.1)
+- **Content hashing** — the build puts a hash of a file's contents in its name, so a changed file gets a new
+  URL and old ones can be cached forever. (1.1)

@@ -6,6 +6,7 @@ engineStrict: true
 
 catalog:
   "@biomejs/biome": 2.6.7
+  "@fastify/static": 10.1.11
   "@types/node": 24.19.2
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
