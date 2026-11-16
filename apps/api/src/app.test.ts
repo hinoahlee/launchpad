@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { buildApp } from "../src/app.ts";
+import { buildApp } from "./app.ts";
 
 const app = buildApp({ NODE_ENV: "test", PORT: 0, LOG_LEVEL: "silent" });
 afterAll(() => app.close());

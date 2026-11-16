@@ -49,3 +49,24 @@ change after this phase arrives as a small PR.
 - **Why:** one command that answers "is this safe to merge?", locally and in CI.
 - **Terms:** unit vs. integration test, in-process HTTP injection, test runner.
 - **Done when:** `pnpm verify` is green.
+
+### 0.6 Conventions as lint rules
+- **Build:** Biome rules for kebab-case files, named exports, `process.env` only in `config.ts`, no `../`
+  imports (`"imports": { "#*": "./src/*" }` per package). Built-in rules only. Decision `007-mechanical-guardrails.md`.
+- **Why:** agents (and people) skip prose rules; a failing check can't be skipped.
+- **Terms:** subpath imports.
+- **Done when:** a file breaking each rule fails `pnpm lint`; the repo passes.
+
+### 0.7 Structure + test rules
+- **Build:** folder layout per app (`features/<name>/`, `lib/`), what belongs in `packages/shared`, tests next
+  to the code they test, the contract-first rule, and when to write unit vs. integration vs. E2E tests.
+- **Why:** one obvious place for everything keeps a growing codebase navigable for agents.
+- **Terms:** testing trophy, colocation.
+- **Done when:** `rules.md` has the rules and Vitest only collects colocated tests.
+
+### 0.8 Agent loop
+- **Build:** Claude Code hooks: Biome on each edited file, checks before an agent stops; PR template section
+  for changed or removed tests.
+- **Why:** feedback inside the agent's loop is the cheapest place to catch a mistake.
+- **Terms:** hook, feedback loop.
+- **Done when:** a hook blocks an agent from stopping while lint or tests fail.

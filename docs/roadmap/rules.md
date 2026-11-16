@@ -75,9 +75,11 @@ Next: close this session. Open a new session in this folder, model Opus 5.5, and
 
 ## Conventions (change them with a decision note)
 - TypeScript strict; Node 24; the API runs `.ts` directly in dev and ships a tsdown bundle.
-- Biome with defaults. kebab-case file names, named exports.
+- Enforce conventions with a check (lint rule, type, test), not prose. `biome.json` enforces: kebab-case file
+  names, named exports, no `../` imports (use the `#…` alias from
+  `src/` or a package name), `process.env` only in `config.ts`. See decision 007.
 - Zod at every boundary: env, requests, responses parsed by the web app, external APIs, webhooks.
-- Env only through `config.ts`, validated at boot.
+- Env is parsed once in `config.ts`, validated at boot.
 - Errors: `reply.code(4xx); return { error: 'snake_case_code' }`.
 - Tests hit a real Postgres. Every endpoint: 401 without a session, a validation failure, the happy path, and
   "user A can't touch user B's (or org B's) data".
