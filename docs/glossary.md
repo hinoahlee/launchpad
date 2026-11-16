@@ -111,3 +111,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   are unchanged. On a fresh CI runner it must be imported from outside (`cache-from`). (2.3)
 - **Cache hit** — a step found its result in the cache and skipped the work (`CACHED` in the build log); a
   **cache miss** redoes it. (2.3)
+- **Semantic versioning (semver)** — `major.minor.patch`: a major release may break you, a minor adds
+  features, a patch only fixes. A promise by the author, not a guarantee. (2.4)
+- **Supply-chain attack** — attacking an app through something it depends on (a hijacked npm package or
+  GitHub Action) instead of its own code. (2.4)
+- **CVE** — a public ID (`CVE-2026-1234`) for one known vulnerability; Dependabot alerts match these against
+  the lockfile. (2.4)
+- **Release age (cooldown)** — waiting a few days before adopting a new release, so malicious or broken
+  versions are usually caught and pulled first. (2.4)
