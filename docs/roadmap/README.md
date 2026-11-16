@@ -12,7 +12,7 @@ like you're shadowing a principal engineer.
 | # | Phase | Status |
 |---|---|---|
 | 0 | [Workspace](phases/00-workspace.md) | done |
-| 1 | [Container](phases/01-container.md) | in progress |
+| 1 | [Container](phases/01-container.md) | done |
 | 2 | [Continuous integration](phases/02-ci.md) | not started |
 | 3 | [First deploy (Render)](phases/03-render.md) | not started |
 | 4 | [Database](phases/04-database.md) | not started |

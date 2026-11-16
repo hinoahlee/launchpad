@@ -84,3 +84,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Build context** — the files sent to Docker for `COPY`, trimmed by `.dockerignore`. (1.3)
 - **PID 1** — the first process in a container; Linux gives it no default signal handling, so it must handle
   `SIGTERM` itself or be killed after the timeout. (1.3)
+- **Twelve-factor app** — a widely used checklist for apps that deploy cleanly anywhere (config in env, stateless
+  processes, logs to stdout, ...). (1.4)
+- **Configuration via environment** — settings come from environment variables, so one image runs in every
+  environment with different values. (1.4)
+- **Stateless process** — keeps nothing on local disk or in memory that it would miss if replaced, so
+  platforms can kill, restart and scale it freely. (1.4)

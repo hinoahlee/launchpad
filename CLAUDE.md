@@ -6,6 +6,7 @@ safety rules and code conventions. During a phase, read only that phase's file i
 ## Project map
 - `docs/roadmap/`: the plan (`README.md` status table, `rules.md`, `phases/`)
 - `docs/glossary.md`: every term introduced so far
+- `docs/deploy-contract.md`: what every platform relies on (image, commands, env, probes, signals)
 - `docs/decisions/`: decision notes (`NNN-title.md`, from `000-template.md`)
 - `.github/pull_request_template.md`: the PR description format
 - `apps/api`: Fastify API. `config.ts` (env, Zod) → `app.ts` (`buildApp`, routes under `/api`) → `server.ts`
