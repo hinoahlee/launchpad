@@ -41,3 +41,8 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   without a reload, keeping state. (0.4)
 - **Origin** — scheme + host + port (`http://localhost:5173`). The browser isolates origins; one origin
   means no CORS setup. (0.4)
+- **Test runner** — the tool that finds test files, runs them and reports pass/fail (Vitest). (0.5)
+- **Unit vs. integration test** — a unit test checks one function alone; an integration test runs several
+  parts together (here: a request through Fastify's real hooks and routes). (0.5)
+- **In-process HTTP injection** — `app.inject()` hands a fake request straight to the app's router: no port,
+  no network, same code path as a real request. (0.5)
