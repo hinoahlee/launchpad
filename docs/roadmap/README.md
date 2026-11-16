@@ -11,7 +11,7 @@ like you're shadowing a principal engineer.
 
 | # | Phase | Status |
 |---|---|---|
-| 0 | [Workspace](phases/00-workspace.md) | in progress (0.1 done) |
+| 0 | [Workspace](phases/00-workspace.md) | in progress (0.1–0.2 done) |
 | 1 | [Container](phases/01-container.md) | not started |
 | 2 | [Continuous integration](phases/02-ci.md) | not started |
 | 3 | [First deploy (Render)](phases/03-render.md) | not started |
@@ -34,8 +34,7 @@ like you're shadowing a principal engineer.
 | 20 | [Later: mobile, enterprise](phases/20-later.md) | — |
 
 Follow-ups noticed along the way:
-- Repo is **public**: GitHub Free only enforces rulesets on public repos (0.1). Never commit secrets.
-- Biome 2.6 formats Markdown; `biome.json` excludes `*.md` so roadmap docs keep their style (0.2).
+- Verify `SIGTERM` shutdown with `docker stop` (Windows can only test Ctrl+C) — phase 1.
 
 ## What we're building
 

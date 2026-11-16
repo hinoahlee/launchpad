@@ -7,8 +7,8 @@ change after this phase arrives as a small PR.
 ### 0.1 Repo + working agreement
 - **Build:** `git init`; `.gitignore`, `.gitattributes`, `README.md` stub; `CLAUDE.md` (project map, commands,
   "follow `docs/roadmap/rules.md`"); `.claude/settings.json` (permissions from `rules.md`);
-  `.github/pull_request_template.md`; `docs/glossary.md`; `docs/decisions/000-template.md`. Private GitHub repo
-  via `gh repo create`. Ruleset on `main`: require a PR, block force-push, squash merge only, delete branches
+  `.github/pull_request_template.md`; `docs/glossary.md`; `docs/decisions/000-template.md`. Public GitHub repo
+  via `gh repo create` (GitHub Free enforces rulesets only on public repos). Ruleset on `main`: require a PR, block force-push, squash merge only, delete branches
   after merge. This is the only step committed straight to `main`.
 - **Why:** every later change becomes a small PR you can review, like on a real team.
 - **Terms:** trunk-based development, pull request (PR), branch ruleset, squash merge.
@@ -29,7 +29,7 @@ change after this phase arrives as a small PR.
 - **Build:** `apps/api` with Fastify. `config.ts` (Zod: `NODE_ENV`, `PORT`, `LOG_LEVEL`), `buildApp(config)`,
   `server.ts`, pino JSON logs, request IDs (accept `x-request-id` or generate; echo it back),
   `GET /api/health` and `GET /api/ready`, graceful shutdown on `SIGTERM`/`SIGINT`. Runs `.ts` directly
-  (`node --watch`).
+  (`node --watch-path=src`).
 - **Why:** the app factory makes testing easy; health endpoints and clean shutdown are what every platform
   needs to run you safely.
 - **Terms:** app factory, liveness vs. readiness probe, structured logging, request ID, `SIGTERM`, fail fast.

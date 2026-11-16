@@ -8,11 +8,13 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `docs/glossary.md`: every term introduced so far
 - `docs/decisions/`: decision notes (`NNN-title.md`, from `000-template.md`)
 - `.github/pull_request_template.md`: the PR description format
+- `apps/api`: Fastify API. `config.ts` (env, Zod) → `app.ts` (`buildApp`, routes under `/api`) → `server.ts`
+  (listen, signals). Runs `.ts` directly with Node.
 - `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
 - References (read-only): `../turborepo`, `../mixmallow`
 
 ## Commands
-Run from the repo root (Node 24, pnpm via Corepack; versions are enforced by `engines`).
+Run from the repo root.
 ```bash
 pnpm install     # one install for every package
 pnpm dev         # turbo: every app in watch mode

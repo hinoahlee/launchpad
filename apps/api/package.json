@@ -1,0 +1,20 @@
+{
+	"name": "@launchpad/api",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "node --watch-path=src src/server.ts",
+		"start": "node src/server.ts",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"fastify": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@launchpad/tsconfig": "workspace:*",
+		"@types/node": "catalog:",
+		"typescript": "catalog:"
+	}
+}
