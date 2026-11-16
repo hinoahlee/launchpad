@@ -9,7 +9,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `docs/decisions/`: decision notes (`NNN-title.md`, from `000-template.md`)
 - `.github/pull_request_template.md`: the PR description format
 - `apps/api`: Fastify API. `config.ts` (env, Zod) → `app.ts` (`buildApp`, routes under `/api`) → `server.ts`
-  (listen, signals). Runs `.ts` directly with Node.
+  (listen, signals). Dev runs `.ts` directly with Node; `pnpm build` bundles `server`, `worker`, `migrate`
+  into `dist/` with tsdown.
 - `apps/web`: Vite + React SPA. In dev, Vite proxies `/api` to the API (one origin, as in production).
 - `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
 - References (read-only): `../turborepo`, `../mixmallow`
