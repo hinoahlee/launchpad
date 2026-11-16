@@ -75,3 +75,12 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   it in; all npm packages stay external here. (1.2)
 - **Source map** — a `.map` file linking bundled code back to the original source, so stack traces show
   `src/*.ts` lines (`node --enable-source-maps`). (1.2)
+- **Image** — a read-only snapshot of a filesystem plus a start command; built once, run anywhere. (1.3)
+- **Container** — a running process started from an image, with its own filesystem view and network. (1.3)
+- **Layer** — the filesystem change one Dockerfile instruction makes; reused from cache while its inputs are
+  unchanged, so slow steps go first. (1.3)
+- **Multi-stage build** — a heavy build stage with all the tools, then a slim runtime stage that copies in
+  only the output. (1.3)
+- **Build context** — the files sent to Docker for `COPY`, trimmed by `.dockerignore`. (1.3)
+- **PID 1** — the first process in a container; Linux gives it no default signal handling, so it must handle
+  `SIGTERM` itself or be killed after the timeout. (1.3)

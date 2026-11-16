@@ -34,7 +34,7 @@ like you're shadowing a principal engineer.
 | 20 | [Later: mobile, enterprise](phases/20-later.md) | — |
 
 Follow-ups noticed along the way:
-- Verify `SIGTERM` shutdown with `docker stop` (Windows can only test Ctrl+C) — phase 1.
+- Build the image for `linux/amd64` explicitly in CI (`docker build --platform`) — phase 2.
 
 ## What we're building
 
