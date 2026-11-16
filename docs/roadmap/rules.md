@@ -35,6 +35,7 @@ Steps marked 🧑 are human actions. Give exact click paths, URLs and values, th
 1. path — what to look for
 ## New terms
 ## Try it
+## Tests changed or removed (and why)
 ## Taken from turborepo / mixmallow (and what changed)
 ```
 
@@ -123,20 +124,6 @@ Every platform depends only on this (`docs/deploy-contract.md` from phase 1):
 - No local state: files go to the bucket, everything else to Postgres.
 - Migrations are backward compatible with the previous release (expand/contract).
 
-## `.claude/settings.json` (created in 0.1)
-```json
-{
-  "permissions": {
-    "deny": ["Read(./.env)", "Read(./.env.*)", "Read(./**/*.secret.tfvars)"],
-    "ask": [
-      "Bash(terraform apply:*)", "Bash(terraform destroy:*)", "Bash(terraform import:*)",
-      "Bash(terraform state:*)", "Bash(aws:*)", "Bash(gh pr merge:*)", "Bash(gh repo create:*)"
-    ],
-    "allow": [
-      "Bash(pnpm:*)", "Bash(git:*)", "Bash(gh pr create:*)", "Bash(gh pr view:*)", "Bash(gh run:*)",
-      "Bash(docker:*)", "Bash(terraform fmt:*)", "Bash(terraform validate:*)", "Bash(terraform plan:*)",
-      "Bash(terraform init:*)"
-    ]
-  }
-}
-```
+## `.claude/settings.json`
+The file is the source of truth. Permissions: deny reading secrets; ask before Terraform state changes, `aws`,
+merging PRs and creating repos. Hooks: Biome after every edit; `pnpm verify` before an agent stops (one retry).

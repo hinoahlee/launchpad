@@ -15,6 +15,8 @@ Only what Phase 0 needs. Later accounts and tools are steps inside the phases, m
 **fnm shell setup** (puts `node` on PATH in new terminals):
 - Git Bash: add `eval "$(fnm env --use-on-cd --shell bash)"` to `~/.bashrc`.
 - PowerShell: `New-Item -Force $PROFILE; Add-Content $PROFILE 'fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression'`
+- Apps started outside a terminal (Claude Code hooks): add `%APPDATA%\fnm\aliases\default` to your user `Path`
+  (Start → "Edit environment variables for your account"), then restart the app.
 
 ## 2. Pick a name
 A short template name, e.g. `launchpad`. It becomes the folder, the repo and the AWS resource prefix.
