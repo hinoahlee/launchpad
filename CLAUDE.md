@@ -26,6 +26,8 @@ pnpm format      # biome check --write: fix formatting and safe lint fixes
 pnpm test        # turbo: tests in every package
 pnpm verify      # lint, then typecheck + test + build: "is this safe to merge?"
 ```
+Local config: each app's `.env` (copy of its `.env.example`), loaded by `pnpm dev`. Agents never read `.env`.
+
 Shared versions live in the `catalog:` in `pnpm-workspace.yaml`; packages use `"catalog:"`.
 
 ## Git
