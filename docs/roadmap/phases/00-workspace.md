@@ -58,11 +58,11 @@ change after this phase arrives as a small PR.
 - **Done when:** a file breaking each rule fails `pnpm lint`; the repo passes.
 
 ### 0.7 Structure + test rules
-- **Build:** folder layout per app (`features/<name>/`, `lib/`), what belongs in `packages/shared`, tests next
-  to the code they test, the contract-first rule, and when to write unit vs. integration vs. E2E tests.
+- **Build:** `rules.md` sections: folder layout per app (`features/<name>/`, `lib/`), what belongs in
+  `packages/shared`, tests next to the code they test, the contract-first rule, and which kind of test to write.
 - **Why:** one obvious place for everything keeps a growing codebase navigable for agents.
 - **Terms:** testing trophy, colocation.
-- **Done when:** `rules.md` has the rules and Vitest only collects colocated tests.
+- **Done when:** `rules.md` has the Structure and Tests sections; existing code follows them.
 
 ### 0.8 Agent loop
 - **Build:** Claude Code hooks: Biome on each edited file, checks before an agent stops; PR template section

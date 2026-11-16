@@ -48,3 +48,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   no network, same code path as a real request. (0.5)
 - **Subpath imports** — the `"imports"` field in `package.json`: `#lib/x.ts` maps to `./src/lib/x.ts` for that
   package only. Paths don't change when files move, and code can't reach into another package. (0.6)
+- **Colocation** — keeping a test next to the file it tests (`foo.ts` + `foo.test.ts`), so they are read,
+  changed and deleted together. (0.7)
+- **Testing trophy** — a test mix with most tests at the integration level, some unit tests for pure logic,
+  and few E2E tests; fits when integration tests are cheap, as with `app.inject()`. (0.7)
