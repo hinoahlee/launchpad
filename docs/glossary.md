@@ -105,3 +105,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Required check** — a status check that must pass before GitHub allows a merge. (2.2)
 - **Branch protection** — rules on a branch (here a GitHub *ruleset*) such as "no force-push" and "merge only
   through a PR with green checks". (2.2)
+- **Buildx** — Docker's build front end (on BuildKit); can build for other platforms and import/export its
+  layer cache, e.g. to the GitHub Actions cache. (2.3)
+- **Build cache** — stored layers from earlier builds; Docker reuses a layer while its instruction and inputs
+  are unchanged. On a fresh CI runner it must be imported from outside (`cache-from`). (2.3)
+- **Cache hit** — a step found its result in the cache and skipped the work (`CACHED` in the build log); a
+  **cache miss** redoes it. (2.3)
