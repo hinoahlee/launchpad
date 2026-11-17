@@ -134,3 +134,18 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   receive traffic. (3.2)
 - **Zero-downtime deploy** — start the new version next to the old one, switch traffic only once it passes
   its health check, then stop the old one. (3.2)
+- **DNS record** — one entry in a zone. An **A** record maps a name to an IPv4 address; a **CNAME** says a name
+  is an alias for another name (`render.noahlee.xyz` → `launchpad-6ocu.onrender.com`). (3.3)
+- **TTL (time to live)** — how many seconds resolvers may cache a DNS answer before asking again; it bounds
+  how long a change takes to reach everyone. (3.3)
+- **TLS certificate** — a file binding a domain name to a public key, signed by a CA; the browser checks it
+  before trusting the connection (the padlock). (3.3)
+- **Certificate authority (CA)** — an organization browsers trust to sign certificates, after it checks the
+  requester controls the domain. (3.3)
+- **Let's Encrypt** — a free, automated CA; certificates last 90 days and are renewed automatically. Render
+  uses it (and Google Trust Services). (3.3)
+- **Proxied vs. DNS-only** — in Cloudflare, proxied (orange cloud) sends traffic through Cloudflare, which
+  answers with its own IPs and certificate; DNS-only (grey cloud) just hands out the target, and clients
+  connect straight to it. (3.3)
+- **SNI (Server Name Indication)** — the hostname a browser sends at the start of a TLS connection, so one IP
+  can serve many sites, each with its own certificate. (3.3)

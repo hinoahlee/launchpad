@@ -19,6 +19,10 @@ services:
     healthCheckPath: /api/ready
     # Deploy a commit on main only after its GitHub checks (verify, image) pass.
     autoDeployTrigger: checksPass
+    # Tells Render which service answers for this name, and to issue its TLS certificate. DNS side: a CNAME in
+    # Cloudflare, `render` -> this service's onrender.com host, DNS only (grey cloud).
+    domains:
+      - render.noahlee.xyz
     # NODE_ENV comes from the image; Render sets PORT. Only non-defaults go here.
     envVars:
       - key: LOG_LEVEL
