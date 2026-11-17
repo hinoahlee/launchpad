@@ -47,15 +47,7 @@ export function buildApp(
 
 			// Readiness: failing means "stop routing to me". Same as /health until phase 4 adds the DB check.
 			// During shutdown Fastify already answers 503 (`return503OnClosing`).
-			// DRILL (step 3.4): a deliberately bad deploy, reverted right after. Fails only in production, so CI
-			// (and app.test.ts) stay green and the bug reaches Render, where the health check must catch it.
-			api.get("/ready", async (_request, reply) => {
-				if (config.NODE_ENV === "production") {
-					reply.code(500);
-					return { error: "drill_not_ready" };
-				}
-				return { status: "ok" };
-			});
+			api.get("/ready", async () => ({ status: "ok" }));
 		},
 		{ prefix: "/api" },
 	);
