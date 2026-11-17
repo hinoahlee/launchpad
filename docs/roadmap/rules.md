@@ -69,9 +69,10 @@ Next: close this session. Open a new session in this folder, model Opus 5.5, and
   money without the human's explicit yes for that action. Show a short summary of the plan first.
 - Never read or print secrets (`.env`, secret tfvars). The human puts secrets into the platform (Render, GitHub
   Environments, Secrets Manager); give them the exact name to use.
-- CI reaches AWS through OIDC only. Prod changes only through CI.
+- CI reaches clouds with the narrowest credential the provider offers (OIDC on AWS; Render's deploy hook,
+  which can only deploy our own image). Prod changes only through CI.
 - You never merge PRs.
-- Verify current docs (AWS, Terraform providers, GitHub Actions, Render, Better Auth) instead of relying on
+- Verify current docs (Render, AWS, Terraform providers, GitHub Actions, Better Auth) instead of relying on
   memory. Pin versions.
 
 ## Conventions (change them with a decision note)
@@ -81,6 +82,8 @@ Next: close this session. Open a new session in this folder, model Opus 5.5, and
   only in `config.ts`. See decision 007.
 - Zod at every boundary: env, requests, responses parsed by the web app, external APIs, webhooks.
 - Env is parsed once in `config.ts`, validated at boot.
+- Every platform is opt-in (decision 004): with no cloud account the repo installs, tests and passes CI. Deploy
+  jobs run only when their GitHub variables are set; infra code takes account-specific values as variables.
 - Errors: `reply.code(4xx); return { error: 'snake_case_code' }`.
 - Decision notes (`docs/decisions/NNN-title.md`, ≤ 15 lines: context, options, decision, consequences) when a
   step names one. Runbooks in `docs/runbooks/` when a step names one.
@@ -92,15 +95,15 @@ apps/<app>/src/
   features/<name>/   everything for one feature: routes or components, logic, and their tests
   lib/               helpers used by 2+ features; no feature logic
   testing/           test helpers and setup (factories, fixtures)
-apps/web/src/routes/ pages (phase 11); apps/web/src/components/ui/: shared UI primitives
+apps/web/src/routes/ pages (phase 7); apps/web/src/components/ui/: shared UI primitives
 packages/shared/     the API contract: Zod request/response schemas + types; depends only on zod
 packages/<name>/     code used by 2+ apps (db, ...); never imports from apps
-e2e/                 Playwright journeys (phase 11)
+e2e/                 Playwright journeys (phase 7)
 ```
 - Code moves to `lib/` or a package when its second user appears, not before.
 - A feature never imports another feature's files; move what they share to `lib/`.
 - Contract first: an endpoint the web app calls has its schemas in `packages/shared`, imported by both apps.
-  No local copies. Until `packages/shared` exists (11.1), add no such endpoint.
+  No local copies. Until `packages/shared` exists (7.1), add no such endpoint.
 
 ## Tests
 - Next to the code: `foo.ts` → `foo.test.ts` in the same folder.

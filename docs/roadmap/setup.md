@@ -28,12 +28,13 @@ Change any of these now by editing this table; otherwise they stand.
 |---|---|
 | Git flow | One short-lived branch + PR per step, squash merge, CI required |
 | DNS + registrar | Cloudflare |
-| Domains | `render.<domain>`, `staging.<domain>` (AWS), `app.<domain>` (AWS prod), `vps.<domain>` |
+| Deploy targets | Render (paid) first, VPS next, AWS optional ([decision 004](../decisions/004-deploy-targets.md)) |
+| Domains | `render.<domain>`, `vps.<domain>`, `aws-staging.<domain>` + `aws.<domain>` (AWS) |
 | AWS region | `us-east-1` |
 | AWS accounts | Organization with `staging` and `prod` member accounts |
 | Auth | Better Auth (one session model for web and mobile) |
 | Email | Resend |
-| Files | S3 on AWS, Cloudflare R2 elsewhere |
+| Files | S3-compatible: Cloudflare R2 (Render, VPS), S3 on AWS |
 | Model | Opus 5.5 for every phase |
 
 ## 4. Create the folder (PowerShell)
