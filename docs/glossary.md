@@ -165,3 +165,8 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   digest (`@sha256:…`) is the hash of the image's content, so it always means exactly those bytes. (4.1)
 - **Package visibility** — whether a GHCR image is public (anyone can pull) or private (pulling needs a
   token). New packages start private. (4.1)
+- **Image-backed service** — a Render service that pulls a prebuilt image from a registry instead of building
+  the repo (a Git-backed service). (4.2)
+- **Instance type** — the CPU and memory size a service runs on, and what you pay for (here `0.5c-512mb`). (4.2)
+- **Spin-down** — a free service stopping after idle time; the next request waits for it to start again (a cold
+  start). Paid instances stay on. (4.2)

@@ -14,8 +14,9 @@ runs on paid plans with its own Postgres, ready for phase 5. Why: [decision 004]
 - **Done when:** the package lists the SHA, and its digest matches the CI output.
 
 ### 4.2 Render runs the GHCR image
-- **Build:** `render.yaml`: `runtime: image` from GHCR, plan `0.5c-512mb` (paid; no spin-down). Check whether
-  the runtime change needs a new service, and plan the switch so the domain keeps working.
+- **Build:** `render.yaml`: `runtime: image` from GHCR (default reference `:main`, which `publish` now also
+  pushes), plan `0.5c-512mb` (paid; no spin-down). Check whether the runtime change needs a new service, and
+  plan the switch so the domain keeps working.
 - **Why:** Render runs the bytes CI tested instead of rebuilding them (decision 003's open issue).
 - **Terms:** image-backed service, instance type, spin-down.
 - 🧑 **You:** approve the cost; apply the Blueprint change in Render.

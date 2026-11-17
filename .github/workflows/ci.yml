@@ -58,7 +58,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # On main only, once both checks pass: push the image to GitHub's registry (GHCR) as `:<commit sha>`.
+  # On main only, once both checks pass: push the image to GitHub's registry (GHCR) as `:<commit sha>` and `:main`.
   # Every deploy uses the digest printed here (decision 004). The build reuses `image`'s cached layers.
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -95,7 +95,11 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.name.outputs.image }}:${{ github.sha }}
+          # `:<sha>` names this build forever. `:main` moves to the newest build: it's the default reference
+          # Render falls back to for deploys it starts itself (infra/render/render.yaml).
+          tags: |
+            ${{ steps.name.outputs.image }}:${{ github.sha }}
+            ${{ steps.name.outputs.image }}:main
           # `source` links the package to this repo on GitHub; `revision` records the commit inside the image.
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
