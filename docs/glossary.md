@@ -155,3 +155,13 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   fix is small, or when the old version can't run (e.g. after a database migration). (3.4)
 - **Revert commit** — a new commit that undoes an earlier one (`git revert <sha>`), so history keeps both the
   mistake and its undo, and the undo ships through the normal PR → CI → deploy path. (3.4)
+
+## Phase 4 — Render delivery
+- **Container registry** — a server that stores images by name so any machine can pull them (`docker pull`).
+  (4.1)
+- **GHCR (GitHub Container Registry)** — GitHub's registry at `ghcr.io`; CI pushes to it with the built-in
+  `GITHUB_TOKEN`, no extra secret. (4.1)
+- **Image tag vs. digest** — a tag (`:abc123`, `:latest`) is a name that can be moved to another image; a
+  digest (`@sha256:…`) is the hash of the image's content, so it always means exactly those bytes. (4.1)
+- **Package visibility** — whether a GHCR image is public (anyone can pull) or private (pulling needs a
+  token). New packages start private. (4.1)
