@@ -5,7 +5,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 
 | # | Promise | Where it's met |
 |---|---|---|
-| 1 | One image, non-root, `linux/amd64`, published once per `main` commit as `ghcr.io/<owner>/<repo>:<sha>`; platforms run it by digest. | `Dockerfile` (`USER node`). `.github/workflows/ci.yml` (`image` job, `platforms: linux/amd64`; `publish` job). |
+| 1 | One image, non-root, `linux/amd64`, published once per `main` commit as `ghcr.io/<owner>/<repo>:<sha>`; platforms run it by digest. | `Dockerfile` (`USER node`). `.github/workflows/cicd.yml` (`image` job, `platforms: linux/amd64`; `publish` job). |
 | 2 | `node dist/server.js` (the default `CMD`): SPA + `/api` on `$PORT`. | `server.ts`, `app.ts` |
 | 3 | `node dist/worker.js`: background jobs. | `worker.ts` (stub: idles until phase 8) |
 | 4 | `node dist/migrate.js`: apply migrations, exit 0/1; run once before new code starts. | `migrate.ts` (stub: validates config until phase 5) |

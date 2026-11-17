@@ -15,7 +15,7 @@ like you're shadowing a principal engineer.
 | 1 | [Container](phases/01-container.md) | done |
 | 2 | [Continuous integration](phases/02-ci.md) | done |
 | 3 | [First deploy (Render)](phases/03-render.md) | done |
-| 4 | [Render delivery](phases/04-render-delivery.md) | in progress |
+| 4 | [Render delivery](phases/04-render-delivery.md) | done |
 | 5 | [Database](phases/05-database.md) | not started |
 | 6 | [Observability](phases/06-observability.md) | not started |
 | 7 | [App foundations](phases/07-app-foundations.md) | not started |
