@@ -135,7 +135,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Zero-downtime deploy** — start the new version next to the old one, switch traffic only once it passes
   its health check, then stop the old one. (3.2)
 - **DNS record** — one entry in a zone. An **A** record maps a name to an IPv4 address; a **CNAME** says a name
-  is an alias for another name (`render.noahlee.xyz` → `launchpad-6ocu.onrender.com`). (3.3)
+  is an alias for another name (`render.noahlee.xyz` → `launchpad-mn7r.onrender.com`). (3.3)
 - **TTL (time to live)** — how many seconds resolvers may cache a DNS answer before asking again; it bounds
   how long a change takes to reach everyone. (3.3)
 - **TLS certificate** — a file binding a domain name to a public key, signed by a CA; the browser checks it
@@ -170,3 +170,10 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Instance type** — the CPU and memory size a service runs on, and what you pay for (here `0.5c-512mb`). (4.2)
 - **Spin-down** — a free service stopping after idle time; the next request waits for it to start again (a cold
   start). Paid instances stay on. (4.2)
+- **Deploy hook** — a secret URL that starts a deploy of one Render service when called; with `imgURL` it
+  deploys a given digest of that service's image, nothing else. (4.3)
+- **Continuous deployment** — every change merged to `main` that passes CI goes live with no manual step. (4.3)
+- **GitHub Environment** — a named deploy target (here `production`) with its own secrets and rules, such as
+  which branches may deploy to it. (4.3)
+- **Reusable workflow** — a workflow other workflows call like a function (`on: workflow_call`, `uses:`). (4.3)
+- **`workflow_dispatch`** — a trigger that adds a "Run workflow" button (with inputs) in the Actions tab. (4.3)

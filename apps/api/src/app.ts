@@ -45,9 +45,12 @@ export function buildApp(
 			// Liveness: failing means "restart me". Never check dependencies here: restarts don't fix a DB outage.
 			api.get("/health", async () => ({ status: "ok" }));
 
-			// Readiness: failing means "stop routing to me". Same as /health until phase 4 adds the DB check.
+			// Readiness: failing means "stop routing to me". Same as /health until phase 5 adds the DB check.
 			// During shutdown Fastify already answers 503 (`return503OnClosing`).
 			api.get("/ready", async () => ({ status: "ok" }));
+
+			// Which build is answering. The deploy job polls this until it reports the commit it deployed.
+			api.get("/version", async () => ({ sha: config.GIT_SHA }));
 		},
 		{ prefix: "/api" },
 	);

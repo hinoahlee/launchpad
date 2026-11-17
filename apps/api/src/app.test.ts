@@ -4,7 +4,12 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "./app.ts";
 
-const app = buildApp({ NODE_ENV: "test", PORT: 0, LOG_LEVEL: "silent" });
+const app = buildApp({
+	NODE_ENV: "test",
+	PORT: 0,
+	LOG_LEVEL: "silent",
+	GIT_SHA: "abc123",
+});
 afterAll(() => app.close());
 
 describe("probes", () => {
@@ -18,6 +23,12 @@ describe("probes", () => {
 		const res = await app.inject({ method: "GET", url: "/api/ready" });
 		expect(res.statusCode).toBe(200);
 		expect(res.json()).toEqual({ status: "ok" });
+	});
+
+	it("GET /api/version → the build's commit", async () => {
+		const res = await app.inject({ method: "GET", url: "/api/version" });
+		expect(res.statusCode).toBe(200);
+		expect(res.json()).toEqual({ sha: "abc123" });
 	});
 });
 
@@ -66,7 +77,7 @@ describe("web app", () => {
 	);
 
 	const web = buildApp(
-		{ NODE_ENV: "test", PORT: 0, LOG_LEVEL: "silent" },
+		{ NODE_ENV: "test", PORT: 0, LOG_LEVEL: "silent", GIT_SHA: "abc123" },
 		{ webRoot },
 	);
 	afterAll(async () => {
@@ -135,7 +146,12 @@ describe("web app", () => {
 	it("production refuses to boot without a web build", () => {
 		expect(() =>
 			buildApp(
-				{ NODE_ENV: "production", PORT: 0, LOG_LEVEL: "silent" },
+				{
+					NODE_ENV: "production",
+					PORT: 0,
+					LOG_LEVEL: "silent",
+					GIT_SHA: "abc123",
+				},
 				{ webRoot: path.join(webRoot, "missing") },
 			),
 		).toThrow(/SPA build not found/);

@@ -9,6 +9,9 @@ const envSchema = z.object({
 	LOG_LEVEL: z
 		.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
 		.default("info"),
+	// The commit the image was built from. CI bakes it in (Dockerfile `ARG GIT_SHA`); `/api/version` reports
+	// it so a deploy can check the new code is live. Unset in dev.
+	GIT_SHA: z.string().default("dev"),
 });
 
 export type Config = z.infer<typeof envSchema>;

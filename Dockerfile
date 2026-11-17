@@ -25,6 +25,10 @@ ENV NODE_ENV=production
 WORKDIR /app/api
 COPY --from=build /out/api ./
 COPY --from=build /repo/apps/web/dist /app/web/dist
+# The commit this image was built from (CI passes `--build-arg GIT_SHA=<sha>`); served at /api/version.
+# Declared after the COPYs: it changes every commit, and every layer after it is rebuilt when it does.
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
 # Least privilege: the built-in `node` user (uid 1000) can read the app but not change it (files stay
 # root-owned), so a compromised process can't rewrite the code it runs.
 USER node
