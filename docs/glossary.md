@@ -149,3 +149,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   connect straight to it. (3.3)
 - **SNI (Server Name Indication)** — the hostname a browser sends at the start of a TLS connection, so one IP
   can serve many sites, each with its own certificate. (3.3)
+- **Rollback** — go back to the previous version by redeploying it. Fast, and right when the old version is
+  known good. (3.4)
+- **Roll forward** — fix the problem with a new change and deploy that, instead of going back. Normal when the
+  fix is small, or when the old version can't run (e.g. after a database migration). (3.4)
+- **Revert commit** — a new commit that undoes an earlier one (`git revert <sha>`), so history keeps both the
+  mistake and its undo, and the undo ships through the normal PR → CI → deploy path. (3.4)
