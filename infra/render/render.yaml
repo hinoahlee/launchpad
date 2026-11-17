@@ -15,13 +15,40 @@ services:
     region: oregon
     # Paid (formerly "Starter", ~$7/mo): 0.5 CPU / 512 MB, always on (no spin-down), pre-deploy commands allowed.
     plan: 0.5c-512mb
+    # Every deploy runs this first, in a one-off container from the new image with the same env vars. Non-zero
+    # exit = the deploy fails and the old version keeps serving. Still the config-checking stub until phase 5.
+    preDeployCommand: node dist/migrate.js
     # Render sends traffic to a new deploy only once this returns 2xx; until then the old one keeps serving.
     healthCheckPath: /api/ready
     # Tells Render which service answers for this name, and to issue its TLS certificate. DNS side: a CNAME in
-    # Cloudflare, `render` -> this service's onrender.com host, DNS only (grey cloud).
+    # Cloudflare, `render` -> this service's onrender.com host, DNS only (grey cloud). Keep in sync with the
+    # GitHub repository variable RENDER_URL, which the deploy job polls.
     domains:
       - render.noahlee.xyz
     # NODE_ENV comes from the image; Render sets PORT. Only non-defaults go here.
     envVars:
       - key: LOG_LEVEL
         value: info
+      # Render fills this in with the database's private-network URL (password included) at deploy time; the
+      # value never appears in this repo or in GitHub. To use another provider, swap `fromDatabase` for
+      # `sync: false` and paste its URL in the dashboard: the app only reads DATABASE_URL.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: launchpad-db
+          property: connectionString
+
+databases:
+  - name: launchpad-db
+    # Name and user inside Postgres. These, the version and the region can't be changed after creation.
+    databaseName: launchpad
+    user: launchpad
+    # Same major version as local and CI (phase 5), so dumps and SQL behave the same everywhere.
+    postgresMajorVersion: "17"
+    region: oregon
+    # Smallest paid instance (~$6/mo): point-in-time recovery (3 days on the Hobby workspace), no expiry.
+    plan: 0.1c-256mb
+    # Storage is billed apart (~$0.30/GB/mo); this plan defaults to 15 GB. Disks can grow later, never shrink.
+    diskSizeGB: 1
+    # No access from the internet: only services in this Render workspace connect, over the private network.
+    # Add a CIDR here (e.g. your IP) for a one-off psql session, then remove it.
+    ipAllowList: []
