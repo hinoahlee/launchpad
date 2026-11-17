@@ -177,3 +177,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   which branches may deploy to it. (4.3)
 - **Reusable workflow** — a workflow other workflows call like a function (`on: workflow_call`, `uses:`). (4.3)
 - **`workflow_dispatch`** — a trigger that adds a "Run workflow" button (with inputs) in the Actions tab. (4.3)
+- **Managed database** — a database the provider runs for you: installs, patches, backups, restores. You pay
+  for an instance size plus storage. (4.4)
+- **Internal vs. external URL** — the internal URL works only inside the provider's private network (from your
+  own services, fast, no internet); the external one is reachable from anywhere it's allowed. (4.4)
+- **IP allow list** — the address ranges allowed to connect from the internet; empty means nobody. (4.4)
+- **Pre-deploy step** — a command the platform runs once per deploy, in a throwaway container from the new
+  image, before the new version starts; if it fails, the deploy stops and the old version keeps serving.
+  The slot for migrations. (4.4)
