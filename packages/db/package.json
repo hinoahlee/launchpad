@@ -1,0 +1,26 @@
+{
+	"name": "@launchpad/db",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "node --env-file-if-exists=../../apps/api/.env scripts/migrate.ts",
+		"db:check": "node scripts/check-migrations.ts",
+		"db:studio": "node --env-file-if-exists=../../apps/api/.env node_modules/drizzle-kit/bin.cjs studio",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"drizzle-orm": "catalog:",
+		"postgres": "catalog:"
+	},
+	"devDependencies": {
+		"@launchpad/tsconfig": "workspace:*",
+		"@types/node": "catalog:",
+		"drizzle-kit": "catalog:",
+		"typescript": "catalog:"
+	}
+}

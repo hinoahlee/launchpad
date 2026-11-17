@@ -18,7 +18,10 @@
 	},
 	"dependencies": {
 		"@fastify/static": "catalog:",
+		"@launchpad/db": "workspace:*",
+		"drizzle-orm": "catalog:",
 		"fastify": "catalog:",
+		"postgres": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
