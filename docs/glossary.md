@@ -185,3 +185,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Pre-deploy step** — a command the platform runs once per deploy, in a throwaway container from the new
   image, before the new version starts; if it fails, the deploy stops and the old version keeps serving.
   The slot for migrations. (4.4)
+
+## Phase 5 — Database
+- **Environment variable** — a named value the operating system hands a process at start (`PORT=3000`); the
+  same image gets different settings on each platform without a rebuild. (5.1)
+- **Connection string** — one URL with everything needed to reach a database:
+  `postgres://user:password@host:port/database`. It holds the password, so treat it as a secret. (5.1)
+- **Container volume** — storage Docker keeps outside a container's own filesystem; a named volume survives
+  the container being removed, so the database's data does too (until `down -v`). (5.1)

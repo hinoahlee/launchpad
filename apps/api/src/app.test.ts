@@ -9,6 +9,7 @@ const app = buildApp({
 	PORT: 0,
 	LOG_LEVEL: "silent",
 	GIT_SHA: "abc123",
+	DATABASE_URL: "postgres://test:test@localhost:5432/test",
 });
 afterAll(() => app.close());
 
@@ -77,7 +78,13 @@ describe("web app", () => {
 	);
 
 	const web = buildApp(
-		{ NODE_ENV: "test", PORT: 0, LOG_LEVEL: "silent", GIT_SHA: "abc123" },
+		{
+			NODE_ENV: "test",
+			PORT: 0,
+			LOG_LEVEL: "silent",
+			GIT_SHA: "abc123",
+			DATABASE_URL: "postgres://test:test@localhost:5432/test",
+		},
 		{ webRoot },
 	);
 	afterAll(async () => {
@@ -151,6 +158,7 @@ describe("web app", () => {
 					PORT: 0,
 					LOG_LEVEL: "silent",
 					GIT_SHA: "abc123",
+					DATABASE_URL: "postgres://test:test@localhost:5432/test",
 				},
 				{ webRoot: path.join(webRoot, "missing") },
 			),

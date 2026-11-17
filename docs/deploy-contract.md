@@ -24,5 +24,6 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `PORT` | `3000` | Platforms usually set it. |
 | `LOG_LEVEL` | `info` | `fatal` … `trace`, or `silent`. |
 | `GIT_SHA` | `dev` | Baked into the image by CI (`--build-arg`; `unknown` if built without it); reported by `GET /api/version`. Platforms don't set it. |
+| `DATABASE_URL` | required | `postgres://user:password@host:port/database`. A secret: the platform injects it (Render: `fromDatabase` in the Blueprint). |
 
 New variables are added here in the same PR as `config.ts`.
