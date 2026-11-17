@@ -12,6 +12,11 @@ const envSchema = z.object({
 	// The commit the image was built from. CI bakes it in (Dockerfile `ARG GIT_SHA`); `/api/version` reports
 	// it so a deploy can check the new code is live. Unset in dev.
 	GIT_SHA: z.string().default("dev"),
+	// Postgres connection string: postgres://user:password@host:port/database. Required: every process
+	// (server, worker, migrate) needs the database, so a missing value stops the boot.
+	DATABASE_URL: z
+		.url({ protocol: /^postgres(ql)?$/ })
+		.describe("postgres://user:password@host:port/database"),
 });
 
 export type Config = z.infer<typeof envSchema>;

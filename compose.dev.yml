@@ -1,0 +1,32 @@
+# Local services for `pnpm dev`. Not used in production: Render, the VPS and AWS run their own Postgres.
+#   docker compose -f compose.dev.yml up -d     # start (data survives restarts)
+#   docker compose -f compose.dev.yml down      # stop; add -v to also delete the data
+#   docker compose -f compose.dev.yml exec postgres psql -U launchpad   # a psql shell, no local install
+
+services:
+  postgres:
+    # Same major version as Render (infra/render/render.yaml). Debian, not Alpine: text sorting (collation)
+    # comes from glibc on both, so ORDER BY gives the same order here as in production.
+    image: postgres:17.12-trixie
+    restart: unless-stopped
+    environment:
+      # Dev-only credentials, matching DATABASE_URL in apps/api/.env.example. The image creates this user and
+      # database on the first start, when the volume is empty.
+      POSTGRES_USER: launchpad
+      POSTGRES_PASSWORD: launchpad
+      POSTGRES_DB: launchpad
+    ports:
+      # Host port 5433, not 5432: a system Postgres or another project's container often holds 5432. Localhost
+      # only: Docker-published ports skip the OS firewall, so 0.0.0.0 would expose it to the network.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # `up -d --wait` returns once Postgres accepts connections, not just once the container started.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U launchpad -d launchpad"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres-data:
