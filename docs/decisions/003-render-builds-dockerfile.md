@@ -1,6 +1,6 @@
 # 003 — Render builds the Dockerfile
 
-**Status:** accepted · **Date:** 2026-11-16
+**Status:** superseded by [004](004-deploy-targets.md) · **Date:** 2026-11-16
 
 ## Context
 Render can run the native Node runtime, build our `Dockerfile`, or pull an image CI already built. Render has

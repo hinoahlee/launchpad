@@ -1,6 +1,6 @@
 import { loadConfig } from "./config.ts";
 
-// Background-job process (`node dist/worker.js`). A stub until phase 12 adds the job queue: it validates
+// Background-job process (`node dist/worker.js`). A stub until phase 8 adds the job queue: it validates
 // config like every entrypoint, then stays alive doing nothing, so platforms can already run it.
 
 loadConfig();

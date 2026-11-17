@@ -1,7 +1,8 @@
 # Phase 4 — Database
 
-**Goal:** Postgres locally, in CI and on Render, with migrations applied before every deploy.
-**You'll need:** psql client. **Cost:** +~$6–7/mo (Render Postgres).
+**Goal:** Postgres locally and in CI, with the schema in code and the API's readiness tied to it. Production
+Postgres comes in phase 5.
+**You'll need:** psql client. **Cost:** $0.
 
 ### 4.1 Local Postgres
 - **Build:** `compose.dev.yml` (Postgres 17, named volume), `DATABASE_URL` in config and `.env.example`.
@@ -31,17 +32,3 @@
 - **Terms:** service container, test isolation, factory.
 - **Ref:** turborepo `@repo/db/testing`, `apps/api/test/setup.ts`.
 - **Done when:** CI is green with DB tests.
-
-### 4.5 Render Postgres + pre-deploy migrations
-- **Build:** database in `render.yaml`, `DATABASE_URL` from it, pre-deploy command `node dist/migrate.js`.
-  Decision `004-expand-contract.md`.
-- **Why:** migrations run once, before new code starts; old code must still work with the new schema.
-- **Terms:** pre-deploy step, expand/contract, backward-compatible migration.
-- **Done when:** Render's deploy log shows migrate, then start.
-
-### 4.6 Drill: backup + restore
-- **Build:** `docs/runbooks/restore-database.md`, written while doing it: `pg_dump` the Render database,
-  restore it locally, compare row counts; note what Render's own backups offer.
-- **Why:** a backup you've never restored is a hope, not a backup.
-- **Terms:** logical vs. physical backup, point-in-time recovery (PITR), RPO, RTO.
-- **Done when:** restored locally and counts match.
