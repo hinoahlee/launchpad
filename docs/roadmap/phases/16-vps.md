@@ -1,8 +1,8 @@
 # Phase 16 — VPS target
 
-**Goal:** the same image on any VPS, deployed by CI: a cheap home for toy and personal projects. It replaces App
-Platform and Managed Postgres with containers you run yourself. Nothing here is DigitalOcean-specific except
-the registry and bucket URLs, both variables.
+**Goal:** the same image on any VPS, deployed by CI: a cheap home for toy and personal projects. It replaces Render
+and its Postgres with containers you run yourself, on any provider. The image comes from GHCR; files and
+backups go to R2.
 **You'll need:** a VPS (yours is on DigitalOcean), a deploy SSH key. **Cost:** your existing VPS.
 
 ### 16.1 Compose + Caddy
@@ -21,7 +21,7 @@ the registry and bucket URLs, both variables.
 - **Done when:** a merge deploys to the VPS.
 
 ### 16.3 Backups
-- **Build:** nightly `pg_dump` to an S3-compatible bucket (Spaces today) with retention; a VPS section in
+- **Build:** nightly `pg_dump` to an S3-compatible bucket (R2 today) with retention; a VPS section in
   `restore-database.md`.
 - **Why:** the database now lives on one disk you own; a backup must live somewhere else.
 - **Done when:** a restore from the bucket works.

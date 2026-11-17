@@ -14,9 +14,9 @@ like you're shadowing a principal engineer.
 | 0 | [Workspace](phases/00-workspace.md) | done |
 | 1 | [Container](phases/01-container.md) | done |
 | 2 | [Continuous integration](phases/02-ci.md) | done |
-| 3 | [First deploy (Render)](phases/03-render.md) | done, retired ([decision 004](../decisions/004-deploy-targets.md)) |
-| 4 | [Database](phases/04-database.md) | not started |
-| 5 | [DigitalOcean](phases/05-digitalocean.md) | not started |
+| 3 | [First deploy (Render)](phases/03-render.md) | done |
+| 4 | [Render delivery](phases/04-render-delivery.md) | not started |
+| 5 | [Database](phases/05-database.md) | not started |
 | 6 | [Observability](phases/06-observability.md) | not started |
 | 7 | [App foundations](phases/07-app-foundations.md) | not started |
 | 8 | [Background jobs](phases/08-jobs.md) | not started |
@@ -40,8 +40,8 @@ Follow-ups noticed along the way:
 ## What we're building
 
 A Fastify API and a React SPA in one container image, with Postgres, background jobs, email, auth (web now,
-mobile later), organizations, file uploads and Stripe billing. It deploys to DigitalOcean App Platform, a VPS or
-AWS from the same image. Each platform is opt-in: the template runs and passes CI with no cloud account.
+mobile later), organizations, file uploads and Stripe billing. It deploys to Render, a VPS or AWS from the
+same image. Each platform is opt-in: the template runs and passes CI with no cloud account.
 
 | Area | Choice |
 |---|---|
@@ -49,32 +49,33 @@ AWS from the same image. Each platform is opt-in: the template runs and passes C
 | API / web | Fastify + Zod / Vite + React, TanStack Router + Query, Tailwind + shadcn/ui |
 | Data | PostgreSQL 17 + Drizzle; jobs queued in Postgres |
 | Auth | Better Auth: sessions in Postgres; cookie on web, `Authorization` header on mobile |
-| Services | Resend (email), Spaces / S3 (files), Stripe (billing), Sentry (errors), Better Stack (uptime) |
-| Hosting | DigitalOcean: App Platform, Managed Postgres, Container Registry, Spaces. Later: VPS, AWS |
-| Delivery | GitHub Actions, PR per change; Terraform; Cloudflare DNS |
+| Services | Resend (email), R2 / S3 (files), Stripe (billing), Sentry (errors), Better Stack (uptime) |
+| Hosting | Render (paid): web, worker, Postgres. Later: VPS, then AWS (optional) |
+| Delivery | GitHub Actions is the only CI/CD: image to GHCR, deploy by digest; Cloudflare DNS; Terraform for AWS |
 
 ### One image, three platforms
 
 ```mermaid
 flowchart LR
   pr["PR merged to main"] --> ci["CI: verify + build"]
-  ci --> reg[("Image in registry")]
-  reg --> do["DigitalOcean: App Platform + Managed Postgres"]
+  ci --> reg[("Image in GHCR")]
+  reg --> render["Render: web + worker + Postgres"]
   reg -.-> vps["VPS: Compose + Caddy + Postgres"]
   reg -.-> aws["AWS: staging → approval → prod (optional)"]
 ```
 
-### On DigitalOcean
+### On Render
 
 ```mermaid
 flowchart LR
-  user(["Browser / app"]) --> app["App Platform: web"]
-  subgraph do["DigitalOcean"]
-    app --> db[("Managed Postgres")]
-    worker["App Platform: worker"] --> db
-    job["Pre-deploy job: migrate"] --> db
+  gh["GitHub Actions"] -- "deploy hook + digest" --> web
+  user(["Browser / app"]) --> web["Render: web"]
+  subgraph render["Render"]
+    web --> db[("Render Postgres")]
+    worker["Render: worker"] --> db
+    pre["Pre-deploy: migrate"] --> db
   end
-  user -. "direct upload" .-> spaces[("Spaces")]
+  user -. "direct upload" .-> r2[("Cloudflare R2")]
 ```
 
 ### Every step

@@ -1,12 +1,13 @@
 # Phase 11 — File storage
 
 **Goal:** users upload and download files directly to and from a bucket; the API only signs URLs.
-**You'll need:** your Spaces subscription. **Cost:** included (250 GiB shared across buckets).
+**You'll need:** Cloudflare R2 (your Cloudflare account). **Cost:** $0 on the free tier (verify limits).
 
 ### 11.1 Buckets
-- **Build:** a Spaces bucket in Terraform with a key scoped to that bucket only (verify per-bucket keys);
-  `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` and keys in config (endpoint optional, so S3 needs no change); CORS
-  for each origin; private.
+- **Build:** `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` and keys in config (endpoint optional, so S3 needs no
+  change); a short `docs/runbooks/r2-bucket.md`.
+- 🧑 **You:** create the R2 bucket (private), a token scoped to that bucket only, and CORS for each origin;
+  put the keys in Render.
 - **Terms:** object storage, bucket, object key, CORS, S3-compatible API, scoped access key.
 - **Done when:** buckets exist with the right CORS.
 

@@ -7,7 +7,7 @@
 - **Terms:** horizontal scaling, stateless service, shared state.
 
 ### 14.2 Several instances
-- **Build:** run 2 web instances on App Platform (check which sizes allow it), prove nothing breaks (sessions,
+- **Build:** run 2 web instances on Render, prove nothing breaks (sessions,
   rate limits, jobs), then scale back. Autoscaling comes with AWS (phase 20).
 - **Terms:** horizontal vs. vertical scaling, stateless service.
 
@@ -17,8 +17,8 @@
 - **Terms:** throughput, latency percentile, bottleneck, saturation.
 
 ### 14.4 Edge protection
-- **Build:** decide whether to put Cloudflare's proxy (free managed WAF rules + a rate rule) in front of App
-  Platform; if yes, `trustProxy` and the real client IP. AWS WAF comes in phase 20.
+- **Build:** decide whether to put Cloudflare's proxy (free managed WAF rules + a rate rule) in front of
+  Render; if yes, `trustProxy` and the real client IP. AWS WAF comes in phase 20.
 - **Terms:** WAF, OWASP Top 10, bot traffic, proxied DNS.
 
 ### 14.5 Supply chain + scanning

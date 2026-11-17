@@ -1,7 +1,7 @@
 # Phase 3 — First deploy (Render)
 
-> **Retired** by [decision 004](../../decisions/004-deploy-targets.md): Render was removed in favour of
-> DigitalOcean (phase 5). The lessons (IaC, health checks, DNS, TLS, the bad-deploy drill) carry over.
+> Phase 4 moves this service to a paid plan running images from GHCR
+> ([decision 004](../../decisions/004-deploy-targets.md)).
 
 **Goal:** a live HTTPS URL on Render that updates itself after CI passes on `main`.
 **You'll need:** Render account, Cloudflare account + a domain. **Cost:** $0 (Render free plan; ~$7/mo for always-on) + domain.

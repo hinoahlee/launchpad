@@ -8,14 +8,14 @@
   responses include the request ID.
 - **Why:** when a user reports "it broke", the request ID leads you to the exact log lines.
 - **Terms:** structured logging, correlation ID, log level, redaction.
-- **Done when:** you find one request in App Platform's runtime logs by its ID.
+- **Done when:** you find one request in Render's logs by its ID.
 
 ### 6.2 Error tracking
 - **Build:** Sentry in API and web; release = git SHA; environment tag; source maps uploaded in CI; disabled
   when no DSN is set.
 - **Why:** errors arrive grouped, with stack traces and the release that introduced them.
 - **Terms:** error tracking, release, source map, sampling.
-- 🧑 **You:** create two Sentry projects; add the DSNs as Terraform variables (app secrets).
+- 🧑 **You:** create two Sentry projects; add the DSNs in Render (`sync: false` variables).
 - **Done when:** a test error shows a readable stack trace and the commit SHA.
 
 ### 6.3 Uptime + alerts

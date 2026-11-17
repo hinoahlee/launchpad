@@ -1,6 +1,6 @@
 # Phase 17 — AWS foundation (optional)
 
-> **Optional.** AWS comes after every feature works on DigitalOcean
+> **Optional.** AWS comes after every feature works on Render
 > ([decision 004](../../decisions/004-deploy-targets.md)).
 > New AWS accounts may get free credits; check the current offer in step 17.1.
 
@@ -21,16 +21,17 @@
 
 ### 17.3 Terraform bootstrap
 - **Build:** `infra/aws/bootstrap`: a state bucket per account (versioned, encrypted, public access blocked)
-  with S3-native locking. Terraform itself: decision 005 (phase 5).
+  with S3-native locking. Decision `006-terraform.md`.
 - **Why:** state is Terraform's memory of what exists; it must be shared, locked and recoverable.
 - **Terms:** Terraform, provider, resource, state, backend, lock, plan vs. apply.
 - 🧑 **You:** run `terraform apply`.
 - **Done when:** `terraform plan` shows no changes.
 
 ### 17.4 Layout + infra checks
-- **Build:** `infra/aws/modules/`, `infra/aws/envs/{staging,prod}`; the phase 5 infra CI job covers `infra/aws`.
+- **Build:** `infra/aws/modules/`, `infra/aws/envs/{staging,prod}`; CI runs `fmt -check`, `validate`, `tflint`
+  when `infra/**` changes.
 - **Why:** environments become thin files that call shared modules with different sizes.
-- **Terms:** root module, environment folder.
+- **Terms:** module, root module, variable, output, linting for IaC.
 - **Done when:** the infra CI job is green.
 
 ### 17.5 GitHub OIDC + ECR
@@ -42,7 +43,7 @@
 - **Done when:** the role ARN is an output.
 
 ### 17.6 Publish the image on `main`
-- **Build:** the `publish` job also pushes `:<sha>` to staging ECR (only when `vars.AWS_ROLE_ARN` is set).
+- **Build:** the `publish` job also copies the GHCR digest to staging ECR (only when `vars.AWS_ROLE_ARN` is set).
 - **Why:** one image, built once, identified by its digest, is what every AWS environment runs.
 - **Terms:** image tag vs. digest, immutable tags, artifact.
 - **Done when:** `aws ecr describe-images` lists the SHA, and GitHub holds no AWS secrets.

@@ -21,8 +21,9 @@
 - **Terms:** cron expression, scheduler, singleton job.
 - **Done when:** a sample hourly job runs once per hour on the deployed app.
 
-### 8.4 Run the worker on App Platform
-- **Build:** a worker component in the app spec (added now, not earlier: an idle stub would cost ~$5/mo);
+### 8.4 Run the worker on Render
+- **Build:** a background worker in `render.yaml` from the same image, deployed by the same job (added now,
+  not earlier: an idle stub would cost ~$7/mo);
   `DATABASE_DIRECT_URL` for `LISTEN` when a connection pooler is in front.
 - **Terms:** worker process, connection pooler (transaction vs. session mode).
-- **Done when:** the worker runs on App Platform and processes a job.
+- **Done when:** the worker runs on Render and processes a job.

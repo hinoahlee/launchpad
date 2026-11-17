@@ -65,14 +65,14 @@ Next: close this session. Open a new session in this folder, model Opus 5.5, and
 - When the plan seems wrong, say so and propose a change rather than following it blindly.
 
 ## Safety
-- Never run `terraform apply`/`destroy`/`import`, mutating `doctl` or `aws` commands, DNS changes or anything that costs
+- Never run `terraform apply`/`destroy`/`import`, mutating `aws` commands, DNS changes or anything that costs
   money without the human's explicit yes for that action. Show a short summary of the plan first.
-- Never read or print secrets (`.env`, secret tfvars). The human puts secrets into the platform (GitHub
-  Environments, DigitalOcean, Secrets Manager); give them the exact name to use.
-- CI reaches clouds with the narrowest credential the provider offers (OIDC on AWS; a scoped token on
-  DigitalOcean). Prod changes only through CI.
+- Never read or print secrets (`.env`, secret tfvars). The human puts secrets into the platform (Render, GitHub
+  Environments, Secrets Manager); give them the exact name to use.
+- CI reaches clouds with the narrowest credential the provider offers (OIDC on AWS; Render's deploy hook,
+  which can only deploy our own image). Prod changes only through CI.
 - You never merge PRs.
-- Verify current docs (DigitalOcean, AWS, Terraform providers, GitHub Actions, Better Auth) instead of relying on
+- Verify current docs (Render, AWS, Terraform providers, GitHub Actions, Better Auth) instead of relying on
   memory. Pin versions.
 
 ## Conventions (change them with a decision note)

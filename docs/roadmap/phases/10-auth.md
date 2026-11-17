@@ -14,7 +14,7 @@ endpoints, same flows, same tables. Decision `NNN-auth-library.md` (Better Auth 
 - **Done when:** the auth tables exist and `/api/auth/ok` responds (verify the current endpoint name).
 
 ### 10.2 Google sign-in
-- 🧑 **You:** create the OAuth client; add redirect URIs for local and `app.<domain>`.
+- 🧑 **You:** create the OAuth client; add redirect URIs for local and `render.<domain>`.
 - **Build:** Google provider; sign-in button; error states.
 - **Terms:** OAuth 2.0, OpenID Connect (OIDC), authorization code flow, PKCE, redirect URI, scope, ID token.
 - **Done when:** you sign in on the deployed app.

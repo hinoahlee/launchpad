@@ -1,6 +1,6 @@
 # Deploy contract
 
-Every platform (DigitalOcean App Platform, VPS, AWS) depends only on this page. If a platform needs something not listed here,
+Every platform (Render, VPS, AWS) depends only on this page. If a platform needs something not listed here,
 change this page first (with a decision note). Why one image: [decision 002](decisions/002-single-image.md).
 
 | # | Promise | Where it's met |

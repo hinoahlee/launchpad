@@ -7,7 +7,7 @@
 - **Terms:** major version, changelog, deprecation, codemod.
 
 ### 15.2 Postgres major upgrade
-- **Build:** rehearse on a fork of the cluster, then upgrade the managed Postgres major version; runbook.
+- **Build:** rehearse on a restored copy, then upgrade Render Postgres's major version (Render's process); runbook.
 - **Terms:** major upgrade, blue/green deployment, maintenance window.
 
 ### 15.3 Secret rotation
@@ -19,14 +19,14 @@
   and Sentry; postmortems.
 - **Terms:** game day, chaos engineering, mean time to detect (MTTD).
 
-### 15.5 Staging (optional, ~+$5–10/mo)
-- **Build:** a second app from the same Terraform module with its own database on the production cluster;
+### 15.5 Staging (optional, ~+$13/mo)
+- **Build:** a staging service + database in `render.yaml` (compare Render's preview environments);
   `main` deploys to staging, and the same digest reaches production after your approval.
 - 🧑 **You:** add yourself as required reviewer on the `production` GitHub Environment.
 - **Terms:** promotion, build once / deploy many, approval gate, environment parity.
 - **Done when:** one merge reaches production with the digest staging ran.
 
 ### 15.6 Starting a project from the template
-- **Build:** `docs/runbooks/new-project.md`: rename, remove example features, turn on DigitalOcean (variables,
-  `.tfvars`, secrets), first deploy. Or swap this repo's infra to a real app and tear launchpad down.
+- **Build:** `docs/runbooks/new-project.md`: rename, remove example features, turn on Render (Blueprint,
+  deploy hook secret, R2 keys), first deploy. Or swap this repo's infra to a real app and tear launchpad down.
 - **Done when:** you follow it once on a throwaway project.
