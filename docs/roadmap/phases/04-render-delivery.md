@@ -24,8 +24,8 @@ runs on paid plans with its own Postgres, ready for phase 5. Why: [decision 004]
 
 ### 4.3 Continuous deployment from GitHub
 - **Build:** `deploy` job after `publish`, in GitHub Environment `production`, only when its deploy-hook secret
-  is set: call Render's deploy hook with `imgURL=…@sha256:<digest>`, wait until that deploy is live (Render API
-  or a version check; pick the one needing the least access), fail the job otherwise. Runnable by hand with an
+  is set: call Render's deploy hook with `imgURL=…@sha256:<digest>`, poll `/api/version` until it reports the new
+  commit (no Render API key needed), fail the job otherwise. Runnable by hand with an
   older digest: that is the rollback.
 - **Why:** GitHub is the only CI/CD; Render only runs what it's told to.
 - **Terms:** deploy hook, continuous deployment, GitHub Environment, `workflow_dispatch`, rollback.

@@ -1,0 +1,93 @@
+# Deploys one published image to Render by digest, then waits until the live site serves it.
+# CI calls it after `publish` on main. Run it by hand (Actions → Deploy to Render → Run workflow) with an older
+# commit SHA to roll back. GitHub holds only Render's deploy hook, which can deploy nothing but this repo's image.
+name: Deploy to Render
+
+on:
+  workflow_call:
+    inputs:
+      sha:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA of an image published from main (step 4.3 or later; earlier ones lack /api/version)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # Opt-in (decision 004): a copy of the template without Render skips this job instead of failing.
+    if: vars.RENDER_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Holds the deploy hook secret; restricted to the main branch in the repo's settings.
+    environment:
+      name: production
+      url: ${{ vars.RENDER_URL }}
+    # One deploy at a time; a newer one waits instead of cancelling a deploy halfway.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      SHA: ${{ inputs.sha }}
+      RENDER_URL: ${{ vars.RENDER_URL }}
+    steps:
+      # Inputs go through env, never straight into the script, so a crafted value can't inject shell code.
+      - name: Resolve the image digest
+        id: image
+        run: |
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::sha must be a full 40-character commit SHA"; exit 1
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          digest=$(docker buildx imagetools inspect "$image:$SHA" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "ref=$image@$digest" >> "$GITHUB_OUTPUT"
+          echo "Deploying $image@$digest (commit $SHA)"
+
+      # The hook deploys exactly this digest. Render rejects any image other than the service's own repository.
+      - name: Trigger the Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Secret RENDER_DEPLOY_HOOK_URL is missing from the production environment"; exit 1
+          fi
+          sep='?'; [[ "$HOOK" == *\?* ]] && sep='&'
+          url="$HOOK${sep}imgURL=$(jq -rn --arg v "$REF" '$v|@uri')"
+          code=$(curl -sS -o response.json -w '%{http_code}' -X POST "$url")
+          case "$code" in
+            200) echo "Deploy started: $(jq -r '.deploy.id // .id // "?"' response.json)" ;;
+            202) echo "Queued behind a deploy already in progress" ;;
+            *) echo "::error::Render answered HTTP $code"; cat response.json; exit 1 ;;
+          esac
+
+      # Done means users get the new build: poll the public URL (through DNS and TLS) until it reports this
+      # commit. No Render API key needed. On timeout, Render's Events page says why (failed health check, ...).
+      - name: Wait until the new version is live
+        run: |
+          deadline=$((SECONDS + 600))
+          until [ "$(curl -fsS --max-time 5 "${RENDER_URL%/}/api/version" | jq -r .sha 2>/dev/null)" = "$SHA" ]; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::$RENDER_URL did not report $SHA within 10 minutes; see the service's Events in Render"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Live: $RENDER_URL serves $SHA"
+
+      - name: Summary
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          {
+            echo "### Deployed to Render"
+            echo "Commit \`$SHA\`"
+            echo
+            echo "Image \`$REF\`"
+          } >> "$GITHUB_STEP_SUMMARY"

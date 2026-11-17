@@ -53,6 +53,7 @@ jobs:
           # Render, AWS and most VPSs run x86-64; say so instead of relying on the runner's default.
           platforms: linux/amd64
           push: false
+          build-args: GIT_SHA=${{ github.sha }}
           # Layer cache in GitHub's Actions cache. `mode=max` also keeps the build stage's layers (the slow
           # `pnpm fetch`), which aren't part of the final image.
           cache-from: type=gha
@@ -107,6 +108,8 @@ jobs:
           # A plain single-image manifest, so the digest is the image itself (provenance attestations would
           # wrap it in an index). Supply-chain attestations come with scanning in step 14.5.
           provenance: false
+          # Same value as in `image`, so every layer comes from its cache.
+          build-args: GIT_SHA=${{ github.sha }}
           cache-from: type=gha
 
       - name: Summary
@@ -120,3 +123,12 @@ jobs:
             echo
             echo "Digest: \`${IMAGE}@${DIGEST}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Deploy the image just published (decision 004). Skipped unless the repo variable RENDER_URL is set.
+  deploy:
+    needs: publish
+    if: vars.RENDER_URL != ''
+    uses: ./.github/workflows/deploy-render.yml
+    with:
+      sha: ${{ github.sha }}
+    secrets: inherit
