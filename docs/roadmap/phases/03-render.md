@@ -1,7 +1,7 @@
 # Phase 3 — First deploy (Render)
 
 **Goal:** a live HTTPS URL on Render that updates itself after CI passes on `main`.
-**You'll need:** Render account, Cloudflare account + a domain. **Cost:** ~$7/mo (Render starter) + domain.
+**You'll need:** Render account, Cloudflare account + a domain. **Cost:** $0 (Render free plan; ~$7/mo for always-on) + domain.
 
 ### 3.1 🧑 Accounts
 - **You:** create a Render account (connect GitHub, grant this repo only); create a Cloudflare account and buy a
