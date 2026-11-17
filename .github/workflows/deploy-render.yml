@@ -24,7 +24,8 @@ jobs:
     # Opt-in (decision 004): a copy of the template without Render skips this job instead of failing.
     if: vars.RENDER_URL != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Longer than the 16-minute wait below, so the step's own error message is what you see.
+    timeout-minutes: 20
     # Holds the deploy hook secret; restricted to the main branch in the repo's settings.
     environment:
       name: production
@@ -69,12 +70,14 @@ jobs:
 
       # Done means users get the new build: poll the public URL (through DNS and TLS) until it reports this
       # commit. No Render API key needed. On timeout, Render's Events page says why (failed health check, ...).
+      # 16 minutes: just past Render's own 15-minute limit for a deploy to pass its health check, so when this
+      # fails Render has already given up, and a rollback started right after doesn't queue behind it.
       - name: Wait until the new version is live
         run: |
-          deadline=$((SECONDS + 600))
+          deadline=$((SECONDS + 960))
           until [ "$(curl -fsS --max-time 5 "${RENDER_URL%/}/api/version" | jq -r .sha 2>/dev/null)" = "$SHA" ]; do
             if [ "$SECONDS" -ge "$deadline" ]; then
-              echo "::error::$RENDER_URL did not report $SHA within 10 minutes; see the service's Events in Render"
+              echo "::error::$RENDER_URL did not report $SHA within 16 minutes; see the service's Events in Render"
               exit 1
             fi
             sleep 10

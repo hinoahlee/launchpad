@@ -1,5 +1,6 @@
-# Runs `pnpm verify` (lint, typecheck, test, build) on a clean machine for every PR and every push to main.
-name: CI
+# CI/CD: verifies every PR and every push to main (lint, typecheck, test, build, image). On main it also publishes
+# the image to GHCR and deploys it to Render (`deploy`, only when the RENDER_URL variable is set).
+name: CI/CD
 
 on:
   pull_request:
@@ -8,7 +9,7 @@ on:
 
 # A newer push to the same PR/branch cancels the run it makes outdated.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: cicd-${{ github.ref }}
   cancel-in-progress: true
 
 # GITHUB_TOKEN gets read-only repo access; jobs ask for more only if they need it.
