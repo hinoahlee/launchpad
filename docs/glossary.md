@@ -242,3 +242,8 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   reads `app.tsx:42` instead of `index-a1b2.js:1:80423`. Ours are uploaded to Sentry, not served. (6.2)
 - **Sampling** — sending only a fraction of events to save cost or quota. We send 100% of errors and no
   traces (per-request timing), which would be sampled when added. (6.2)
+- **Incident** — something is broken for users right now and needs a response, not just a ticket. (6.4)
+- **MTTR (mean time to recovery)** — how long, on average, from noticing a problem to users being OK again.
+  Reverting first keeps it short. (6.4)
+- **Blameless postmortem** — a short write-up after an incident about what in the system let it happen and
+  what change would catch it next time, never about who to blame. (6.4)
