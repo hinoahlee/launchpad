@@ -1,4 +1,5 @@
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import path from "node:path";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -7,9 +8,12 @@ import postgres from "postgres";
 // installed: packages/db in dev and tests (workspace link), node_modules/@launchpad/db in the image
 // (`pnpm deploy`). Asked at call time, not from this file's location: the API bundles this code into its
 // own dist/, so a path relative to this file would point there instead.
+// require.resolve, not import.meta.resolve: same lookup, but Vitest's module runner doesn't support the latter.
 function migrationsFolder(): string {
-	return fileURLToPath(
-		new URL("migrations", import.meta.resolve("@launchpad/db/package.json")),
+	const require = createRequire(import.meta.url);
+	return path.join(
+		path.dirname(require.resolve("@launchpad/db/package.json")),
+		"migrations",
 	);
 }
 

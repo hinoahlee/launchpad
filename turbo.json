@@ -9,11 +9,23 @@
 			"dependsOn": ["^typecheck"]
 		},
 		"test": {
-			"dependsOn": ["^build"]
+			// ^test: a package's tests wait for its dependencies' tests (api waits for db). Both use the one test
+			// database and wipe it, so they must not run at the same time.
+			"dependsOn": ["^build", "^test"],
+			"passThroughEnv": ["TEST_DATABASE_URL"]
 		},
 		"dev": {
 			"cache": false,
 			"persistent": true
+		},
+		// Offline: schema.ts vs. the committed migrations. Reruns only when these inputs change.
+		"db:check": {
+			"inputs": [
+				"src/schema.ts",
+				"migrations/**",
+				"scripts/check-migrations.ts"
+			],
+			"outputs": []
 		}
 	}
 }

@@ -1,6 +1,6 @@
 # Local services for `pnpm dev`. Not used in production: Render, the VPS and AWS run their own Postgres.
-#   docker compose -f compose.dev.yml up -d     # start (data survives restarts)
-#   docker compose -f compose.dev.yml down      # stop; add -v to also delete the data
+#   pnpm db:up     # start and wait until Postgres accepts connections (data survives restarts)
+#   pnpm db:down   # stop; `docker compose -f compose.dev.yml down -v` also deletes the data
 #   docker compose -f compose.dev.yml exec postgres psql -U launchpad   # a psql shell, no local install
 
 services:

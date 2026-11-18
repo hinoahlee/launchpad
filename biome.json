@@ -46,7 +46,11 @@
 			}
 		},
 		{
-			"includes": ["apps/api/src/config.ts", "packages/db/drizzle.config.ts"],
+			"includes": [
+				"apps/api/src/config.ts",
+				"packages/db/drizzle.config.ts",
+				"packages/db/src/testing/index.ts"
+			],
 			"linter": {
 				"rules": {
 					"style": {
