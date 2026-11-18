@@ -1,10 +1,12 @@
 import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
+import { flushSentry, initSentry } from "./lib/sentry.ts";
 
 // Deploy contract: exit within 25 s of SIGTERM, before the platform's SIGKILL.
 const SHUTDOWN_TIMEOUT_MS = 25_000;
 
 const config = loadConfig();
+initSentry(config);
 const app = buildApp(config);
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
@@ -18,6 +20,8 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 
 	// Stops accepting connections, waits for in-flight requests, runs onClose hooks.
 	await app.close();
+	// Errors captured in the last moments are still in memory: send them before exiting.
+	await flushSentry();
 	app.log.info("shutdown complete");
 	process.exit(0);
 }

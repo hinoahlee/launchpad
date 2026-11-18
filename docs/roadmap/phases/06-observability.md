@@ -15,7 +15,8 @@
   when no DSN is set.
 - **Why:** errors arrive grouped, with stack traces and the release that introduced them.
 - **Terms:** error tracking, release, source map, sampling.
-- 🧑 **You:** create two Sentry projects; add the DSNs in Render (`sync: false` variables).
+- 🧑 **You:** create two Sentry projects. The API DSN goes in Render (`sync: false`); the web DSN, org, project
+  and an auth token go in GitHub (the web bundle is built in CI, so Render's variables can't reach it).
 - **Done when:** a test error shows a readable stack trace and the commit SHA.
 
 ### 6.3 Uptime + alerts

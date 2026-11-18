@@ -15,6 +15,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 8 | JSON logs to stdout with a request ID; no secrets. | One logger config (`apps/api/src/lib/logger.ts`, pino) for server, worker and migrate; secret fields redacted. The server writes one `request` line per request (method, route, url without query, status, durationMs, requestId); error bodies include `requestId`. |
 | 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Bucket in phase 11. |
 | 10 | Migrations are backward compatible with the previous release (expand/contract). | [Decision 005](decisions/005-expand-contract.md). |
+| 11 | Unexpected errors (5xx) go to Sentry when `SENTRY_DSN` is set, tagged with release (= `GIT_SHA`), environment and `requestId`. | `lib/sentry.ts`, the error handler in `app.ts`. Web: `apps/web/src/lib/sentry.ts`, DSN baked in at build (below). |
 
 ## Environment variables
 
@@ -25,5 +26,19 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `LOG_LEVEL` | `info` | `fatal` … `trace`, or `silent`. |
 | `GIT_SHA` | `dev` | Baked into the image by CI (`--build-arg`; `unknown` if built without it); reported by `GET /api/version`. Platforms don't set it. |
 | `DATABASE_URL` | required | `postgres://user:password@host:port/database`. A secret: the platform injects it (Render: `fromDatabase` in the Blueprint). |
+| `SENTRY_DSN` | unset (off) | The API's Sentry project DSN. Set in the platform (Render: `sync: false`). |
+| `SENTRY_ENVIRONMENT` | `NODE_ENV` | The environment tag on errors; set it where `NODE_ENV=production` isn't the whole story (staging). |
+| `DEBUG_ERROR_ROUTE` | `false` | `true` adds `GET /api/debug/error`, which throws. Only to check error reporting; turn it off after. |
 
 New variables are added here in the same PR as `config.ts`.
+
+## Build-time settings (CI → image)
+
+The web bundle is built inside the image, so its settings are fixed when CI builds it, not when a platform
+starts it. All are optional; unset means Sentry is off in the browser and no source maps are uploaded.
+
+| GitHub name | Kind | Notes |
+|---|---|---|
+| `SENTRY_DSN_WEB` | variable | The web Sentry project's DSN. Public: every visitor's browser downloads it. |
+| `SENTRY_ORG`, `SENTRY_PROJECT_WEB` | variables | Where the web source maps go (`launchpad-web`). |
+| `SENTRY_AUTH_TOKEN` | secret | Uploads source maps on `main` builds; a BuildKit secret, never in a layer. |

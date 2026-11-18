@@ -234,3 +234,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   sets the lowest one written; quieter lines (successful probes at `debug`) are dropped. (6.1)
 - **Redaction** — replacing a secret field's value (`password`, `authorization`) with `[redacted]` before the
   line is written, so a mistake in what you log can't leak it into the log store. (6.1)
+- **Error tracking** — a service (Sentry) that receives every unexpected error with its stack trace, groups
+  repeats into one issue, and alerts you on new ones. Logs say what happened; error tracking says what broke. (6.2)
+- **Release** — the version of the code an error came from. Here the git SHA, so an issue shows which deploy
+  introduced it and whether a later one fixed it. (6.2)
+- **Source map** — a file mapping bundled, minified code back to the original source lines, so a stack trace
+  reads `app.tsx:42` instead of `index-a1b2.js:1:80423`. Ours are uploaded to Sentry, not served. (6.2)
+- **Sampling** — sending only a fraction of events to save cost or quota. We send 100% of errors and no
+  traces (per-request timing), which would be sampled when added. (6.2)

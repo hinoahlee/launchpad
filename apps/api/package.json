@@ -20,6 +20,7 @@
 	"dependencies": {
 		"@fastify/static": "catalog:",
 		"@launchpad/db": "workspace:*",
+		"@sentry/node": "catalog:",
 		"drizzle-orm": "catalog:",
 		"fastify": "catalog:",
 		"pino": "catalog:",

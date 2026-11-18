@@ -37,6 +37,10 @@ services:
         fromDatabase:
           name: launchpad-db
           property: connectionString
+      # Sentry project launchpad-api → Client Keys (DSN). `sync: false`: the value lives only in Render's dashboard,
+      # never in this file. Unset: error tracking is off. (The web app's DSN is a GitHub variable, baked in by CI.)
+      - key: SENTRY_DSN
+        sync: false
 
 databases:
   - name: launchpad-db
