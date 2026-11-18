@@ -17,13 +17,36 @@ function migrationsFolder(): string {
 	);
 }
 
+// Migrations recorded as applied. 0 on a fresh database, where Drizzle hasn't created its table yet. Two
+// queries: Postgres resolves every table a query names before running it, so one query can't skip a missing one.
+async function appliedCount(client: postgres.Sql): Promise<number> {
+	const [table] = await client<{ exists: boolean }[]>`
+		select to_regclass('drizzle.__drizzle_migrations') is not null as exists`;
+	if (!table?.exists) return 0;
+	const [row] = await client<{ n: number }[]>`
+		select count(*)::int as n from drizzle.__drizzle_migrations`;
+	return row?.n ?? 0;
+}
+
+export type MigrationResult = {
+	// Migrations this run applied (0: the database was already up to date).
+	applied: number;
+	// Migrations recorded in the database after this run.
+	total: number;
+};
+
 // Applies every migration not yet recorded in drizzle.__drizzle_migrations, in order, in one transaction:
 // either all of them apply or none do. Safe to run again: applied ones are skipped.
-export async function runMigrations(databaseUrl: string): Promise<void> {
+export async function runMigrations(
+	databaseUrl: string,
+): Promise<MigrationResult> {
 	// One connection is enough. onnotice: silence Postgres NOTICEs ("schema already exists, skipping").
 	const client = postgres(databaseUrl, { max: 1, onnotice: () => {} });
 	try {
+		const before = await appliedCount(client);
 		await migrate(drizzle(client), { migrationsFolder: migrationsFolder() });
+		const total = await appliedCount(client);
+		return { applied: total - before, total };
 	} finally {
 		await client.end();
 	}

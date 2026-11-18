@@ -14,7 +14,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 7 | On `SIGTERM`: stop taking work, finish or hand back what's in flight, exit within 25 s. | `server.ts` (`app.close()`, 25 s timeout; closes the DB pool last), `worker.ts` |
 | 8 | JSON logs to stdout with a request ID; no secrets. | Fastify logger (`requestId`). Worker and migrate write JSON by hand until phase 6. |
 | 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Bucket in phase 11. |
-| 10 | Migrations are backward compatible with the previous release (expand/contract). | From phase 5. |
+| 10 | Migrations are backward compatible with the previous release (expand/contract). | [Decision 005](decisions/005-expand-contract.md). |
 
 ## Environment variables
 
