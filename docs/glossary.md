@@ -250,3 +250,8 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   monitor waits for 3 failures in a row and 4xx errors don't alert. (6.3)
 - **SLO (service level objective)** — a reliability target you choose, e.g. "99.9% of checks pass each month"
   (about 43 minutes of downtime allowed). It tells you when reliability needs work, not just that it failed. (6.3)
+- **Incident** — something is broken for users right now and needs a response, not just a ticket. (6.4)
+- **MTTR (mean time to recovery)** — how long, on average, from noticing a problem to users being OK again.
+  Reverting first keeps it short. (6.4)
+- **Blameless postmortem** — a short write-up after an incident about what in the system let it happen and
+  what change would catch it next time, never about who to blame. (6.4)
