@@ -25,7 +25,11 @@
   PagerDuty) is for when a team shares the pager.
 - **Why:** the simplest signal that matters: can users reach it?
 - **Terms:** uptime check, synthetic monitoring, alert fatigue, SLO.
-- **Done when:** making `/api/ready` fail (a temporarily wrong `DATABASE_URL`) triggers an alert.
+- **Done when:** a failing check triggers an alert. Test it by pointing the monitor at `/api/nope` (404), then
+  back. (A wrong `DATABASE_URL` doesn't work on Render: the bad deploy fails its health check and the old
+  version keeps serving, so the site never goes down.)
+- **Setup used:** Sentry → Monitors → Create Monitor → Uptime. `GET /api/ready`, every 1 min, 5 s timeout,
+  down after 3 failures, project `launchpad-api`. The project's default alert emails on downtime issues.
 
 ### 6.4 Drill: first incident
 - **Build:** the agent ships a bug on purpose. You follow `docs/runbooks/incident.md` (written in this step):

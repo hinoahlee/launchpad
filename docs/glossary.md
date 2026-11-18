@@ -242,6 +242,14 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   reads `app.tsx:42` instead of `index-a1b2.js:1:80423`. Ours are uploaded to Sentry, not served. (6.2)
 - **Sampling** — sending only a fraction of events to save cost or quota. We send 100% of errors and no
   traces (per-request timing), which would be sampled when added. (6.2)
+- **Uptime check** — a request sent to your site on a schedule (here `GET /api/ready` every minute) to ask
+  "can users reach it?". Fails on an error status, a timeout or no answer. (6.3)
+- **Synthetic monitoring** — checks made by a robot pretending to be a user, so you learn about an outage
+  even when no real user is on the site. An uptime check is the simplest kind. (6.3)
+- **Alert fatigue** — so many alerts, or so many false ones, that people stop paying attention. Why the
+  monitor waits for 3 failures in a row and 4xx errors don't alert. (6.3)
+- **SLO (service level objective)** — a reliability target you choose, e.g. "99.9% of checks pass each month"
+  (about 43 minutes of downtime allowed). It tells you when reliability needs work, not just that it failed. (6.3)
 - **Incident** — something is broken for users right now and needs a response, not just a ticket. (6.4)
 - **MTTR (mean time to recovery)** — how long, on average, from noticing a problem to users being OK again.
   Reverting first keeps it short. (6.4)
