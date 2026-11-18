@@ -1,7 +1,7 @@
 # Phase 6 — Observability
 
 **Goal:** you hear about problems before users do, and can find the cause quickly.
-**You'll need:** Sentry and Better Stack accounts (free). **Cost:** $0.
+**You'll need:** a Sentry account (free Developer plan: errors plus 1 uptime monitor). **Cost:** $0.
 
 ### 6.1 Searchable logs
 - **Build:** one log line per request (method, route, status, duration, request ID), secrets redacted; error
@@ -19,7 +19,9 @@
 - **Done when:** a test error shows a readable stack trace and the commit SHA.
 
 ### 6.3 Uptime + alerts
-- **Build:** nothing in code. 🧑 **You:** a Better Stack monitor on `/api/ready` that alerts you by email/phone.
+- **Build:** nothing in code. 🧑 **You:** a Sentry uptime monitor on `/api/ready` that alerts you by email (and
+  the Sentry mobile app). One account for errors and uptime; a phone-call/on-call tool (Better Stack,
+  PagerDuty) is for when a team shares the pager.
 - **Why:** the simplest signal that matters: can users reach it?
 - **Terms:** uptime check, synthetic monitoring, alert fatigue, SLO.
 - **Done when:** making `/api/ready` fail (a temporarily wrong `DATABASE_URL`) triggers an alert.

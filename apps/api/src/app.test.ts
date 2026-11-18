@@ -47,7 +47,10 @@ describe("probes", () => {
 	it("GET /api/ready → 503 when the database refuses connections", async () => {
 		const res = await app.inject({ method: "GET", url: "/api/ready" });
 		expect(res.statusCode).toBe(503);
-		expect(res.json()).toEqual({ error: "database_unavailable" });
+		expect(res.json()).toEqual({
+			error: "database_unavailable",
+			requestId: res.headers["x-request-id"],
+		});
 	});
 
 	it("GET /api/ready → 503 within the timeout when the database never answers", async () => {
@@ -191,13 +194,19 @@ describe("web app", () => {
 			headers: html,
 		});
 		expect(res.statusCode).toBe(404);
-		expect(res.json()).toEqual({ error: "not_found" });
+		expect(res.json()).toEqual({
+			error: "not_found",
+			requestId: res.headers["x-request-id"],
+		});
 	});
 
 	it("a missing asset → JSON 404, never HTML", async () => {
 		const res = await web.inject({ method: "GET", url: "/assets/gone-xyz.js" });
 		expect(res.statusCode).toBe(404);
-		expect(res.json()).toEqual({ error: "not_found" });
+		expect(res.json()).toEqual({
+			error: "not_found",
+			requestId: res.headers["x-request-id"],
+		});
 	});
 
 	it("a non-GET to a page path → JSON 404", async () => {
@@ -207,7 +216,10 @@ describe("web app", () => {
 			headers: html,
 		});
 		expect(res.statusCode).toBe(404);
-		expect(res.json()).toEqual({ error: "not_found" });
+		expect(res.json()).toEqual({
+			error: "not_found",
+			requestId: res.headers["x-request-id"],
+		});
 	});
 
 	it("production refuses to boot without a web build", () => {
@@ -223,5 +235,130 @@ describe("web app", () => {
 				{ webRoot: path.join(webRoot, "missing") },
 			),
 		).toThrow(/SPA build not found/);
+	});
+});
+
+describe("request logs", () => {
+	// Collects the JSON lines the app writes, instead of printing them.
+	function capture(level: "info" | "debug" = "info") {
+		const lines: Record<string, unknown>[] = [];
+		const logged = buildApp(
+			{
+				NODE_ENV: "test",
+				PORT: 0,
+				LOG_LEVEL: level,
+				GIT_SHA: "abc123",
+				DATABASE_URL: UNREACHABLE_DB,
+			},
+			{ logStream: { write: (line) => lines.push(JSON.parse(line)) } },
+		);
+		logged.get("/api/boom", async () => {
+			throw new Error('relation "secret_table" does not exist');
+		});
+		afterAll(() => logged.close());
+		// onResponse runs once the response is sent, which can be just after inject() resolves.
+		const requestLines = async () => {
+			await new Promise((resolve) => setImmediate(resolve));
+			return lines.filter((line) => line.msg === "request");
+		};
+		return { logged, lines, requestLines };
+	}
+
+	const { logged, lines, requestLines } = capture();
+
+	it("writes one line per request, with its ID", async () => {
+		lines.length = 0;
+		const res = await logged.inject({
+			method: "GET",
+			url: "/api/version?token=abc",
+			headers: { "x-request-id": "find-me-123" },
+		});
+		expect(await requestLines()).toEqual([
+			expect.objectContaining({
+				level: 30,
+				requestId: "find-me-123",
+				method: "GET",
+				route: "/api/version",
+				url: "/api/version", // the query string (and its token) is left out
+				status: 200,
+				durationMs: expect.any(Number),
+			}),
+		]);
+		expect(res.headers["x-request-id"]).toBe("find-me-123");
+		expect(JSON.stringify(lines)).not.toContain("token=abc");
+	});
+
+	it("logs a 5xx at error level, with the stack", async () => {
+		lines.length = 0;
+		await logged.inject({ method: "GET", url: "/api/boom" });
+		const [line] = await requestLines();
+		expect(line).toMatchObject({ level: 50, status: 500, route: "/api/boom" });
+		const error = lines.find((l) => l.msg === "unhandled error");
+		expect(error).toMatchObject({
+			level: 50,
+			requestId: line?.requestId,
+			err: { stack: expect.stringContaining("secret_table") },
+		});
+	});
+
+	it("keeps successful probes out of info", async () => {
+		lines.length = 0;
+		await logged.inject({ method: "GET", url: "/api/health" });
+		expect(await requestLines()).toEqual([]);
+	});
+
+	it("still logs a failing probe", async () => {
+		lines.length = 0;
+		await logged.inject({ method: "GET", url: "/api/ready" });
+		expect(await requestLines()).toEqual([
+			expect.objectContaining({ status: 503, url: "/api/ready" }),
+		]);
+	});
+
+	it("logs successful probes at debug", async () => {
+		const debug = capture("debug");
+		await debug.logged.inject({ method: "GET", url: "/api/health" });
+		expect(await debug.requestLines()).toEqual([
+			expect.objectContaining({ level: 20, url: "/api/health" }),
+		]);
+	});
+});
+
+describe("errors", () => {
+	const failing = buildApp({
+		NODE_ENV: "test",
+		PORT: 0,
+		LOG_LEVEL: "silent",
+		GIT_SHA: "abc123",
+		DATABASE_URL: UNREACHABLE_DB,
+	});
+	failing.get("/api/boom", async () => {
+		throw new Error('relation "secret_table" does not exist');
+	});
+	failing.post("/api/echo", async (request) => request.body);
+	afterAll(() => failing.close());
+
+	it("an unexpected error → 500 with a code and the request ID, never the message", async () => {
+		const res = await failing.inject({ method: "GET", url: "/api/boom" });
+		expect(res.statusCode).toBe(500);
+		expect(res.json()).toEqual({
+			error: "internal_error",
+			requestId: res.headers["x-request-id"],
+		});
+		expect(res.body).not.toContain("secret_table");
+	});
+
+	it("a client error Fastify raises → its status as a snake_case code", async () => {
+		const res = await failing.inject({
+			method: "POST",
+			url: "/api/echo",
+			headers: { "content-type": "application/json" },
+			payload: "{not json",
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json()).toEqual({
+			error: "bad_request",
+			requestId: res.headers["x-request-id"],
+		});
 	});
 });

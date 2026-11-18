@@ -226,3 +226,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   snapshot before it, plus the WAL replayed up to that moment. On Render, into a new database. (5.6)
 - **RPO / RTO** — recovery point objective: how much recent data you can afford to lose. Recovery time
   objective: how long getting it back may take. A drill measures both. (5.6)
+- **Structured logging** — each log line is JSON with named fields (`status`, `route`, `requestId`), not a
+  sentence, so a log tool can filter and search by field instead of by text. (6.1)
+- **Correlation ID (request ID)** — one ID given to a request and stamped on every log line, error body and
+  header it produces, so one search finds everything that happened to it. Here: `x-request-id`. (6.1)
+- **Log level** — how serious a line is: `trace` < `debug` < `info` < `warn` < `error` < `fatal`. `LOG_LEVEL`
+  sets the lowest one written; quieter lines (successful probes at `debug`) are dropped. (6.1)
+- **Redaction** — replacing a secret field's value (`password`, `authorization`) with `[redacted]` before the
+  line is written, so a mistake in what you log can't leak it into the log store. (6.1)

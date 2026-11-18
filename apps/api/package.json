@@ -22,6 +22,7 @@
 		"@launchpad/db": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"fastify": "catalog:",
+		"pino": "catalog:",
 		"postgres": "catalog:",
 		"zod": "catalog:"
 	},
