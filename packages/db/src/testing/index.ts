@@ -50,7 +50,7 @@ export async function resetTestDatabase(
 	} catch (error) {
 		throw new Error(
 			`Can't prepare the test database on ${server.host}. Is Postgres running? ` +
-				"docker compose -f compose.dev.yml up -d --wait",
+				"Start it with: pnpm db:up",
 			{ cause: error },
 		);
 	} finally {
