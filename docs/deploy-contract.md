@@ -8,7 +8,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 1 | One image, non-root, `linux/amd64`, published once per `main` commit as `ghcr.io/<owner>/<repo>:<sha>`; platforms run it by digest. | `Dockerfile` (`USER node`). `.github/workflows/cicd.yml` (`image` job, `platforms: linux/amd64`; `publish` job). |
 | 2 | `node dist/server.js` (the default `CMD`): SPA + `/api` on `$PORT`. | `server.ts`, `app.ts` |
 | 3 | `node dist/worker.js`: background jobs. | `worker.ts` (stub: idles until phase 8) |
-| 4 | `node dist/migrate.js`: apply migrations, exit 0/1; run once before new code starts. | `migrate.ts` → `runMigrations` (`packages/db`), SQL from `dist/migrations` (copied in by the build) |
+| 4 | `node dist/migrate.js`: apply migrations, exit 0/1; run once before new code starts. | `migrate.ts` → `runMigrations` (`packages/db`), which reads the SQL shipped inside `@launchpad/db` |
 | 5 | Config from environment variables only; invalid config exits non-zero at boot. | `config.ts` (Zod). The server also refuses to boot in production without the SPA build. |
 | 6 | `/api/health` = process alive. `/api/ready` = can serve traffic (checks the DB). `/api/version` = the build's commit. | `app.ts`. `/ready` adds the DB check in phase 5. The image's `HEALTHCHECK` calls `/api/health`. |
 | 7 | On `SIGTERM`: stop taking work, finish or hand back what's in flight, exit within 25 s. | `server.ts` (`app.close()`, 25 s timeout), `worker.ts` |

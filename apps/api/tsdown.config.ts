@@ -11,8 +11,6 @@ export default defineConfig({
 	target: "node24",
 	fixedExtension: false, // dist/server.js, not .mjs (package.json already says "type": "module")
 	sourcemap: true, // stack traces point at src/*.ts lines (with `node --enable-source-maps`)
-	// SQL files for dist/migrate.js. `pnpm deploy` ships dist/, so they reach the image with no Dockerfile change.
-	copy: [{ from: "../../packages/db/migrations", to: "dist" }],
 	deps: {
 		// Workspace packages export raw .ts, which Node refuses to type-strip under node_modules (where
 		// `pnpm deploy` puts them), so they're bundled in. Their npm dependencies must then be listed in this

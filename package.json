@@ -16,7 +16,7 @@
 		"test": "turbo run test",
 		"verify": "biome check . && turbo run typecheck test build",
 		"db:generate": "pnpm --filter @launchpad/db db:generate",
-		"db:migrate": "pnpm --filter @launchpad/db db:migrate",
+		"db:migrate": "pnpm --filter @launchpad/api db:migrate",
 		"db:check": "pnpm --filter @launchpad/db db:check",
 		"db:studio": "pnpm --filter @launchpad/db db:studio"
 	},

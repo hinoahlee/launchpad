@@ -4,11 +4,15 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./package.json": "./package.json"
 	},
+	"files": [
+		"src",
+		"migrations"
+	],
 	"scripts": {
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "node --env-file-if-exists=../../apps/api/.env scripts/migrate.ts",
 		"db:check": "node scripts/check-migrations.ts",
 		"db:studio": "node --env-file-if-exists=../../apps/api/.env node_modules/drizzle-kit/bin.cjs studio",
 		"typecheck": "tsc"
