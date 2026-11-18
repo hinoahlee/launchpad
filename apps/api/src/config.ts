@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+// An optional URL where an empty value (`SENTRY_DSN=` in .env) means "not set".
+const optionalUrl = z
+	.url()
+	.optional()
+	.or(z.literal("").transform(() => undefined));
+
 // Every environment variable the API reads, parsed once at boot. Nothing else reads process.env.
 const envSchema = z.object({
 	NODE_ENV: z
@@ -17,6 +23,12 @@ const envSchema = z.object({
 	DATABASE_URL: z
 		.url({ protocol: /^postgres(ql)?$/ })
 		.describe("postgres://user:password@host:port/database"),
+	// Where errors are reported (Sentry project launchpad-api → Client Keys). Unset: Sentry is off.
+	SENTRY_DSN: optionalUrl,
+	// The environment tag on every error (production, staging...). Unset: NODE_ENV.
+	SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+	// Adds GET /api/debug/error, which throws, to check error reporting end to end. Turn on, test, turn off.
+	DEBUG_ERROR_ROUTE: z.stringbool().default(false),
 });
 
 export type Config = z.infer<typeof envSchema>;

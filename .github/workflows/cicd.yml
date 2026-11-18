@@ -72,7 +72,16 @@ jobs:
           # Render, AWS and most VPSs run x86-64; say so instead of relying on the runner's default.
           platforms: linux/amd64
           push: false
-          build-args: GIT_SHA=${{ github.sha }}
+          # GIT_SHA and the web bundle's Sentry settings (public values; empty until the repository variables
+          # are set, which keeps Sentry off). Keep in sync with `publish`, so it reuses these layers.
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            SENTRY_DSN_WEB=${{ vars.SENTRY_DSN_WEB }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT_WEB=${{ vars.SENTRY_PROJECT_WEB }}
+          # Source maps go to Sentry for main builds only (the code that gets deployed), never for PRs.
+          # Secrets don't change the layer cache key, so `publish` reuses this build, upload already done.
+          secrets: ${{ github.event_name == 'push' && format('sentry_auth_token={0}', secrets.SENTRY_AUTH_TOKEN) || '' }}
           # Layer cache in GitHub's Actions cache. `mode=max` also keeps the build stage's layers (the slow
           # `pnpm fetch`), which aren't part of the final image.
           cache-from: type=gha
@@ -127,8 +136,14 @@ jobs:
           # A plain single-image manifest, so the digest is the image itself (provenance attestations would
           # wrap it in an index). Supply-chain attestations come with scanning in step 14.5.
           provenance: false
-          # Same value as in `image`, so every layer comes from its cache.
-          build-args: GIT_SHA=${{ github.sha }}
+          # Same values as in `image`, so every layer comes from its cache. The token is passed too, in case the
+          # cache missed and the web bundle is rebuilt here (the upload is idempotent per release).
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            SENTRY_DSN_WEB=${{ vars.SENTRY_DSN_WEB }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT_WEB=${{ vars.SENTRY_PROJECT_WEB }}
+          secrets: sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
           cache-from: type=gha
 
       - name: Summary

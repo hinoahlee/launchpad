@@ -15,7 +15,15 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm fetch
 COPY . .
 RUN pnpm install --offline --frozen-lockfile
-RUN pnpm --filter @launchpad/api --filter @launchpad/web build
+# Baked into the web bundle at build time (apps/web/src/config.ts): public values, readable in any browser.
+# The SENTRY_* ones are empty unless CI's Sentry variables are set; then Sentry stays off in the browser.
+ARG GIT_SHA=unknown
+ARG SENTRY_DSN_WEB=""
+ARG SENTRY_ORG=""
+ARG SENTRY_PROJECT_WEB=""
+# The Sentry auth token (source map upload) is a BuildKit secret: present during this RUN only, never written
+# to a layer or the image history. Without it the build skips source maps (apps/web/vite.config.ts).
+RUN --mount=type=secret,id=sentry_auth_token,env=SENTRY_AUTH_TOKEN     VITE_GIT_SHA="$GIT_SHA" VITE_SENTRY_DSN="$SENTRY_DSN_WEB"     SENTRY_ORG="$SENTRY_ORG" SENTRY_PROJECT="$SENTRY_PROJECT_WEB"     pnpm --filter @launchpad/api --filter @launchpad/web build
 # A self-contained copy of the API package: package.json, dist/, and only production node_modules.
 RUN pnpm deploy --legacy --filter @launchpad/api --prod /out/api
 

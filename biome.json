@@ -48,6 +48,7 @@
 		{
 			"includes": [
 				"apps/api/src/config.ts",
+				"apps/web/vite.config.ts",
 				"packages/db/drizzle.config.ts",
 				"packages/db/src/testing/index.ts"
 			],

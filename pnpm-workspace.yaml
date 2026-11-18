@@ -20,6 +20,10 @@ overrides:
 
 catalog:
   "@biomejs/biome": 2.6.7
+  # One version for all three: they share @sentry/core. 11.10.0: the newest release at least two weeks old.
+  "@sentry/bundler-plugins": 11.10.0
+  "@sentry/node": 11.10.0
+  "@sentry/react": 11.10.0
   "@fastify/static": 10.1.11
   "@types/node": 24.19.2
   "@types/react": 19.3.0

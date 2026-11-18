@@ -13,6 +13,7 @@ import Fastify, {
 import type { DestinationStream } from "pino";
 import type { Config } from "./config.ts";
 import { loggerOptions } from "./lib/logger.ts";
+import { reportError } from "./lib/sentry.ts";
 
 // `app.db` in every route and plugin, typed.
 declare module "fastify" {
@@ -152,6 +153,7 @@ export function buildApp(
 		if (status >= 500) {
 			// The stack goes to the log; the client gets a code, never the message (it can name tables, hosts...).
 			request.log.error({ err }, "unhandled error");
+			reportError(err, request.id);
 			return { error: "internal_error" };
 		}
 		return { error: statusCode(status) };
@@ -177,6 +179,13 @@ export function buildApp(
 
 			// Which build is answering. The deploy job polls this until it reports the commit it deployed.
 			api.get("/version", async () => ({ sha: config.GIT_SHA }));
+
+			// Off unless DEBUG_ERROR_ROUTE=true: a public route that throws would let anyone fill the Sentry quota.
+			if (config.DEBUG_ERROR_ROUTE) {
+				api.get("/debug/error", async () => {
+					throw new Error("Test error from GET /api/debug/error");
+				});
+			}
 		},
 		{ prefix: "/api" },
 	);

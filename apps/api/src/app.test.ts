@@ -15,6 +15,7 @@ const app = buildApp({
 	PORT: 0,
 	LOG_LEVEL: "silent",
 	GIT_SHA: "abc123",
+	DEBUG_ERROR_ROUTE: false,
 	DATABASE_URL: UNREACHABLE_DB,
 });
 afterAll(() => app.close());
@@ -33,6 +34,7 @@ describe("probes", () => {
 			PORT: 0,
 			LOG_LEVEL: "silent",
 			GIT_SHA: "abc123",
+			DEBUG_ERROR_ROUTE: false,
 			DATABASE_URL: testDatabaseUrl(),
 		});
 		try {
@@ -71,6 +73,7 @@ describe("probes", () => {
 				PORT: 0,
 				LOG_LEVEL: "silent",
 				GIT_SHA: "abc123",
+				DEBUG_ERROR_ROUTE: false,
 				DATABASE_URL: `postgres://test:test@127.0.0.1:${address.port}/test`,
 			},
 			{ readyTimeoutMs: 200 },
@@ -146,6 +149,7 @@ describe("web app", () => {
 			PORT: 0,
 			LOG_LEVEL: "silent",
 			GIT_SHA: "abc123",
+			DEBUG_ERROR_ROUTE: false,
 			DATABASE_URL: "postgres://test:test@localhost:5432/test",
 		},
 		{ webRoot },
@@ -230,6 +234,7 @@ describe("web app", () => {
 					PORT: 0,
 					LOG_LEVEL: "silent",
 					GIT_SHA: "abc123",
+					DEBUG_ERROR_ROUTE: false,
 					DATABASE_URL: "postgres://test:test@localhost:5432/test",
 				},
 				{ webRoot: path.join(webRoot, "missing") },
@@ -248,6 +253,7 @@ describe("request logs", () => {
 				PORT: 0,
 				LOG_LEVEL: level,
 				GIT_SHA: "abc123",
+				DEBUG_ERROR_ROUTE: false,
 				DATABASE_URL: UNREACHABLE_DB,
 			},
 			{ logStream: { write: (line) => lines.push(JSON.parse(line)) } },
@@ -330,6 +336,7 @@ describe("errors", () => {
 		PORT: 0,
 		LOG_LEVEL: "silent",
 		GIT_SHA: "abc123",
+		DEBUG_ERROR_ROUTE: false,
 		DATABASE_URL: UNREACHABLE_DB,
 	});
 	failing.get("/api/boom", async () => {

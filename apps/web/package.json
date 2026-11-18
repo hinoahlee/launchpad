@@ -13,12 +13,14 @@
 		"typecheck": "tsc"
 	},
 	"dependencies": {
+		"@sentry/react": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@launchpad/tsconfig": "workspace:*",
+		"@sentry/bundler-plugins": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
