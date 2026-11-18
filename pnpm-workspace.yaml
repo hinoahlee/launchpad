@@ -28,6 +28,8 @@ catalog:
   drizzle-kit: 0.31.11
   drizzle-orm: 0.45.4
   fastify: 5.12.8
+  # The version Fastify itself uses, so there is one copy (and one set of types).
+  pino: 10.4.0
   # 3.x, not 4.x: drizzle-orm 0.45 predates postgres.js 4 (Oct 2026). Renovate proposes the major later.
   postgres: 3.4.9
   react: 19.3.1

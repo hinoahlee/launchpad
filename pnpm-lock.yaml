@@ -200,6 +200,9 @@ catalogs:
     fastify:
       specifier: 5.12.8
       version: 5.12.8
+    pino:
+      specifier: 10.4.0
+      version: 10.4.0
     postgres:
       specifier: 3.4.9
       version: 3.4.9
@@ -259,6 +262,9 @@ importers:
       fastify:
         specifier: 'catalog:'
         version: 5.12.8
+      pino:
+        specifier: 'catalog:'
+        version: 10.4.0
       postgres:
         specifier: 'catalog:'
         version: 3.4.9

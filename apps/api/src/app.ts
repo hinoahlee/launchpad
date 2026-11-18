@@ -1,11 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import { STATUS_CODES } from "node:http";
 import path from "node:path";
 import fastifyStatic from "@fastify/static";
 import { createDb, type Database } from "@launchpad/db";
 import { sql } from "drizzle-orm";
-import Fastify, { type FastifyInstance, LogController } from "fastify";
+import Fastify, {
+	type FastifyError,
+	type FastifyInstance,
+	LogController,
+} from "fastify";
+import type { DestinationStream } from "pino";
 import type { Config } from "./config.ts";
+import { loggerOptions } from "./lib/logger.ts";
 
 // `app.db` in every route and plugin, typed.
 declare module "fastify" {
@@ -23,6 +30,17 @@ const DEFAULT_WEB_ROOT = path.resolve(import.meta.dirname, "../../web/dist");
 
 const API_PATH = /^\/api(\/|\?|$)/;
 
+// Probes the platform calls every few seconds. Their successful lines go to `debug`, so they don't bury real
+// traffic at the default `info` level; a failing probe still logs at `info` or above.
+const PROBES = new Set(["/api/health", "/api/ready"]);
+
+// 413 → "payload_too_large": the error code for a client error Fastify raised itself (bad JSON, body too big).
+function statusCode(status: number): string {
+	return (STATUS_CODES[status] ?? "error")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "_");
+}
+
 // How long /api/ready waits for the database. Well under Render's 5 s per health check, so a slow database
 // shows up as our 503, not as a check that timed out with no answer.
 const READY_TIMEOUT_MS = 2_000;
@@ -32,6 +50,8 @@ export type BuildOptions = {
 	webRoot?: string;
 	// Tests shorten it to keep the "database never answers" case fast.
 	readyTimeoutMs?: number;
+	// Where log lines go (default stdout). Tests capture them here.
+	logStream?: DestinationStream;
 };
 
 // Rejects if `promise` hasn't settled within `ms`. The query itself isn't cancelled: it ends on its own
@@ -50,11 +70,20 @@ export function buildApp(
 	{
 		webRoot = DEFAULT_WEB_ROOT,
 		readyTimeoutMs = READY_TIMEOUT_MS,
+		logStream,
 	}: BuildOptions = {},
 ): FastifyInstance {
 	const app = Fastify({
-		logger: { level: config.LOG_LEVEL },
-		logController: new LogController({ requestIdLogLabel: "requestId" }),
+		logger: {
+			...loggerOptions(config.LOG_LEVEL),
+			...(logStream && { stream: logStream }),
+		},
+		logController: new LogController({
+			requestIdLogLabel: "requestId",
+			// Fastify's own two lines per request ("incoming request", "request completed") are replaced by
+			// the single line in onResponse below.
+			disableRequestLogging: true,
+		}),
 		genReqId: (req) => {
 			const incoming = req.headers["x-request-id"];
 			return typeof incoming === "string" && REQUEST_ID.test(incoming)
@@ -74,6 +103,58 @@ export function buildApp(
 	// Echo the ID back so a user or another service can quote it when reporting a problem.
 	app.addHook("onRequest", async (request, reply) => {
 		reply.header("x-request-id", request.id);
+	});
+
+	// Every error body carries the ID too: `{ error, requestId }`. Someone pasting the response into a bug
+	// report hands you the search term for the logs.
+	app.addHook("preSerialization", async (request, reply, payload) => {
+		if (
+			reply.statusCode >= 400 &&
+			typeof payload === "object" &&
+			payload !== null &&
+			"error" in payload
+		) {
+			return { ...payload, requestId: request.id };
+		}
+		return payload;
+	});
+
+	// One line per request, written once the response is sent. `requestId` is added by the request's logger.
+	app.addHook("onResponse", async (request, reply) => {
+		const status = reply.statusCode;
+		const level =
+			status >= 500
+				? "error"
+				: status < 400 && PROBES.has(request.url)
+					? "debug"
+					: "info";
+		request.log[level](
+			{
+				method: request.method,
+				// The pattern (`/api/users/:id`) groups requests to one endpoint; unset when nothing matched.
+				route: request.routeOptions.url,
+				// The path as called, without the query string (which can carry tokens).
+				url: request.url.split("?")[0],
+				status,
+				durationMs: Math.round(reply.elapsedTime),
+			},
+			"request",
+		);
+	});
+
+	// Anything a route throws, plus Fastify's own client errors (bad JSON, body too large).
+	app.setErrorHandler((err: FastifyError, request, reply) => {
+		const status =
+			err.statusCode !== undefined && err.statusCode >= 400
+				? err.statusCode
+				: 500;
+		reply.code(status);
+		if (status >= 500) {
+			// The stack goes to the log; the client gets a code, never the message (it can name tables, hosts...).
+			request.log.error({ err }, "unhandled error");
+			return { error: "internal_error" };
+		}
+		return { error: statusCode(status) };
 	});
 
 	app.register(

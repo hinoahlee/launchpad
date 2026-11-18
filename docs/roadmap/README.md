@@ -17,7 +17,7 @@ like you're shadowing a principal engineer.
 | 3 | [First deploy (Render)](phases/03-render.md) | done |
 | 4 | [Render delivery](phases/04-render-delivery.md) | done |
 | 5 | [Database](phases/05-database.md) | done |
-| 6 | [Observability](phases/06-observability.md) | not started |
+| 6 | [Observability](phases/06-observability.md) | in progress |
 | 7 | [App foundations](phases/07-app-foundations.md) | not started |
 | 8 | [Background jobs](phases/08-jobs.md) | not started |
 | 9 | [Email](phases/09-email.md) | not started |
@@ -51,7 +51,7 @@ same image. Each platform is opt-in: the template runs and passes CI with no clo
 | API / web | Fastify + Zod / Vite + React, TanStack Router + Query, Tailwind + shadcn/ui |
 | Data | PostgreSQL 17 + Drizzle; jobs queued in Postgres |
 | Auth | Better Auth: sessions in Postgres; cookie on web, `Authorization` header on mobile |
-| Services | Resend (email), R2 / S3 (files), Stripe (billing), Sentry (errors), Better Stack (uptime) |
+| Services | Resend (email), R2 / S3 (files), Stripe (billing), Sentry (errors + uptime) |
 | Hosting | Render (paid): web, worker, Postgres. Later: VPS, then AWS (optional) |
 | Delivery | GitHub Actions is the only CI/CD: image to GHCR, deploy by digest; Cloudflare DNS; Terraform for AWS |
 
