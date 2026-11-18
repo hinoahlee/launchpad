@@ -36,3 +36,6 @@ Thumbs.db
 # The global gitignore on this machine hides these; this repo commits them on purpose
 !CLAUDE.md
 !.claude/
+
+# drizzle-kit scratch output from `pnpm db:check`
+.migrations-check/

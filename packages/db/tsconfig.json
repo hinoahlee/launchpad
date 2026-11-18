@@ -1,0 +1,7 @@
+{
+	"extends": "@launchpad/tsconfig/base.json",
+	"compilerOptions": {
+		"types": ["node"]
+	},
+	"include": ["src", "scripts", "drizzle.config.ts"]
+}

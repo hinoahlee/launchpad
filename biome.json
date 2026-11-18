@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!**/*.md", "!**/*.svg"]
+		"includes": ["**", "!**/*.md", "!**/*.svg", "!packages/db/migrations"]
 	},
 	"linter": {
 		"rules": {
@@ -16,7 +16,9 @@
 				"noProcessEnv": "error",
 				"useFilenamingConvention": {
 					"level": "error",
-					"options": { "filenameCases": ["kebab-case"] }
+					"options": {
+						"filenameCases": ["kebab-case"]
+					}
 				},
 				"noRestrictedImports": {
 					"level": "error",
@@ -35,11 +37,23 @@
 	"overrides": [
 		{
 			"includes": ["**/*.config.ts"],
-			"linter": { "rules": { "style": { "noDefaultExport": "off" } } }
+			"linter": {
+				"rules": {
+					"style": {
+						"noDefaultExport": "off"
+					}
+				}
+			}
 		},
 		{
-			"includes": ["apps/api/src/config.ts"],
-			"linter": { "rules": { "style": { "noProcessEnv": "off" } } }
+			"includes": ["apps/api/src/config.ts", "packages/db/drizzle.config.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noProcessEnv": "off"
+					}
+				}
+			}
 		}
 	]
 }

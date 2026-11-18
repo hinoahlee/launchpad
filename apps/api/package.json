@@ -14,11 +14,15 @@
 		"build": "tsdown",
 		"start": "node --enable-source-maps dist/server.js",
 		"typecheck": "tsc",
-		"test": "vitest run"
+		"test": "vitest run",
+		"db:migrate": "node --env-file-if-exists=.env src/migrate.ts"
 	},
 	"dependencies": {
 		"@fastify/static": "catalog:",
+		"@launchpad/db": "workspace:*",
+		"drizzle-orm": "catalog:",
 		"fastify": "catalog:",
+		"postgres": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

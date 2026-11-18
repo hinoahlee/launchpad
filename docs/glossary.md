@@ -193,3 +193,13 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   `postgres://user:password@host:port/database`. It holds the password, so treat it as a secret. (5.1)
 - **Container volume** — storage Docker keeps outside a container's own filesystem; a named volume survives
   the container being removed, so the database's data does too (until `down -v`). (5.1)
+- **Schema** — the shape of the database: tables, columns, types, constraints. Here it's written in
+  TypeScript (`packages/db/src/schema.ts`), so queries are type-checked against it. (5.2)
+- **ORM (object-relational mapper)** — a library that maps tables to code and builds SQL for you. Drizzle is a
+  thin one: its queries read like SQL and you can always see the SQL it runs. (5.2)
+- **DDL (data definition language)** — SQL that changes structure, not data: `CREATE TABLE`, `ALTER TABLE`,
+  `CREATE INDEX`. (5.2)
+- **Migration** — a numbered SQL file of DDL that moves the schema one step forward. Applied in order, once
+  each; the database records which ones ran (`drizzle.__drizzle_migrations`). (5.2)
+- **`citext`** — a Postgres extension type: text compared case-insensitively, so `Bob@x.com` = `bob@x.com`
+  for uniqueness and lookups, while the original casing is kept for display. (5.2)

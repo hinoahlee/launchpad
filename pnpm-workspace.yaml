@@ -4,6 +4,12 @@ packages:
 
 engineStrict: true
 
+# Dependency install scripts run only if listed here as true (pnpm fails the install on unlisted ones).
+allowBuilds:
+  # drizzle-kit's esbuild: its postinstall only double-checks the binary, which already arrives as a
+  # platform-specific optional dependency. Denied: no third-party code runs at install time.
+  esbuild: false
+
 catalog:
   "@biomejs/biome": 2.6.7
   "@fastify/static": 10.1.11
@@ -11,7 +17,11 @@ catalog:
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
   "@vitejs/plugin-react": 6.3.0
+  drizzle-kit: 0.31.11
+  drizzle-orm: 0.45.4
   fastify: 5.12.8
+  # 3.x, not 4.x: drizzle-orm 0.45 predates postgres.js 4 (Oct 2026). Renovate proposes the major later.
+  postgres: 3.4.9
   react: 19.3.1
   react-dom: 19.3.1
   tsdown: 0.23.7

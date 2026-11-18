@@ -13,6 +13,9 @@ safety rules and code conventions. During a phase, read only that phase's file i
   (listen, signals). Dev runs `.ts` directly with Node; `pnpm build` bundles `server`, `worker`, `migrate`
   into `dist/` with tsdown.
 - `apps/web`: Vite + React SPA. In dev, Vite proxies `/api` to the API (one origin, as in production).
+- `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
+  (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
+  is the one migrate entrypoint (deploy: `node dist/migrate.js`; dev: `pnpm db:migrate`).
 - `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
 - References (read-only): `../turborepo`, `../mixmallow`
 
@@ -27,8 +30,13 @@ pnpm lint        # biome check (lint + format check), no writes
 pnpm format      # biome check --write: fix formatting and safe lint fixes
 pnpm test        # turbo: tests in every package
 pnpm verify      # lint, then typecheck + test + build: "is this safe to merge?"
+pnpm db:generate # schema.ts changed → write the next migration (review the SQL, commit it)
+pnpm db:migrate  # apply migrations to DATABASE_URL (apps/api/.env); the same file deploys run
+pnpm db:check    # fail if schema.ts has changes no migration covers
+pnpm db:studio   # browse the database in the browser
 ```
-Local config: each app's `.env` (copy of its `.env.example`), loaded by `pnpm dev`. Agents never read `.env`.
+Local Postgres: `docker compose -f compose.dev.yml up -d --wait`.
+Local config: each app's `.env` (copy of its `.env.example`), loaded by `pnpm dev` and the `db:*` scripts. Agents never read `.env`.
 
 Shared versions live in the `catalog:` in `pnpm-workspace.yaml`; packages use `"catalog:"`.
 
