@@ -12,8 +12,14 @@ const config = loadConfig();
 
 try {
 	log(30, "applying migrations");
-	await runMigrations(config.DATABASE_URL);
-	log(30, "migrations applied");
+	const { applied, total } = await runMigrations(config.DATABASE_URL);
+	// The deploy log's proof of what this release changed: "applied 1" before the new code starts.
+	log(
+		30,
+		applied > 0
+			? `migrations applied: ${applied} new (${total} total)`
+			: `database up to date: no new migrations (${total} total)`,
+	);
 } catch (error) {
 	// Messages only, not the error objects (which can carry connection details). Drizzle wraps the
 	// driver's error ("Failed query: ...") and keeps the real reason in `cause`.

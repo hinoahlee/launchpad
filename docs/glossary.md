@@ -215,3 +215,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   emptied before every test, and test files sharing the database run one at a time. (5.4)
 - **Factory** — a test helper that creates a valid record with sensible defaults (`insertUser(db, { email })`),
   so a test only spells out the fields it's about. (5.4)
+- **Backward-compatible migration** — a schema change the release still serving keeps working with: it only
+  adds (a table, a nullable or defaulted column) or removes what nothing reads any more. (5.5)
+- **Expand/contract** — a breaking change split across releases: expand (add the new shape), move the code and
+  data over, then contract (drop the old shape) once no running release uses it. A rename takes 3–4 PRs. (5.5)
