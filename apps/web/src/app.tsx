@@ -6,7 +6,6 @@ import viteLogo from "./assets/vite.svg";
 import "./app.css";
 
 const healthSchema = z.object({ status: z.literal("ok") });
-const versionSchema = z.object({ version: z.string() });
 
 function useApiStatus() {
 	const [status, setStatus] = useState("checking");
@@ -23,23 +22,9 @@ function useApiStatus() {
 	return status;
 }
 
-// The commit the API is running, shortened like GitHub does.
-function useApiVersion() {
-	const [version, setVersion] = useState("…");
-	useEffect(() => {
-		fetch("/api/version")
-			.then((res) => res.json())
-			.then((body) =>
-				setVersion(versionSchema.parse(body).version.slice(0, 7)),
-			);
-	}, []);
-	return version;
-}
-
 export function App() {
 	const [count, setCount] = useState(0);
 	const apiStatus = useApiStatus();
-	const apiVersion = useApiVersion();
 
 	return (
 		<>
@@ -55,7 +40,6 @@ export function App() {
 						Edit <code>src/app.tsx</code> and save to test <code>HMR</code>
 					</p>
 					<p>API: {apiStatus}</p>
-					<p>Version: {apiVersion}</p>
 				</div>
 				<button
 					type="button"
