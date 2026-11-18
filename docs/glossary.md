@@ -209,3 +209,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   can't hang your code forever. (5.3)
 - **HTTP 503 (Service Unavailable)** — "I'm running but can't serve right now", e.g. the database is down.
   Load balancers stop sending traffic to an instance that answers 503 on its readiness probe. (5.3)
+- **Service container** — a container CI starts next to a job (here Postgres in the `verify` job), reachable
+  on a port, deleted with the job. Gives tests a real dependency with no shared state between runs. (5.4)
+- **Test isolation** — each test runs from a known state and can't see another test's data. Here: tables are
+  emptied before every test, and test files sharing the database run one at a time. (5.4)
+- **Factory** — a test helper that creates a valid record with sensible defaults (`insertUser(db, { email })`),
+  so a test only spells out the fields it's about. (5.4)

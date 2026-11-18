@@ -15,7 +15,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `apps/web`: Vite + React SPA. In dev, Vite proxies `/api` to the API (one origin, as in production).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
-  is the one migrate entrypoint (deploy: `node dist/migrate.js`; dev: `pnpm db:migrate`).
+  is the one migrate entrypoint (deploy: `node dist/migrate.js`; dev: `pnpm db:migrate`). Test helpers
+  (`@launchpad/db/testing`): `_test`-only guard, schema reset, `truncateAll`, factories like `insertUser`.
 - `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
 - References (read-only): `../turborepo`, `../mixmallow`
 
@@ -28,8 +29,8 @@ pnpm build       # turbo: build in dependency order (cached)
 pnpm typecheck   # turbo: tsc in every package
 pnpm lint        # biome check (lint + format check), no writes
 pnpm format      # biome check --write: fix formatting and safe lint fixes
-pnpm test        # turbo: tests in every package
-pnpm verify      # lint, then typecheck + test + build: "is this safe to merge?"
+pnpm test        # turbo: tests in every package (needs compose Postgres: tests use launchpad_test)
+pnpm verify      # lint, then typecheck + test + build + db:check: "is this safe to merge?"
 pnpm db:generate # schema.ts changed → write the next migration (review the SQL, commit it)
 pnpm db:migrate  # apply migrations to DATABASE_URL (apps/api/.env); the same file deploys run
 pnpm db:check    # fail if schema.ts has changes no migration covers

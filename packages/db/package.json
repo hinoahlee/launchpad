@@ -5,7 +5,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./package.json": "./package.json"
+		"./package.json": "./package.json",
+		"./testing": "./src/testing/index.ts"
 	},
 	"files": [
 		"src",
@@ -15,7 +16,8 @@
 		"db:generate": "drizzle-kit generate",
 		"db:check": "node scripts/check-migrations.ts",
 		"db:studio": "node --env-file-if-exists=../../apps/api/.env node_modules/drizzle-kit/bin.cjs studio",
-		"typecheck": "tsc"
+		"typecheck": "tsc",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"drizzle-orm": "catalog:",
@@ -25,6 +27,7 @@
 		"@launchpad/tsconfig": "workspace:*",
 		"@types/node": "catalog:",
 		"drizzle-kit": "catalog:",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	}
 }

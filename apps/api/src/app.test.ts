@@ -2,11 +2,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { testDatabaseUrl } from "@launchpad/db/testing";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "./app.ts";
 
-// Port 1 on this machine: nothing listens there, so every connection is refused at once. These tests never
-// reach a real database; the ones that need one come with the test database (step 5.4).
+// Port 1 on this machine: nothing listens there, so every connection is refused at once. Most tests here
+// don't need a database; the ones that do build their own app on the test database.
 const UNREACHABLE_DB = "postgres://test:test@127.0.0.1:1/test";
 
 const app = buildApp({
@@ -24,6 +25,23 @@ describe("probes", () => {
 		const res = await app.inject({ method: "GET", url: "/api/health" });
 		expect(res.statusCode).toBe(200);
 		expect(res.json()).toEqual({ status: "ok" });
+	});
+
+	it("GET /api/ready → 200 ok when the database answers", async () => {
+		const ready = buildApp({
+			NODE_ENV: "test",
+			PORT: 0,
+			LOG_LEVEL: "silent",
+			GIT_SHA: "abc123",
+			DATABASE_URL: testDatabaseUrl(),
+		});
+		try {
+			const res = await ready.inject({ method: "GET", url: "/api/ready" });
+			expect(res.statusCode).toBe(200);
+			expect(res.json()).toEqual({ status: "ok" });
+		} finally {
+			await ready.close();
+		}
 	});
 
 	it("GET /api/ready → 503 when the database refuses connections", async () => {
