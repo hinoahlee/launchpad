@@ -1,29 +1,71 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "./app.ts";
+
+// Port 1 on this machine: nothing listens there, so every connection is refused at once. These tests never
+// reach a real database; the ones that need one come with the test database (step 5.4).
+const UNREACHABLE_DB = "postgres://test:test@127.0.0.1:1/test";
 
 const app = buildApp({
 	NODE_ENV: "test",
 	PORT: 0,
 	LOG_LEVEL: "silent",
 	GIT_SHA: "abc123",
-	DATABASE_URL: "postgres://test:test@localhost:5432/test",
+	DATABASE_URL: UNREACHABLE_DB,
 });
 afterAll(() => app.close());
 
 describe("probes", () => {
-	it("GET /api/health → 200 ok", async () => {
+	it("GET /api/health → 200 ok, even with the database down", async () => {
+		// This app's database is unreachable: liveness must not depend on it.
 		const res = await app.inject({ method: "GET", url: "/api/health" });
 		expect(res.statusCode).toBe(200);
 		expect(res.json()).toEqual({ status: "ok" });
 	});
 
-	it("GET /api/ready → 200 ok", async () => {
+	it("GET /api/ready → 503 when the database refuses connections", async () => {
 		const res = await app.inject({ method: "GET", url: "/api/ready" });
-		expect(res.statusCode).toBe(200);
-		expect(res.json()).toEqual({ status: "ok" });
+		expect(res.statusCode).toBe(503);
+		expect(res.json()).toEqual({ error: "database_unavailable" });
+	});
+
+	it("GET /api/ready → 503 within the timeout when the database never answers", async () => {
+		// Accepts TCP connections but never speaks Postgres: the client waits for a reply that never comes,
+		// like a database that's overloaded or behind a dropped network path.
+		const sockets = new Set<Socket>();
+		const silent = createServer((socket) => sockets.add(socket));
+		await new Promise<void>((resolve) =>
+			silent.listen(0, "127.0.0.1", resolve),
+		);
+		const address = silent.address();
+		if (address === null || typeof address === "string")
+			throw new Error("no port");
+
+		const stuck = buildApp(
+			{
+				NODE_ENV: "test",
+				PORT: 0,
+				LOG_LEVEL: "silent",
+				GIT_SHA: "abc123",
+				DATABASE_URL: `postgres://test:test@127.0.0.1:${address.port}/test`,
+			},
+			{ readyTimeoutMs: 200 },
+		);
+		try {
+			const started = Date.now();
+			const res = await stuck.inject({ method: "GET", url: "/api/ready" });
+			expect(res.statusCode).toBe(503);
+			expect(Date.now() - started).toBeLessThan(2_000);
+		} finally {
+			// End the pool with no grace period: app.close() alone would give the stuck query its full 5 s.
+			await stuck.db.$client.end({ timeout: 0 });
+			await stuck.close();
+			for (const socket of sockets) socket.destroy();
+			silent.close();
+		}
 	});
 
 	it("GET /api/version → the build's commit", async () => {

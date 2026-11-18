@@ -203,3 +203,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   each; the database records which ones ran (`drizzle.__drizzle_migrations`). (5.2)
 - **`citext`** — a Postgres extension type: text compared case-insensitively, so `Bob@x.com` = `bob@x.com`
   for uniqueness and lookups, while the original casing is kept for display. (5.2)
+- **Connection pool** — a set of open database connections a process keeps and reuses, so a request doesn't
+  pay for a new connection (several network round-trips plus authentication) each time. (5.3)
+- **Timeout** — the longest you'll wait for something before treating it as failed, so a stuck dependency
+  can't hang your code forever. (5.3)
+- **HTTP 503 (Service Unavailable)** — "I'm running but can't serve right now", e.g. the database is down.
+  Load balancers stop sending traffic to an instance that answers 503 on its readiness probe. (5.3)

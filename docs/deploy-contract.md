@@ -10,8 +10,8 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 3 | `node dist/worker.js`: background jobs. | `worker.ts` (stub: idles until phase 8) |
 | 4 | `node dist/migrate.js`: apply migrations, exit 0/1; run once before new code starts. | `migrate.ts` → `runMigrations` (`packages/db`), which reads the SQL shipped inside `@launchpad/db` |
 | 5 | Config from environment variables only; invalid config exits non-zero at boot. | `config.ts` (Zod). The server also refuses to boot in production without the SPA build. |
-| 6 | `/api/health` = process alive. `/api/ready` = can serve traffic (checks the DB). `/api/version` = the build's commit. | `app.ts`. `/ready` adds the DB check in phase 5. The image's `HEALTHCHECK` calls `/api/health`. |
-| 7 | On `SIGTERM`: stop taking work, finish or hand back what's in flight, exit within 25 s. | `server.ts` (`app.close()`, 25 s timeout), `worker.ts` |
+| 6 | `/api/health` = process alive. `/api/ready` = can serve traffic (checks the DB). `/api/version` = the build's commit. | `app.ts`. `/ready` runs `select 1` with a 2 s timeout → 503 `database_unavailable`. The image's `HEALTHCHECK` calls `/api/health`. |
+| 7 | On `SIGTERM`: stop taking work, finish or hand back what's in flight, exit within 25 s. | `server.ts` (`app.close()`, 25 s timeout; closes the DB pool last), `worker.ts` |
 | 8 | JSON logs to stdout with a request ID; no secrets. | Fastify logger (`requestId`). Worker and migrate write JSON by hand until phase 6. |
 | 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Bucket in phase 11. |
 | 10 | Migrations are backward compatible with the previous release (expand/contract). | From phase 5. |
