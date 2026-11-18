@@ -219,3 +219,10 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   adds (a table, a nullable or defaulted column) or removes what nothing reads any more. (5.5)
 - **Expand/contract** — a breaking change split across releases: expand (add the new shape), move the code and
   data over, then contract (drop the old shape) once no running release uses it. A rename takes 3–4 PRs. (5.5)
+- **Logical vs. physical backup** — logical: the data exported as SQL or a dump file (`pg_dump`), restorable on
+  any Postgres. Physical: a copy of the database's files plus its change log (WAL), restorable only on the same
+  Postgres version, but to any moment. (5.6)
+- **Point-in-time recovery (PITR)** — rebuild the database as it was at a chosen moment: the last physical
+  snapshot before it, plus the WAL replayed up to that moment. On Render, into a new database. (5.6)
+- **RPO / RTO** — recovery point objective: how much recent data you can afford to lose. Recovery time
+  objective: how long getting it back may take. A drill measures both. (5.6)

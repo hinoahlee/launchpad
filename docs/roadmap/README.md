@@ -16,7 +16,7 @@ like you're shadowing a principal engineer.
 | 2 | [Continuous integration](phases/02-ci.md) | done |
 | 3 | [First deploy (Render)](phases/03-render.md) | done |
 | 4 | [Render delivery](phases/04-render-delivery.md) | done |
-| 5 | [Database](phases/05-database.md) | in progress |
+| 5 | [Database](phases/05-database.md) | done |
 | 6 | [Observability](phases/06-observability.md) | not started |
 | 7 | [App foundations](phases/07-app-foundations.md) | not started |
 | 8 | [Background jobs](phases/08-jobs.md) | not started |
@@ -35,7 +35,9 @@ like you're shadowing a principal engineer.
 | 21 | [Later: mobile, enterprise](phases/21-later.md) | — |
 
 Follow-ups noticed along the way:
-- None open.
+- Phase 15 (rotate secrets): the 5.6 drill rotated the database password after a leak. Learned: a new Render
+  credential reaches the app only after a Blueprint **Manual Sync** and a redeploy; check `session_user` (the
+  login), not `current_user` (Render's new login acts as the original owner role), before deleting the old one.
 
 ## What we're building
 
