@@ -4,14 +4,26 @@ import { STATUS_CODES } from "node:http";
 import path from "node:path";
 import fastifyStatic from "@fastify/static";
 import { createDb, type Database } from "@launchpad/db";
+import {
+	errorResponseSchema,
+	healthResponseSchema,
+	versionResponseSchema,
+} from "@launchpad/shared";
 import { sql } from "drizzle-orm";
 import Fastify, {
 	type FastifyError,
 	type FastifyInstance,
 	LogController,
 } from "fastify";
+import {
+	hasZodFastifySchemaValidationErrors,
+	serializerCompiler,
+	validatorCompiler,
+	type ZodTypeProvider,
+} from "fastify-type-provider-zod";
 import type { DestinationStream } from "pino";
 import type { Config } from "./config.ts";
+import { greetingRoutes } from "./features/greeting/routes.ts";
 import { loggerOptions } from "./lib/logger.ts";
 import { reportError } from "./lib/sentry.ts";
 
@@ -93,6 +105,11 @@ export function buildApp(
 		},
 	});
 
+	// Route schemas are Zod schemas (from @launchpad/shared): Zod checks each request and shapes each response.
+	// Set before any route is added: Fastify compiles a route's schemas when the route is registered.
+	app.setValidatorCompiler(validatorCompiler);
+	app.setSerializerCompiler(serializerCompiler);
+
 	// The pool opens connections on first use, so building the app never touches the database. Closed last
 	// on shutdown: app.close() waits for in-flight requests first, then runs onClose hooks.
 	const db = createDb(config.DATABASE_URL);
@@ -145,6 +162,17 @@ export function buildApp(
 
 	// Anything a route throws, plus Fastify's own client errors (bad JSON, body too large).
 	app.setErrorHandler((err: FastifyError, request, reply) => {
+		// A request that doesn't match its route's schema: say which fields are wrong, so the caller can fix it.
+		if (hasZodFastifySchemaValidationErrors(err)) {
+			reply.code(400);
+			return {
+				error: "validation_failed",
+				details: err.validation.map((issue) => ({
+					path: issue.instancePath,
+					message: issue.message,
+				})),
+			};
+		}
 		const status =
 			err.statusCode !== undefined && err.statusCode >= 400
 				? err.statusCode
@@ -160,16 +188,26 @@ export function buildApp(
 	});
 
 	app.register(
-		async (api) => {
+		async (root) => {
+			// Typed routes: each handler's request and return value are inferred from its Zod schemas.
+			const api = root.withTypeProvider<ZodTypeProvider>();
+
 			// Liveness: failing means "restart me". Never check dependencies here: restarts don't fix a DB outage.
-			api.get("/health", async () => ({ status: "ok" }));
+			api.get(
+				"/health",
+				{ schema: { response: { 200: healthResponseSchema } } },
+				async () => ({ status: "ok" as const }),
+			);
 
 			// Readiness: failing means "stop routing to me": this instance can't do its job without the database.
 			// During shutdown Fastify already answers 503 (`return503OnClosing`).
-			api.get("/ready", async (request, reply) => {
+			const readySchema = {
+				response: { 200: healthResponseSchema, 503: errorResponseSchema },
+			};
+			api.get("/ready", { schema: readySchema }, async (request, reply) => {
 				try {
 					await withTimeout(db.execute(sql`select 1`), readyTimeoutMs);
-					return { status: "ok" };
+					return { status: "ok" as const };
 				} catch (err) {
 					request.log.warn({ err }, "readiness check failed");
 					reply.code(503);
@@ -178,7 +216,13 @@ export function buildApp(
 			});
 
 			// Which build is answering. The deploy job polls this until it reports the commit it deployed.
-			api.get("/version", async () => ({ sha: config.GIT_SHA }));
+			api.get(
+				"/version",
+				{ schema: { response: { 200: versionResponseSchema } } },
+				async () => ({ sha: config.GIT_SHA }),
+			);
+
+			api.register(greetingRoutes);
 
 			// Off unless DEBUG_ERROR_ROUTE=true: a public route that throws would let anyone fill the Sentry quota.
 			if (config.DEBUG_ERROR_ROUTE) {

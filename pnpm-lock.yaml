@@ -209,6 +209,9 @@ catalogs:
     fastify:
       specifier: 5.12.8
       version: 5.12.8
+    fastify-type-provider-zod:
+      specifier: 7.0.0
+      version: 7.0.0
     pino:
       specifier: 10.4.0
       version: 10.4.0
@@ -243,6 +246,8 @@ catalogs:
 overrides:
   '@esbuild-kit/core-utils>esbuild': 0.25.12
 
+packageExtensionsChecksum: sha256-iI5Wn8rOLAa2Tg/hdNPdKBByg54wzq4m+/xVX/7wJCs=
+
 importers:
 
   .:
@@ -265,6 +270,9 @@ importers:
       '@launchpad/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@launchpad/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@sentry/node':
         specifier: 'catalog:'
         version: 11.10.0
@@ -274,6 +282,9 @@ importers:
       fastify:
         specifier: 'catalog:'
         version: 5.12.8
+      fastify-type-provider-zod:
+        specifier: 'catalog:'
+        version: 7.0.0(fastify@5.12.8)(zod@4.6.7)
       pino:
         specifier: 'catalog:'
         version: 10.4.0
@@ -302,6 +313,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@launchpad/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@sentry/react':
         specifier: 'catalog:'
         version: 11.10.0(react@19.3.1)
@@ -361,6 +375,19 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15))
+
+  packages/shared:
+    dependencies:
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      '@launchpad/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/tsconfig: {}
 
@@ -1697,6 +1724,19 @@ packages:
 
   fastify-plugin@6.0.1:
     resolution: {integrity: sha512-4wW4RxSmvPXLrh5mgQEiu43qU3bw44N2ss4FTkTkQIbprUhE+/s43QX0j/ttcztdWK7PEkHqVthdc5GdEGDvjA==}
+
+  fastify-type-provider-zod@7.0.0:
+    resolution: {integrity: sha512-yUEKMyy+kml+4fzUU9GxVtYVKmPKNFo8OVd2N/RH2I/7JZiKvOqF1BUj3f/JJU3DDQDM7pMv2bf/Y8COPaxUWg==}
+    peerDependencies:
+      '@fastify/swagger': '>=9.5.1'
+      fastify: ^5.5.0
+      openapi-types: ^12.1.3
+      zod: '>=4.1.5'
+    peerDependenciesMeta:
+      '@fastify/swagger':
+        optional: true
+      openapi-types:
+        optional: true
 
   fastify@5.12.8:
     resolution: {integrity: sha512-moP8exb2sCHLUbJkwp+I6C0padhy4D8lp0SdmzY7HhSdZuqm7O/u3o2aq7u8okaQ//33QDzj3G/u+FsSdB8Qzw==}
@@ -3085,6 +3125,12 @@ snapshots:
   fast-uri@4.2.3: {}
 
   fastify-plugin@6.0.1: {}
+
+  fastify-type-provider-zod@7.0.0(fastify@5.12.8)(zod@4.6.7):
+    dependencies:
+      '@fastify/error': 4.2.1
+      fastify: 5.12.8
+      zod: 4.6.7
 
   fastify@5.12.8:
     dependencies:
