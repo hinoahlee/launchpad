@@ -18,7 +18,7 @@ like you're shadowing a principal engineer.
 | 4 | [Render delivery](phases/04-render-delivery.md) | done |
 | 5 | [Database](phases/05-database.md) | done |
 | 6 | [Observability](phases/06-observability.md) | done |
-| 7 | [App foundations](phases/07-app-foundations.md) | in progress |
+| 7 | [App foundations](phases/07-app-foundations.md) | done |
 | 8 | [Background jobs](phases/08-jobs.md) | not started |
 | 9 | [Email](phases/09-email.md) | not started |
 | 10 | [Auth](phases/10-auth.md) | not started |
@@ -35,9 +35,12 @@ like you're shadowing a principal engineer.
 | 21 | [Later: mobile, enterprise](phases/21-later.md) | — |
 
 Follow-ups noticed along the way:
-- Phase 7 (app foundations): a Sentry `tunnel` (browser errors sent via our own `/api` route), so ad blockers
-  don't hide them; seen in the 6.4 drill. `packages/shared` now exists (7.1). It would also let the CSP drop
-  its Sentry hosts from `connect-src` (7.2).
+- Phase 14 (hardening): a Sentry `tunnel` (browser errors sent via our own `/api` route), so ad blockers
+  don't hide them; seen in the 6.4 drill. It would also let the CSP drop its Sentry hosts from `connect-src`
+  (7.2). Not done in phase 7: no step named it.
+- Phase 14 (hardening): confirm rate limits key on each visitor's real IP (`TRUST_PROXY_HOPS`, 7.2) by hitting
+  production from a second network. E2E (7.5) can't check it: one machine, no proxy in front.
+- Before launch: replace the placeholder `contactEmail` in `apps/web/src/lib/site.ts` (7.4).
 - Next dependency update: Dependabot flags `glob` and `minimatch` (moderate, build-time) via the Sentry and
   `@fastify/static` packages. Bump when they ship patched versions, or add `overrides` like the esbuild one.
 - Phase 15 (rotate secrets): the 5.6 drill rotated the database password after a leak. Learned: a new Render
