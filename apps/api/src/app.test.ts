@@ -210,9 +210,7 @@ describe("web app", () => {
 		expect(csp).toContain("script-src-attr 'none'");
 		expect(csp).toContain("object-src 'none'");
 		expect(csp).toContain("frame-ancestors 'none'");
-		// Inline styles are allowed (Radix's scroll lock); inline scripts never are.
-		const scriptSrc = csp.split(";").find((d) => d.startsWith("script-src "));
-		expect(scriptSrc).toBe("script-src 'self'");
+		expect(csp).not.toContain("unsafe-inline");
 		expect(res.headers["strict-transport-security"]).toBe(
 			"max-age=31536000; includeSubDomains",
 		);

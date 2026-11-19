@@ -13,7 +13,8 @@
 		"typecheck": "tsc"
 	},
 	"dependencies": {
-		"@fontsource-variable/inter": "catalog:",
+		"@base-ui/react": "catalog:",
+		"@fontsource-variable/geist": "catalog:",
 		"@launchpad/shared": "workspace:*",
 		"@sentry/react": "catalog:",
 		"@tanstack/react-query": "catalog:",
@@ -21,7 +22,6 @@
 		"class-variance-authority": "catalog:",
 		"cn": "catalog:",
 		"lucide-react": "catalog:",
-		"radix-ui": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"tw-animate-css": "catalog:",

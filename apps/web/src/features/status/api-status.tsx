@@ -30,7 +30,6 @@ export function ApiStatus() {
 				<Button
 					variant="outline"
 					size="icon"
-					className="size-11"
 					aria-label="Check again"
 					disabled={health.isFetching}
 					onClick={() => queryClient.invalidateQueries(healthQuery)}

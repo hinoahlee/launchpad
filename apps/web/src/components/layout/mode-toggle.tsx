@@ -8,37 +8,25 @@ import {
 	DropdownMenuTrigger,
 } from "#components/ui/dropdown-menu.tsx";
 
-// shadcn/ui's Vite dark-mode pattern: a menu of Light / Dark / System. The icon follows the applied theme
-// through CSS (`dark:`), so it's right from the first paint.
+// shadcn/ui's dark-mode pattern: a menu of Light / Dark / System. The icon follows the applied theme through
+// CSS (`dark:`), so it's right from the first paint. Base UI's `render` puts the trigger's behavior on our Button.
 export function ModeToggle() {
-	const { theme, setTheme } = useTheme();
+	const { setTheme } = useTheme();
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				{/* size-11: a 44px touch target. */}
-				<Button variant="ghost" size="icon" className="size-11">
-					<Sun className="dark:hidden" />
-					<Moon className="hidden dark:block" />
-					<span className="sr-only">Change theme</span>
-				</Button>
+			<DropdownMenuTrigger render={<Button variant="outline" size="icon" />}>
+				<Sun className="dark:hidden" />
+				<Moon className="hidden dark:block" />
+				<span className="sr-only">Change theme</span>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				<DropdownMenuItem
-					data-active={theme === "light"}
-					onSelect={() => setTheme("light")}
-				>
+				<DropdownMenuItem onClick={() => setTheme("light")}>
 					<Sun /> Light
 				</DropdownMenuItem>
-				<DropdownMenuItem
-					data-active={theme === "dark"}
-					onSelect={() => setTheme("dark")}
-				>
+				<DropdownMenuItem onClick={() => setTheme("dark")}>
 					<Moon /> Dark
 				</DropdownMenuItem>
-				<DropdownMenuItem
-					data-active={theme === "system"}
-					onSelect={() => setTheme("system")}
-				>
+				<DropdownMenuItem onClick={() => setTheme("system")}>
 					<Monitor /> System
 				</DropdownMenuItem>
 			</DropdownMenuContent>
