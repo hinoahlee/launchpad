@@ -43,6 +43,8 @@ Follow-ups noticed along the way:
 - Before launch: replace the placeholder `contactEmail` in `apps/web/src/lib/site.ts` (7.4).
 - Next dependency update: Dependabot flags `glob` and `minimatch` (moderate, build-time) via the Sentry and
   `@fastify/static` packages. Bump when they ship patched versions, or add `overrides` like the esbuild one.
+- Phase 15 (operations): a runbook to inspect and requeue `failed` jobs (8.2 keeps them; nothing retries them),
+  and an alert when jobs fail. `prune-jobs` (8.3) only deletes `done` jobs.
 - Phase 15 (rotate secrets): the 5.6 drill rotated the database password after a leak. Learned: a new Render
   credential reaches the app only after a Blueprint **Manual Sync** and a redeploy; check `session_user` (the
   login), not `current_user` (Render's new login acts as the original owner role), before deleting the old one.

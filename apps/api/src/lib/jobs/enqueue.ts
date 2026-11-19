@@ -15,14 +15,40 @@ export async function enqueue<T extends JobType>(
 	tx: Database | Transaction,
 	type: T,
 	payload: JobInput<T>,
-	{ runAfter }: EnqueueOptions = {},
+	options: EnqueueOptions = {},
 ): Promise<string> {
+	const id = await insertJob(tx, type, payload, options);
+	if (!id) throw new Error("insert returned no row");
+	return id;
+}
+
+// Queues a job unless one with this `key` was ever queued (`jobs.key` is unique). Returns false when it already
+// exists. Safe to call from many processes at once: the database keeps exactly one row per key.
+export async function enqueueOnce<T extends JobType>(
+	tx: Database | Transaction,
+	key: string,
+	type: T,
+	payload: JobInput<T>,
+	options: EnqueueOptions = {},
+): Promise<boolean> {
+	return (await insertJob(tx, type, payload, options, key)) !== undefined;
+}
+
+async function insertJob<T extends JobType>(
+	tx: Database | Transaction,
+	type: T,
+	payload: JobInput<T>,
+	{ runAfter }: EnqueueOptions,
+	key?: string,
+): Promise<string | undefined> {
 	const parsed = jobTypes[type].parse(payload);
+	// With a key, a duplicate inserts nothing and returns no row. Without one, there's nothing to conflict on.
 	const [job] = await tx
 		.insert(jobs)
-		.values({ type, payload: parsed, ...(runAfter && { runAfter }) })
+		.values({ type, payload: parsed, key, ...(runAfter && { runAfter }) })
+		.onConflictDoNothing({ target: jobs.key })
 		.returning({ id: jobs.id });
-	if (!job) throw new Error("insert returned no row");
+	if (!job) return undefined;
 	// Wakes idle workers at once instead of at their next poll. Sent on commit; dropped on rollback.
 	await notifyWorkers(tx);
 	return job.id;

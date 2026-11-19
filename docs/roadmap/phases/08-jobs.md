@@ -19,11 +19,13 @@
 ### 8.3 Recurring jobs
 - **Build:** cron-style schedules that fire once even with several workers.
 - **Terms:** cron expression, scheduler, singleton job.
-- **Done when:** a sample hourly job runs once per hour on the deployed app.
+- **Done when:** tests show each run is queued once however many workers schedule it, and two local workers
+  started together queue the hourly job once. (The deployed check moved to 8.4: the worker isn't on Render yet.)
 
 ### 8.4 Run the worker on Render
 - **Build:** a background worker in `render.yaml` from the same image, deployed by the same job (added now,
   not earlier: an idle stub would cost ~$7/mo);
   `DATABASE_DIRECT_URL` for `LISTEN` when a connection pooler is in front.
 - **Terms:** worker process, connection pooler (transaction vs. session mode).
-- **Done when:** the worker runs on Render and processes a job.
+- **Done when:** the worker runs on Render and processes a job, and the hourly `prune-jobs` job runs once per
+  hour there.

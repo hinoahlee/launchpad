@@ -10,6 +10,7 @@ import {
 	completeJob,
 	failJob,
 	MAX_ATTEMPTS,
+	pruneDoneJobs,
 	releaseJob,
 } from "./queue.ts";
 
@@ -292,5 +293,34 @@ describe("releaseJob", () => {
 			leaseExpiresAt: null,
 		});
 		expect((await claimOrThrow()).attempts).toBe(1);
+	});
+});
+
+describe("pruneDoneJobs", () => {
+	it("deletes done jobs older than the cutoff and keeps everything else", async () => {
+		const ageDays = async (id: string, days: number) =>
+			db
+				.update(jobs)
+				.set({ updatedAt: sql`now() - make_interval(days => ${days})` })
+				.where(eq(jobs.id, id));
+		const finish = async (message: string, status: "done" | "failed") => {
+			const id = await enqueue(db, "echo", { message });
+			await db.update(jobs).set({ status }).where(eq(jobs.id, id));
+			return id;
+		};
+
+		const oldDone = await finish("old done", "done");
+		const recentDone = await finish("recent done", "done");
+		const oldFailed = await finish("old failed", "failed");
+		const oldQueued = await enqueue(db, "echo", { message: "old queued" });
+		// After the status updates: Drizzle sets updatedAt to now on every update it builds.
+		for (const id of [oldDone, oldFailed, oldQueued]) await ageDays(id, 8);
+		await ageDays(recentDone, 6);
+
+		expect(await pruneDoneJobs(db, 7)).toBe(1);
+		const left = (await db.select({ id: jobs.id }).from(jobs)).map((j) => j.id);
+		expect(left.sort()).toEqual([recentDone, oldFailed, oldQueued].sort());
+		// Running it again finds nothing: safe to run twice.
+		expect(await pruneDoneJobs(db, 7)).toBe(0);
 	});
 });

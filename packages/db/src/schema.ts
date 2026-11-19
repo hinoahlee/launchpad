@@ -60,6 +60,10 @@ export const jobs = pgTable(
 		// and another worker may take it (8.2).
 		leaseExpiresAt: timestamptz("lease_expires_at"),
 		lastError: text("last_error"),
+		// Optional and unique: a second job with the same key is never inserted. Recurring jobs use it so each run
+		// is queued once however many workers schedule it, e.g. "prune-jobs:2026-01-01T10:00:00.000Z". Postgres
+		// allows any number of NULLs in a unique column, so jobs without a key are unaffected.
+		key: text("key").unique(),
 		createdAt: timestamptz("created_at").defaultNow().notNull(),
 		updatedAt: timestamptz("updated_at")
 			.defaultNow()

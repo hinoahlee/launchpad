@@ -236,6 +236,9 @@ catalogs:
     cn:
       specifier: 0.5.2
       version: 0.5.2
+    croner:
+      specifier: 11.0.0
+      version: 11.0.0
     drizzle-kit:
       specifier: 0.31.11
       version: 0.31.11
@@ -333,6 +336,9 @@ importers:
       '@sentry/node':
         specifier: 'catalog:'
         version: 11.10.0
+      croner:
+        specifier: 'catalog:'
+        version: 11.0.0
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.4(@opentelemetry/api@1.10.0)(postgres@3.4.9)
@@ -2173,6 +2179,10 @@ packages:
   cookie@2.0.2:
     resolution: {integrity: sha512-SL0cVuEdETEp7pN0FuZb01toc3vnODEfVUCooxG1SJN0yIirh7JMb9X9bvfCFf0vzzbT68RdbKDHYTiWy7a7iw==}
     engines: {node: '>=22'}
+
+  croner@11.0.0:
+    resolution: {integrity: sha512-T17ADjdttrVToyzLpLq9Xb9xzcMwpQ/M3Qs9szhh0MVNTbv6NWQ9OFYa2qlzPYXFMn+uoDlnW1IpIv6cAvFtyA==}
+    engines: {node: '>=18.0'}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -4900,6 +4910,8 @@ snapshots:
   cookie-es@3.1.1: {}
 
   cookie@2.0.2: {}
+
+  croner@11.0.0: {}
 
   cross-spawn@7.0.6:
     dependencies:

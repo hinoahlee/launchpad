@@ -322,3 +322,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   of waiting. Lets many workers pull from one table without taking the same job. (8.2)
 - **`LISTEN` / `NOTIFY`** — Postgres' built-in messages: a worker listens on a channel, `enqueue()` notifies it,
   and the message arrives when the transaction commits. Polling stays as a fallback. (8.2)
+- **Cron expression** — five fields, "minute hour day-of-month month day-of-week", describing when something
+  repeats: `0 * * * *` = every hour on the hour, `30 3 * * 1` = Mondays 03:30. Ours are read in UTC. (8.3)
+- **Scheduler** — the part that turns schedules into jobs at the right times. Ours only queues; the worker runs
+  the jobs like any other. Every worker runs one, so there's no single scheduler process to keep alive. (8.3)
+- **Singleton job** — a job that must exist at most once, however many processes try to create it. Here: a
+  unique `jobs.key` (`prune-jobs:2026-01-01T10:00:00.000Z`), so the second insert does nothing. (8.3)

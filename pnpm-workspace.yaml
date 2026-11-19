@@ -55,6 +55,8 @@ catalog:
   class-variance-authority: 0.7.1
   # shadcn's class-name merger (clsx + tailwind-merge in one); `shadcn init` installs it since Sep 2026.
   cn: 0.5.2
+  # Cron expressions → run times, for recurring jobs. 11.0.0, not 11.0.1: two-week rule.
+  croner: 11.0.0
   drizzle-kit: 0.31.11
   drizzle-orm: 0.45.4
   fastify: 5.12.8

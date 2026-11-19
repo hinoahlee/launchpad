@@ -25,6 +25,7 @@
 		"@launchpad/db": "workspace:*",
 		"@launchpad/shared": "workspace:*",
 		"@sentry/node": "catalog:",
+		"croner": "catalog:",
 		"drizzle-orm": "catalog:",
 		"fastify": "catalog:",
 		"fastify-type-provider-zod": "catalog:",

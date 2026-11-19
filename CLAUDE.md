@@ -22,6 +22,7 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `apps/api/src/lib/jobs`: background jobs. Job types and their Zod payloads in `job-types.ts`;
   `enqueue(tx, type, payload)` inside the transaction that saves the job's data (`jobs` table in `@launchpad/db`).
   One handler per type in `handlers.ts` (must be idempotent); `queue.ts` claims/finishes rows; `worker.ts` runs the loop.
+  Recurring jobs: add to `schedules.ts` (cron, UTC); `scheduler.ts` queues each run once via `enqueueOnce`.
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
