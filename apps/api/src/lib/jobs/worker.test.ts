@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "#lib/logger.ts";
 import { enqueue } from "./enqueue.ts";
-import type { JobHandlers } from "./handlers.ts";
+import { handlers, type JobHandlers } from "./handlers.ts";
 import { startWorker, type Worker, type WorkerOptions } from "./worker.ts";
 
 const db = createTestDb();
@@ -25,7 +25,7 @@ async function start(
 	worker = await startWorker({
 		db,
 		log,
-		handlers: { echo },
+		handlers: { ...handlers, echo },
 		pollIntervalMs: 60_000,
 		...options,
 	});

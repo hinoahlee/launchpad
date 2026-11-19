@@ -179,3 +179,25 @@ export async function releaseJob(
 		.returning({ id: jobs.id });
 	return released.length > 0;
 }
+
+// Deletes `done` jobs that finished more than `olderThanDays` ago and returns how many. `failed` jobs are kept:
+// someone should look at them first. Their keys go too, which is safe: a schedule only ever queues its latest
+// run (scheduler.ts), never one from days ago.
+export async function pruneDoneJobs(
+	db: Database | Transaction,
+	olderThanDays: number,
+): Promise<number> {
+	const deleted = await db
+		.delete(jobs)
+		.where(
+			and(
+				eq(jobs.status, "done"),
+				lt(
+					jobs.updatedAt,
+					sql`now() - make_interval(days => ${olderThanDays})`,
+				),
+			),
+		)
+		.returning({ id: jobs.id });
+	return deleted.length;
+}

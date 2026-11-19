@@ -1,6 +1,7 @@
 import type { Database } from "@launchpad/db";
 import type { Logger } from "pino";
 import type { JobPayload, JobType } from "./job-types.ts";
+import { pruneDoneJobs } from "./queue.ts";
 
 export type JobContext = {
 	db: Database;
@@ -26,5 +27,10 @@ export type JobHandlers = { [T in JobType]: JobHandler<T> };
 export const handlers: JobHandlers = {
 	echo: async ({ message }, { log }) => {
 		log.info({ message }, "echo");
+	},
+	// Idempotent as it is: a second run finds nothing left to delete.
+	"prune-jobs": async ({ olderThanDays }, { db, log }) => {
+		const deleted = await pruneDoneJobs(db, olderThanDays);
+		log.info({ deleted, olderThanDays }, "pruned done jobs");
 	},
 };

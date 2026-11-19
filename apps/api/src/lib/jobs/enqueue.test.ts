@@ -3,7 +3,7 @@ import { createTestDb, insertUser } from "@launchpad/db/testing";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { ZodError } from "zod";
-import { enqueue } from "./enqueue.ts";
+import { enqueue, enqueueOnce } from "./enqueue.ts";
 
 const db = createTestDb();
 afterAll(() => db.$client.end());
@@ -79,5 +79,44 @@ describe("enqueue", () => {
 				sql`insert into jobs (type, payload, status) values ('echo', '{}', 'finished')`,
 			),
 		).rejects.toMatchObject({ cause: { code: "23514" } }); // check_violation
+	});
+});
+
+describe("enqueueOnce", () => {
+	it("queues a job the first time a key is used, and never again", async () => {
+		expect(await enqueueOnce(db, "welcome:42", "echo", { message: "hi" })).toBe(
+			true,
+		);
+		expect(await enqueueOnce(db, "welcome:42", "echo", { message: "hi" })).toBe(
+			false,
+		);
+		const rows = await db.select().from(jobs);
+		expect(rows).toMatchObject([{ key: "welcome:42", status: "queued" }]);
+	});
+
+	it("still refuses the key after the first job has finished", async () => {
+		await enqueueOnce(db, "welcome:42", "echo", { message: "hi" });
+		await db.update(jobs).set({ status: "done" });
+		expect(await enqueueOnce(db, "welcome:42", "echo", { message: "hi" })).toBe(
+			false,
+		);
+	});
+
+	it("frees the key again when the transaction that used it rolls back", async () => {
+		await db
+			.transaction(async (tx) => {
+				await enqueueOnce(tx, "welcome:42", "echo", { message: "hi" });
+				throw new Error("rollback");
+			})
+			.catch(() => {});
+		expect(await enqueueOnce(db, "welcome:42", "echo", { message: "hi" })).toBe(
+			true,
+		);
+	});
+
+	it("leaves jobs without a key unaffected", async () => {
+		await enqueue(db, "echo", { message: "one" });
+		await enqueue(db, "echo", { message: "two" });
+		expect(await db.$count(jobs)).toBe(2);
 	});
 });
