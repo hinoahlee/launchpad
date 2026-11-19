@@ -209,6 +209,41 @@ describe("leases", () => {
 			lastError: "lease expired",
 		});
 	});
+
+	it("doesn't wait on an abandoned job another worker is sweeping", async () => {
+		const abandoned = await enqueue(db, "echo", { message: "orphan" });
+		await db
+			.update(jobs)
+			.set({ attempts: MAX_ATTEMPTS - 1 })
+			.where(eq(jobs.id, abandoned));
+		await claimOrThrow();
+		await expireLease(abandoned);
+		const fresh = await enqueue(db, "echo", { message: "fresh" });
+
+		// Another worker in the middle of sweeping `abandoned`: it holds that row's lock until we let it finish.
+		const lockTaken = Promise.withResolvers<void>();
+		const finishOther = Promise.withResolvers<void>();
+		const otherWorker = db.transaction(async (tx) => {
+			await tx.select().from(jobs).where(eq(jobs.id, abandoned)).for("update");
+			lockTaken.resolve();
+			await finishOther.promise;
+		});
+		await lockTaken.promise;
+
+		try {
+			// Without SKIP LOCKED in the sweep, this would wait on the locked row and time out.
+			expect(await claimJob(db, LEASE_MS)).toMatchObject({ id: fresh });
+			// Skipped, not swept: it's still the other worker's to handle.
+			expect((await getJob(abandoned)).status).toBe("running");
+		} finally {
+			finishOther.resolve();
+			await otherWorker;
+		}
+
+		// Once the lock is gone, the next claim sweeps it.
+		expect(await claimJob(db, LEASE_MS)).toBeNull();
+		expect((await getJob(abandoned)).status).toBe("failed");
+	});
 });
 
 describe("fencing", () => {

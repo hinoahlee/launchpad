@@ -1,5 +1,5 @@
 import { type Database, jobs, type Transaction } from "@launchpad/db";
-import { and, eq, gte, lt, lte, or, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 
 // The consumer side of the queue: what a worker does with a row. Every write after the claim is fenced: it
 // only applies while the row is still `running` with the `attempts` value this worker claimed it with.
@@ -51,7 +51,10 @@ export async function claimJob(
 			lt(jobs.leaseExpiresAt, sql`now()`),
 		);
 
-		// 1. Abandoned jobs that already used their last attempt: give up on them.
+		// 1. Abandoned jobs that already used their last attempt: give up on them. Only rows no other worker has
+		// locked (SKIP LOCKED again): a plain UPDATE would wait for another worker's sweep of the same rows, and
+		// two sweeps locking rows in different orders could deadlock. A row we skip is swept by whoever holds
+		// it, or by the next claim.
 		await tx
 			.update(jobs)
 			.set({
@@ -59,7 +62,16 @@ export async function claimJob(
 				leaseExpiresAt: null,
 				lastError: "lease expired",
 			})
-			.where(and(leaseExpired, gte(jobs.attempts, MAX_ATTEMPTS)));
+			.where(
+				inArray(
+					jobs.id,
+					tx
+						.select({ id: jobs.id })
+						.from(jobs)
+						.where(and(leaseExpired, gte(jobs.attempts, MAX_ATTEMPTS)))
+						.for("update", { skipLocked: true }),
+				),
+			);
 
 		// 2. Pick the next due job and lock its row. The lock is held until this transaction commits: long
 		// enough for step 3 to mark it running. From then on, the status and lease keep other claims away.
