@@ -20,9 +20,11 @@
 	"dependencies": {
 		"@fastify/static": "catalog:",
 		"@launchpad/db": "workspace:*",
+		"@launchpad/shared": "workspace:*",
 		"@sentry/node": "catalog:",
 		"drizzle-orm": "catalog:",
 		"fastify": "catalog:",
+		"fastify-type-provider-zod": "catalog:",
 		"pino": "catalog:",
 		"postgres": "catalog:",
 		"zod": "catalog:"

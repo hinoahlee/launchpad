@@ -1,11 +1,9 @@
+import { healthResponseSchema } from "@launchpad/shared";
 import { useEffect, useState } from "react";
-import { z } from "zod";
 import heroImg from "./assets/hero.png";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "./assets/vite.svg";
 import "./app.css";
-
-const healthSchema = z.object({ status: z.literal("ok") });
 
 function useApiStatus() {
 	const [status, setStatus] = useState("checking");
@@ -13,7 +11,7 @@ function useApiStatus() {
 		const controller = new AbortController();
 		fetch("/api/health", { signal: controller.signal })
 			.then((res) => res.json())
-			.then((body) => setStatus(healthSchema.parse(body).status))
+			.then((body) => setStatus(healthResponseSchema.parse(body).status))
 			.catch(() => {
 				if (!controller.signal.aborted) setStatus("unreachable");
 			});

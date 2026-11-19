@@ -18,6 +18,17 @@ overrides:
   # unused copy for the 0.25 drizzle-kit already uses.
   "@esbuild-kit/core-utils>esbuild": 0.25.12
 
+# Corrections to packages' own package.json.
+packageExtensions:
+  # Lists @fastify/swagger and openapi-types as required peers, but only imports their types (for its optional
+  # OpenAPI helpers, which we don't use). Optional peers aren't auto-installed, so they stay out of the image.
+  fastify-type-provider-zod:
+    peerDependenciesMeta:
+      "@fastify/swagger":
+        optional: true
+      openapi-types:
+        optional: true
+
 catalog:
   "@biomejs/biome": 2.6.7
   # One version for all three: they share @sentry/core. 11.10.0: the newest release at least two weeks old.
@@ -32,6 +43,7 @@ catalog:
   drizzle-kit: 0.31.11
   drizzle-orm: 0.45.4
   fastify: 5.12.8
+  fastify-type-provider-zod: 7.0.0
   # The version Fastify itself uses, so there is one copy (and one set of types).
   pino: 10.4.0
   # 3.x, not 4.x: drizzle-orm 0.45 predates postgres.js 4 (Oct 2026). Renovate proposes the major later.

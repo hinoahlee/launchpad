@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { testDatabaseUrl } from "@launchpad/db/testing";
 import { afterAll, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { buildApp } from "./app.ts";
 
 // Port 1 on this machine: nothing listens there, so every connection is refused at once. Most tests here
@@ -343,7 +344,31 @@ describe("errors", () => {
 		throw new Error('relation "secret_table" does not exist');
 	});
 	failing.post("/api/echo", async (request) => request.body);
+	// A handler whose return value has a field its response schema doesn't list, and one that breaks it.
+	const userSchema = { response: { 200: z.object({ name: z.string() }) } };
+	failing.get("/api/leaky", { schema: userSchema }, async () => ({
+		name: "Ada",
+		passwordHash: "secret-hash",
+	}));
+	failing.get("/api/broken", { schema: userSchema }, async () => ({
+		name: 42,
+	}));
 	afterAll(() => failing.close());
+
+	it("a response schema drops fields it doesn't list", async () => {
+		const res = await failing.inject({ method: "GET", url: "/api/leaky" });
+		expect(res.statusCode).toBe(200);
+		expect(res.json()).toEqual({ name: "Ada" });
+	});
+
+	it("a response that breaks its schema → 500, never sent as is", async () => {
+		const res = await failing.inject({ method: "GET", url: "/api/broken" });
+		expect(res.statusCode).toBe(500);
+		expect(res.json()).toEqual({
+			error: "internal_error",
+			requestId: res.headers["x-request-id"],
+		});
+	});
 
 	it("an unexpected error → 500 with a code and the request ID, never the message", async () => {
 		const res = await failing.inject({ method: "GET", url: "/api/boom" });
