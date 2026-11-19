@@ -308,3 +308,17 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Transactional outbox** — write the "do this later" message in the same database transaction as the data
   it's about. Both commit or neither does, so no job points at unsaved data and no saved data misses its job.
   (8.1)
+- **At-least-once delivery** — every job runs, but some may run twice (a worker crashes after doing the work
+  but before marking it done). The alternative, at-most-once, can lose jobs. (8.2)
+- **Idempotency** — running something twice has the same effect as running it once. Job handlers must be
+  idempotent because of at-least-once delivery, e.g. "skip if already sent". (8.2)
+- **Lease** — a claim that expires: a worker owns a job only until `lease_expires_at`. If it crashes, the lease
+  runs out and another worker takes the job, so nothing stays stuck. (8.2)
+- **Fencing token** — a number that goes up with each claim (`attempts`). A write only counts if it carries
+  the current number, so a slow worker whose lease ran out can't overwrite the new owner's result. (8.2)
+- **Exponential backoff** — wait longer after each failure (10 s, 20 s, 40 s...), so a struggling service gets
+  time to recover instead of a flood of retries. (8.2)
+- **`FOR UPDATE SKIP LOCKED`** — Postgres: lock the rows I pick, and skip rows someone else has locked instead
+  of waiting. Lets many workers pull from one table without taking the same job. (8.2)
+- **`LISTEN` / `NOTIFY`** — Postgres' built-in messages: a worker listens on a channel, `enqueue()` notifies it,
+  and the message arrives when the transaction commits. Polling stays as a fallback. (8.2)

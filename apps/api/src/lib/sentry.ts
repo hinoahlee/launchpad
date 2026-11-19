@@ -29,9 +29,10 @@ export function initSentry(config: Config, overrides: Overrides = {}): void {
 	});
 }
 
-// Reports an unexpected error. The request ID tag leads from the Sentry issue to the matching log lines.
-export function reportError(err: unknown, requestId: string): void {
-	Sentry.captureException(err, { tags: { requestId } });
+// Reports an unexpected error. The tags (`requestId`, or `jobId` in the worker) lead from the Sentry issue to
+// the matching log lines.
+export function reportError(err: unknown, tags: Record<string, string>): void {
+	Sentry.captureException(err, { tags });
 }
 
 // Sends what's queued before the process exits (at most `timeoutMs`).

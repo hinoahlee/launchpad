@@ -19,7 +19,7 @@ like you're shadowing a principal engineer.
 | 5 | [Database](phases/05-database.md) | done |
 | 6 | [Observability](phases/06-observability.md) | done |
 | 7 | [App foundations](phases/07-app-foundations.md) | done |
-| 8 | [Background jobs](phases/08-jobs.md) | not started |
+| 8 | [Background jobs](phases/08-jobs.md) | in progress |
 | 9 | [Email](phases/09-email.md) | not started |
 | 10 | [Auth](phases/10-auth.md) | not started |
 | 11 | [File storage](phases/11-storage.md) | not started |

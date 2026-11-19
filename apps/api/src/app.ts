@@ -228,7 +228,7 @@ export function buildApp(
 		if (status >= 500) {
 			// The stack goes to the log; the client gets a code, never the message (it can name tables, hosts...).
 			request.log.error({ err }, "unhandled error");
-			reportError(err, request.id);
+			reportError(err, { requestId: request.id });
 			return { error: "internal_error" };
 		}
 		return { error: statusCode(status) };
