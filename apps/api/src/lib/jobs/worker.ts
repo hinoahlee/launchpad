@@ -1,5 +1,6 @@
 import type { Database } from "@launchpad/db";
 import type { Logger } from "pino";
+import type { EmailDriver } from "#lib/email/driver.ts";
 import { reportError } from "#lib/sentry.ts";
 import { handlers as defaultHandlers, type JobHandlers } from "./handlers.ts";
 import { type JobType, jobTypes } from "./job-types.ts";
@@ -15,6 +16,7 @@ import {
 export type WorkerOptions = {
 	db: Database;
 	log: Logger;
+	email: EmailDriver;
 	handlers?: JobHandlers;
 	// How long a claimed job is ours. A handler must finish within it; at the end its signal is aborted, and
 	// another worker may take the job. There is no renewal: raise it if a job type needs longer.
@@ -39,6 +41,7 @@ const message = (err: unknown) =>
 export async function startWorker({
 	db,
 	log,
+	email,
 	handlers = defaultHandlers,
 	leaseMs = DEFAULT_LEASE_MS,
 	pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
@@ -103,7 +106,13 @@ export async function startWorker({
 		]);
 
 		try {
-			await handler(parsed.data, { db, log: jobLog, signal });
+			await handler(parsed.data, {
+				jobId: job.id,
+				db,
+				email,
+				log: jobLog,
+				signal,
+			});
 		} catch (err) {
 			// Shutting down: the handler stopped, so hand the job back without spending an attempt.
 			if (stopping.signal.aborted) {

@@ -23,6 +23,10 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `enqueue(tx, type, payload)` inside the transaction that saves the job's data (`jobs` table in `@launchpad/db`).
   One handler per type in `handlers.ts` (must be idempotent); `queue.ts` claims/finishes rows; `worker.ts` runs the loop.
   Recurring jobs: add to `schedules.ts` (cron, UTC); `scheduler.ts` queues each run once via `enqueueOnce`.
+- `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
+  from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (worker until a provider is set).
+  React Email templates in `templates/*.tsx`, rendered by `render.tsx` in the worker only: Node can't run `.tsx`,
+  so nothing the dev server imports may import them.
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
