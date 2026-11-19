@@ -6,19 +6,11 @@ import { testDatabaseUrl } from "@launchpad/db/testing";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { buildApp } from "./app.ts";
+import { testConfig } from "./testing/config.ts";
 
-// Port 1 on this machine: nothing listens there, so every connection is refused at once. Most tests here
-// don't need a database; the ones that do build their own app on the test database.
-const UNREACHABLE_DB = "postgres://test:test@127.0.0.1:1/test";
-
-const app = buildApp({
-	NODE_ENV: "test",
-	PORT: 0,
-	LOG_LEVEL: "silent",
-	GIT_SHA: "abc123",
-	DEBUG_ERROR_ROUTE: false,
-	DATABASE_URL: UNREACHABLE_DB,
-});
+// Most tests here don't need a database (testConfig's is unreachable); the ones that do build their own app
+// on the test database.
+const app = buildApp(testConfig());
 afterAll(() => app.close());
 
 describe("probes", () => {
@@ -30,14 +22,7 @@ describe("probes", () => {
 	});
 
 	it("GET /api/ready → 200 ok when the database answers", async () => {
-		const ready = buildApp({
-			NODE_ENV: "test",
-			PORT: 0,
-			LOG_LEVEL: "silent",
-			GIT_SHA: "abc123",
-			DEBUG_ERROR_ROUTE: false,
-			DATABASE_URL: testDatabaseUrl(),
-		});
+		const ready = buildApp(testConfig({ DATABASE_URL: testDatabaseUrl() }));
 		try {
 			const res = await ready.inject({ method: "GET", url: "/api/ready" });
 			expect(res.statusCode).toBe(200);
@@ -69,14 +54,9 @@ describe("probes", () => {
 			throw new Error("no port");
 
 		const stuck = buildApp(
-			{
-				NODE_ENV: "test",
-				PORT: 0,
-				LOG_LEVEL: "silent",
-				GIT_SHA: "abc123",
-				DEBUG_ERROR_ROUTE: false,
+			testConfig({
 				DATABASE_URL: `postgres://test:test@127.0.0.1:${address.port}/test`,
-			},
+			}),
 			{ readyTimeoutMs: 200 },
 		);
 		try {
@@ -143,18 +123,13 @@ describe("web app", () => {
 		path.join(webRoot, "assets", "index-abc123.js"),
 		"console.log(1)",
 	);
-
-	const web = buildApp(
-		{
-			NODE_ENV: "test",
-			PORT: 0,
-			LOG_LEVEL: "silent",
-			GIT_SHA: "abc123",
-			DEBUG_ERROR_ROUTE: false,
-			DATABASE_URL: "postgres://test:test@localhost:5432/test",
-		},
-		{ webRoot },
+	// Over the 1 KB below which compression isn't worth it.
+	writeFileSync(
+		path.join(webRoot, "assets", "big-abc123.js"),
+		"console.log(1);\n".repeat(200),
 	);
+
+	const web = buildApp(testConfig(), { webRoot });
 	afterAll(async () => {
 		await web.close();
 		rmSync(webRoot, { recursive: true, force: true });
@@ -227,20 +202,109 @@ describe("web app", () => {
 		});
 	});
 
+	it("pages carry the security headers", async () => {
+		const res = await web.inject({ method: "GET", url: "/", headers: html });
+		const csp = String(res.headers["content-security-policy"]);
+		expect(csp).toContain("default-src 'self'");
+		expect(csp).toContain("script-src 'self'");
+		expect(csp).toContain("script-src-attr 'none'");
+		expect(csp).toContain("object-src 'none'");
+		expect(csp).toContain("frame-ancestors 'none'");
+		expect(csp).not.toContain("unsafe-inline");
+		expect(res.headers["strict-transport-security"]).toBe(
+			"max-age=31536000; includeSubDomains",
+		);
+		expect(res.headers["x-content-type-options"]).toBe("nosniff");
+		expect(res.headers["referrer-policy"]).toBe("no-referrer");
+	});
+
+	it("API responses and 404s carry them too", async () => {
+		for (const url of ["/api/health", "/api/nope"]) {
+			const res = await web.inject({ method: "GET", url });
+			expect(res.headers["content-security-policy"]).toBeDefined();
+			expect(res.headers["x-content-type-options"]).toBe("nosniff");
+		}
+	});
+
+	it("compresses text when the client accepts it", async () => {
+		const url = "/assets/big-abc123.js";
+		const gzip = await web.inject({
+			method: "GET",
+			url,
+			headers: { "accept-encoding": "gzip" },
+		});
+		expect(gzip.headers["content-encoding"]).toBe("gzip");
+		const plain = await web.inject({ method: "GET", url });
+		expect(plain.headers["content-encoding"]).toBeUndefined();
+		expect(plain.body).toContain("console.log(1);");
+	});
+
 	it("production refuses to boot without a web build", () => {
 		expect(() =>
-			buildApp(
-				{
-					NODE_ENV: "production",
-					PORT: 0,
-					LOG_LEVEL: "silent",
-					GIT_SHA: "abc123",
-					DEBUG_ERROR_ROUTE: false,
-					DATABASE_URL: "postgres://test:test@localhost:5432/test",
-				},
-				{ webRoot: path.join(webRoot, "missing") },
-			),
+			buildApp(testConfig({ NODE_ENV: "production" }), {
+				webRoot: path.join(webRoot, "missing"),
+			}),
 		).toThrow(/SPA build not found/);
+	});
+});
+
+describe("rate limit", () => {
+	// Behind two proxies, as on Render: the socket is Render's load balancer, and X-Forwarded-For ends with
+	// "<client>, <cloudflare>". A client can put anything to the left of that.
+	const limited = buildApp(testConfig({ TRUST_PROXY_HOPS: 2 }), {
+		rateLimitMax: 2,
+	});
+	afterAll(() => limited.close());
+
+	const from = (client: string, spoofed?: string) => ({
+		remoteAddress: "10.0.0.1",
+		headers: {
+			"x-forwarded-for": [spoofed, client, "104.16.0.1"]
+				.filter(Boolean)
+				.join(", "),
+		},
+	});
+	const version = (opts: ReturnType<typeof from>) =>
+		limited.inject({ method: "GET", url: "/api/version", ...opts });
+
+	it("allows `max` requests per minute, then 429 with Retry-After", async () => {
+		const client = from("203.0.113.1");
+		const first = await version(client);
+		expect(first.statusCode).toBe(200);
+		expect(first.headers["x-ratelimit-limit"]).toBe("2");
+		expect((await version(client)).statusCode).toBe(200);
+
+		const res = await version(client);
+		expect(res.statusCode).toBe(429);
+		expect(res.headers["retry-after"]).toBeDefined();
+		expect(res.json()).toEqual({
+			error: "too_many_requests",
+			requestId: res.headers["x-request-id"],
+		});
+	});
+
+	it("counts each client IP on its own", async () => {
+		expect((await version(from("203.0.113.2"))).statusCode).toBe(200);
+	});
+
+	it("ignores an X-Forwarded-For value the client made up", async () => {
+		const client = "203.0.113.3";
+		await version(from(client));
+		await version(from(client));
+		// A fresh fake IP each time doesn't buy a fresh counter: the real client IP is still read.
+		expect((await version(from(client, "198.51.100.7"))).statusCode).toBe(429);
+	});
+
+	it("never limits the probes", async () => {
+		const client = from("203.0.113.4");
+		for (let i = 0; i < 5; i++) {
+			const res = await limited.inject({
+				method: "GET",
+				url: "/api/health",
+				...client,
+			});
+			expect(res.statusCode).toBe(200);
+		}
 	});
 });
 
@@ -248,17 +312,9 @@ describe("request logs", () => {
 	// Collects the JSON lines the app writes, instead of printing them.
 	function capture(level: "info" | "debug" = "info") {
 		const lines: Record<string, unknown>[] = [];
-		const logged = buildApp(
-			{
-				NODE_ENV: "test",
-				PORT: 0,
-				LOG_LEVEL: level,
-				GIT_SHA: "abc123",
-				DEBUG_ERROR_ROUTE: false,
-				DATABASE_URL: UNREACHABLE_DB,
-			},
-			{ logStream: { write: (line) => lines.push(JSON.parse(line)) } },
-		);
+		const logged = buildApp(testConfig({ LOG_LEVEL: level }), {
+			logStream: { write: (line) => lines.push(JSON.parse(line)) },
+		});
 		logged.get("/api/boom", async () => {
 			throw new Error('relation "secret_table" does not exist');
 		});
@@ -332,14 +388,7 @@ describe("request logs", () => {
 });
 
 describe("errors", () => {
-	const failing = buildApp({
-		NODE_ENV: "test",
-		PORT: 0,
-		LOG_LEVEL: "silent",
-		GIT_SHA: "abc123",
-		DEBUG_ERROR_ROUTE: false,
-		DATABASE_URL: UNREACHABLE_DB,
-	});
+	const failing = buildApp(testConfig());
 	failing.get("/api/boom", async () => {
 		throw new Error('relation "secret_table" does not exist');
 	});

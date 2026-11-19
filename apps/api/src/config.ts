@@ -29,6 +29,10 @@ const envSchema = z.object({
 	SENTRY_ENVIRONMENT: z.string().min(1).optional(),
 	// Adds GET /api/debug/error, which throws, to check error reporting end to end. Turn on, test, turn off.
 	DEBUG_ERROR_ROUTE: z.stringbool().default(false),
+	// How many proxies sit in front of the app and append to X-Forwarded-For. The client IP (for rate limits)
+	// is read that many hops from the right, so a client can't fake it by sending its own header. 0: no proxy
+	// (dev). Render: 2 (Cloudflare, then Render's load balancer). Caddy on a VPS: 1.
+	TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 });
 
 export type Config = z.infer<typeof envSchema>;

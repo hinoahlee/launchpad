@@ -16,6 +16,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Bucket in phase 11. |
 | 10 | Migrations are backward compatible with the previous release (expand/contract). | [Decision 005](decisions/005-expand-contract.md). |
 | 11 | Unexpected errors (5xx) go to Sentry when `SENTRY_DSN` is set, tagged with release (= `GIT_SHA`), environment and `requestId`. | `lib/sentry.ts`, the error handler in `app.ts`. Web: `apps/web/src/lib/sentry.ts`, DSN baked in at build (below). |
+| 12 | The platform terminates TLS and sets `TRUST_PROXY_HOPS` to the number of proxies that append to `X-Forwarded-For`. The app sends security headers (CSP, HSTS), compresses responses and rate-limits `/api` per client IP (in memory, so per instance). | `app.ts` (helmet, compress, rate-limit; `trustProxy`). Render: 2, in the Blueprint. |
 
 ## Environment variables
 
@@ -29,6 +30,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `SENTRY_DSN` | unset (off) | The API's Sentry project DSN. Set in the platform (Render: `sync: false`). |
 | `SENTRY_ENVIRONMENT` | `NODE_ENV` | The environment tag on errors; set it where `NODE_ENV=production` isn't the whole story (staging). |
 | `DEBUG_ERROR_ROUTE` | `false` | `true` adds `GET /api/debug/error`, which throws. Only to check error reporting; turn it off after. |
+| `TRUST_PROXY_HOPS` | `0` | Proxies in front of the app that append to `X-Forwarded-For` (Render: 2; Caddy on a VPS: 1). Too low: every visitor shares the proxy's IP and one rate limit. Too high: clients can fake their IP. |
 
 New variables are added here in the same PR as `config.ts`.
 

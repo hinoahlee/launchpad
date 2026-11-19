@@ -2,6 +2,9 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { STATUS_CODES } from "node:http";
 import path from "node:path";
+import fastifyCompress from "@fastify/compress";
+import fastifyHelmet from "@fastify/helmet";
+import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import { createDb, type Database } from "@launchpad/db";
 import {
@@ -65,7 +68,11 @@ export type BuildOptions = {
 	readyTimeoutMs?: number;
 	// Where log lines go (default stdout). Tests capture them here.
 	logStream?: DestinationStream;
+	// Requests per minute per client IP on /api. Tests lower it.
+	rateLimitMax?: number;
 };
+
+const RATE_LIMIT_MAX = 100;
 
 // Rejects if `promise` hasn't settled within `ms`. The query itself isn't cancelled: it ends on its own
 // (connect_timeout), and the probe has already answered.
@@ -84,6 +91,7 @@ export function buildApp(
 		webRoot = DEFAULT_WEB_ROOT,
 		readyTimeoutMs = READY_TIMEOUT_MS,
 		logStream,
+		rateLimitMax = RATE_LIMIT_MAX,
 	}: BuildOptions = {},
 ): FastifyInstance {
 	const app = Fastify({
@@ -97,6 +105,11 @@ export function buildApp(
 			// the single line in onResponse below.
 			disableRequestLogging: true,
 		}),
+		// Behind a proxy, the socket's address is the proxy's. Trusting exactly the proxies we have makes
+		// `request.ip` the visitor's address, taken from X-Forwarded-For counting from the right (the end our
+		// proxies write), so a value the client sends at the left is ignored.
+		// `hop` 0 is the socket's address, 1 the rightmost X-Forwarded-For entry, and so on.
+		trustProxy: (_address, hop) => hop < config.TRUST_PROXY_HOPS,
 		genReqId: (req) => {
 			const incoming = req.headers["x-request-id"];
 			return typeof incoming === "string" && REQUEST_ID.test(incoming)
@@ -109,6 +122,40 @@ export function buildApp(
 	// Set before any route is added: Fastify compiles a route's schemas when the route is registered.
 	app.setValidatorCompiler(validatorCompiler);
 	app.setSerializerCompiler(serializerCompiler);
+
+	// Security headers on every response (pages, assets, API). The CSP is the one that matters most: the page
+	// may run only scripts from our own origin, so injected markup (`<script>`, `onclick=`) won't execute.
+	app.register(fastifyHelmet, {
+		contentSecurityPolicy: {
+			useDefaults: false,
+			directives: {
+				defaultSrc: ["'self'"],
+				scriptSrc: ["'self'"],
+				scriptSrcAttr: ["'none'"],
+				styleSrc: ["'self'"],
+				imgSrc: ["'self'", "data:"],
+				fontSrc: ["'self'"],
+				// The browser's Sentry SDK posts errors to its ingest host (the DSN's), e.g. o1.ingest.us.sentry.io.
+				connectSrc: [
+					"'self'",
+					"https://*.ingest.sentry.io",
+					"https://*.ingest.us.sentry.io",
+					"https://*.ingest.de.sentry.io",
+				],
+				objectSrc: ["'none'"],
+				baseUri: ["'self'"],
+				formAction: ["'self'"],
+				frameAncestors: ["'none'"],
+			},
+		},
+		// HSTS: browsers use HTTPS only for this host for a year. Helmet's default; ignored over plain HTTP, so
+		// local runs on http://localhost are unaffected.
+		strictTransportSecurity: { maxAge: 31_536_000, includeSubDomains: true },
+	});
+
+	// gzip/brotli for text responses over 1 KB (JSON, HTML, JS, CSS), when the client accepts it. Render's edge
+	// already compresses; this covers platforms whose proxy doesn't (an AWS load balancer).
+	app.register(fastifyCompress);
 
 	// The pool opens connections on first use, so building the app never touches the database. Closed last
 	// on shutdown: app.close() waits for in-flight requests first, then runs onClose hooks.
@@ -191,6 +238,16 @@ export function buildApp(
 		async (root) => {
 			// Typed routes: each handler's request and return value are inferred from its Zod schemas.
 			const api = root.withTypeProvider<ZodTypeProvider>();
+
+			// Per client IP, across every /api route: slows down scripts guessing passwords or scraping. Counters
+			// live in this process's memory: fine for one instance, but each instance counts on its own and a
+			// restart resets them. With several instances, pass a shared store (`redis:` or `store:`) here.
+			await api.register(fastifyRateLimit, {
+				max: rateLimitMax,
+				timeWindow: "1 minute",
+				// The platform's health checks and the uptime monitor call these every few seconds.
+				allowList: (request) => PROBES.has(request.url),
+			});
 
 			// Liveness: failing means "restart me". Never check dependencies here: restarts don't fix a DB outage.
 			api.get(

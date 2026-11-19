@@ -33,6 +33,9 @@ catalog:
   "@biomejs/biome": 2.6.7
   # One version for all three: they share @sentry/core. 11.10.0: the newest release at least two weeks old.
   "@sentry/bundler-plugins": 11.10.0
+  "@fastify/compress": 9.3.0
+  "@fastify/helmet": 13.2.0
+  "@fastify/rate-limit": 11.2.2
   "@sentry/node": 11.10.0
   "@sentry/react": 11.10.0
   "@fastify/static": 10.1.11

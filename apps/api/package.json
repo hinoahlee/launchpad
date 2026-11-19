@@ -18,6 +18,9 @@
 		"db:migrate": "node --env-file-if-exists=.env src/migrate.ts"
 	},
 	"dependencies": {
+		"@fastify/compress": "catalog:",
+		"@fastify/helmet": "catalog:",
+		"@fastify/rate-limit": "catalog:",
 		"@fastify/static": "catalog:",
 		"@launchpad/db": "workspace:*",
 		"@launchpad/shared": "workspace:*",

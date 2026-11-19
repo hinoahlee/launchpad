@@ -226,6 +226,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   snapshot before it, plus the WAL replayed up to that moment. On Render, into a new database. (5.6)
 - **RPO / RTO** — recovery point objective: how much recent data you can afford to lose. Recovery time
   objective: how long getting it back may take. A drill measures both. (5.6)
+
+## Phase 6 — Observability
+
 - **Structured logging** — each log line is JSON with named fields (`status`, `route`, `requestId`), not a
   sentence, so a log tool can filter and search by field instead of by text. (6.1)
 - **Correlation ID (request ID)** — one ID given to a request and stamped on every log line, error body and
@@ -255,3 +258,23 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   Reverting first keeps it short. (6.4)
 - **Blameless postmortem** — a short write-up after an incident about what in the system let it happen and
   what change would catch it next time, never about who to blame. (6.4)
+
+## Phase 7 — App foundations
+- **API contract** — the agreed shape of every request and response between two programs. Here: Zod schemas
+  in `packages/shared`, imported by both the API and the web app. (7.1)
+- **Schema validation** — checking incoming data against a schema and rejecting what doesn't fit, before any
+  code uses it (bad input → 400 `validation_failed`). (7.1)
+- **Type provider** — a Fastify plugin that turns a route's schemas into TypeScript types for its handler, so
+  `request.query` and the return value are checked by the compiler. (7.1)
+- **Serialization** — turning a value into bytes to send (JSON). The response schema runs first and drops any
+  field it doesn't list, so a stray `passwordHash` never leaves the server. (7.1)
+- **XSS (cross-site scripting)** — an attacker gets their script to run on your page (e.g. through a comment
+  rendered as HTML), where it can act as the signed-in user. (7.2)
+- **Content Security Policy (CSP)** — a response header listing where a page may load scripts, styles and
+  connections from. `script-src 'self'` means only our own files run, so injected script is blocked. (7.2)
+- **HSTS** — `Strict-Transport-Security`: tells the browser to use only HTTPS for this site for a set time, so
+  a network attacker can't downgrade a visit to plain HTTP. (7.2)
+- **Rate limiting** — capping how many requests one client may make per time window (here 100 per minute per
+  IP on `/api`), so one script can't guess passwords or overload the app. (7.2)
+- **Reverse proxy headers** — `X-Forwarded-For` (and `-Proto`, `-Host`): what each proxy in front of the app
+  adds so the app can see the real client. Clients can send them too, so trust only the hops you run. (7.2)
