@@ -28,4 +28,5 @@
   `DATABASE_DIRECT_URL` for `LISTEN` when a connection pooler is in front.
 - **Terms:** worker process, connection pooler (transaction vs. session mode).
 - **Done when:** the worker runs on Render and processes a job, and the hourly `prune-jobs` job runs once per
-  hour there.
+  hour there. Then the worker is suspended (billed by the second) until a real job needs it; deploys skip it
+  while its hook secret is unset.

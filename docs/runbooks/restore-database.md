@@ -43,7 +43,7 @@ another database; `unset DB_URL` afterwards.
 2. **launchpad-db** → **Recovery** → **Point-in-Time Recovery** → **Restore Database** → a name, the time,
    **Copy Existing Settings: Yes** → **Start Recovery**. Wait for **Available**.
 3. Check it from the Shell with `DB_URL` = the new database's **Connect** → **Internal** URL.
-4. Keep it: point `DATABASE_URL` at it (`render.yaml` `fromDatabase.name`, PR), deploy, check `/api/ready`.
+4. Keep it: point `DATABASE_URL` at it (`render.yaml` `fromDatabase.name`, in both the web and the worker; PR), deploy, check `/api/ready`.
    Drill: **Settings** → **Delete Database** (it's billed while it exists).
 
 ## Measured (2026-11-18, 3 rows, ~6 KB dump)

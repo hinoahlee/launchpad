@@ -1,6 +1,7 @@
-# Deploys one published image to Render by digest, then waits until the live site serves it.
-# CI calls it after `publish` on main. Run it by hand (Actions → Deploy to Render → Run workflow) with an older
-# commit SHA to roll back. GitHub holds only Render's deploy hook, which can deploy nothing but this repo's image.
+# Deploys one published image to Render by digest: the web service first, waits until the live site serves it,
+# then the worker. CI calls it after `publish` on main. Run it by hand (Actions → Deploy to Render → Run workflow)
+# with an older commit SHA to roll back both. GitHub holds only Render's deploy hooks, which can deploy nothing
+# but this repo's image.
 name: Deploy to Render
 
 on:
@@ -84,13 +85,40 @@ jobs:
           done
           echo "Live: $RENDER_URL serves $SHA"
 
+      # Only now: the web's pre-deploy has applied this release's migrations, so the new worker never runs against
+      # the old schema (the old worker runs against the new one meanwhile, which expand/contract allows).
+      # The hook can't report back and the worker has no URL to poll, so this step only starts the deploy: its
+      # result is on the worker's Events page in Render. No secret = no worker (suspended, or not created yet).
+      - name: Trigger the worker deploy
+        id: worker
+        env:
+          HOOK: ${{ secrets.RENDER_WORKER_DEPLOY_HOOK_URL }}
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::Secret RENDER_WORKER_DEPLOY_HOOK_URL is not set: skipped the worker deploy"
+            echo "result=skipped (no RENDER_WORKER_DEPLOY_HOOK_URL)" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          sep='?'; [[ "$HOOK" == *\?* ]] && sep='&'
+          url="$HOOK${sep}imgURL=$(jq -rn --arg v "$REF" '$v|@uri')"
+          code=$(curl -sS -o response.json -w '%{http_code}' -X POST "$url")
+          case "$code" in
+            200) echo "Worker deploy started: $(jq -r '.deploy.id // .id // "?"' response.json)" ;;
+            202) echo "Worker deploy queued behind one already in progress" ;;
+            *) echo "::error::Render answered HTTP $code for the worker"; cat response.json; exit 1 ;;
+          esac
+          echo "result=started (see the worker's Events in Render)" >> "$GITHUB_OUTPUT"
+
       - name: Summary
         env:
           REF: ${{ steps.image.outputs.ref }}
+          WORKER: ${{ steps.worker.outputs.result }}
         run: |
           {
             echo "### Deployed to Render"
             echo "Commit \`$SHA\`"
             echo
             echo "Image \`$REF\`"
+            echo
+            echo "Worker: $WORKER"
           } >> "$GITHUB_STEP_SUMMARY"

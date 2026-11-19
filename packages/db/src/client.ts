@@ -2,7 +2,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema.ts";
 
-// One pool of connections per process (postgres.js: up to 10, opened on first use, closed after idling).
+// One pool of connections per process (postgres.js: up to 10, each opened when a query finds none free, kept
+// open and reused, replaced after 30-60 min).
 // Close it on shutdown with `db.$client.end()`.
 export function createDb(databaseUrl: string) {
 	// connect_timeout (seconds, default 30): give up on a connection that doesn't open, so an unreachable

@@ -46,6 +46,33 @@ services:
       - key: SENTRY_DSN
         sync: false
 
+  # Background jobs: the same image, started as `node dist/worker.js` (deploy contract, row 3). No traffic, no
+  # port, no health check: Render counts it healthy while the process runs and restarts it if it exits.
+  # The deploy job deploys it after the web service, so migrations (the web's pre-deploy) are already applied.
+  # ~$7/mo, billed by the second. To pause it: the service's Settings → Suspend Service, and delete the GitHub
+  # secret RENDER_WORKER_DEPLOY_HOOK_URL so deploys skip it. While suspended no jobs run (they wait, queued).
+  - type: worker
+    name: launchpad-worker
+    runtime: image
+    image:
+      url: ghcr.io/noah-lee/launchpad:main
+    dockerCommand: node --enable-source-maps dist/worker.js
+    region: oregon
+    # Workers have no free plan; this is the smallest (0.5 CPU / 512 MB), as for the web service.
+    plan: 0.5c-512mb
+    envVars:
+      - key: LOG_LEVEL
+        value: info
+      # Direct (port 5432) for now. If the web ever moves to the database's pooled URL (transaction mode), the
+      # worker keeps this one for LISTEN, as DATABASE_DIRECT_URL or here.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: launchpad-db
+          property: connectionString
+      # The same DSN as the web service (one Sentry project for the API's processes).
+      - key: SENTRY_DSN
+        sync: false
+
 databases:
   - name: launchpad-db
     # Name and user inside Postgres. These, the version and the region can't be changed after creation.
