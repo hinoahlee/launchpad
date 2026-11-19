@@ -1,5 +1,5 @@
 import { type Database, jobs, type Transaction } from "@launchpad/db";
-import { and, eq, lt, lte, or, sql } from "drizzle-orm";
+import { and, eq, gte, lt, lte, or, sql } from "drizzle-orm";
 
 // The consumer side of the queue: what a worker does with a row. Every write after the claim is fenced: it
 // only applies while the row is still `running` with the `attempts` value this worker claimed it with.
@@ -46,54 +46,55 @@ export async function claimJob(
 	leaseMs: number,
 ): Promise<ClaimedJob | null> {
 	return db.transaction(async (tx) => {
-		for (;;) {
-			const [due] = await tx
-				.select({ id: jobs.id, attempts: jobs.attempts })
-				.from(jobs)
-				.where(
-					or(
-						and(eq(jobs.status, "queued"), lte(jobs.runAfter, sql`now()`)),
-						and(
-							eq(jobs.status, "running"),
-							lt(jobs.leaseExpiresAt, sql`now()`),
-						),
-					),
-				)
-				.orderBy(jobs.runAfter)
-				.limit(1)
-				.for("update", { skipLocked: true });
-			if (!due) return null;
+		const leaseExpired = and(
+			eq(jobs.status, "running"),
+			lt(jobs.leaseExpiresAt, sql`now()`),
+		);
 
-			// An abandoned job that already used its last attempt: give up on it and look for another.
-			if (due.attempts >= MAX_ATTEMPTS) {
-				await tx
-					.update(jobs)
-					.set({
-						status: "failed",
-						leaseExpiresAt: null,
-						lastError: "lease expired",
-					})
-					.where(eq(jobs.id, due.id));
-				continue;
-			}
+		// 1. Abandoned jobs that already used their last attempt: give up on them.
+		await tx
+			.update(jobs)
+			.set({
+				status: "failed",
+				leaseExpiresAt: null,
+				lastError: "lease expired",
+			})
+			.where(and(leaseExpired, gte(jobs.attempts, MAX_ATTEMPTS)));
 
-			const [claimed] = await tx
-				.update(jobs)
-				.set({
-					status: "running",
-					attempts: sql`${jobs.attempts} + 1`,
-					leaseExpiresAt: afterMs(leaseMs),
-				})
-				.where(eq(jobs.id, due.id))
-				.returning({
-					id: jobs.id,
-					type: jobs.type,
-					payload: jobs.payload,
-					attempts: jobs.attempts,
-				});
-			if (!claimed) throw new Error("claimed job vanished under lock");
-			return claimed;
-		}
+		// 2. Pick the next due job and lock its row. The lock is held until this transaction commits: long
+		// enough for step 3 to mark it running. From then on, the status and lease keep other claims away.
+		const [due] = await tx
+			.select({ id: jobs.id })
+			.from(jobs)
+			.where(
+				or(
+					and(eq(jobs.status, "queued"), lte(jobs.runAfter, sql`now()`)),
+					// Re-checked here: a lease can run out between step 1 and this query.
+					and(leaseExpired, lt(jobs.attempts, MAX_ATTEMPTS)),
+				),
+			)
+			.orderBy(jobs.runAfter)
+			.limit(1)
+			.for("update", { skipLocked: true });
+		if (!due) return null;
+
+		// 3. Claim it: a new attempt number (the fencing token) and a fresh lease.
+		const [claimed] = await tx
+			.update(jobs)
+			.set({
+				status: "running",
+				attempts: sql`${jobs.attempts} + 1`,
+				leaseExpiresAt: afterMs(leaseMs),
+			})
+			.where(eq(jobs.id, due.id))
+			.returning({
+				id: jobs.id,
+				type: jobs.type,
+				payload: jobs.payload,
+				attempts: jobs.attempts,
+			});
+		if (!claimed) throw new Error("claimed job vanished under lock");
+		return claimed;
 	});
 }
 
