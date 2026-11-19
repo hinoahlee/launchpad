@@ -15,6 +15,13 @@
       "when": 1794959326725,
       "tag": "0001_users",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795069174589,
+      "tag": "0002_jobs",
+      "breakpoints": true
     }
   ]
 }

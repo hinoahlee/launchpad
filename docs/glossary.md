@@ -301,3 +301,10 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   CI retries failures twice and reports a pass-on-retry as "flaky": a bug to fix, not noise. (7.5)
 - **Test pyramid** — many fast unit/integration tests at the bottom, few slow E2E tests on top. Test each thing
   at the lowest level that can catch its bug. (7.5)
+- **Queue** — a waiting line of work. Here it's the `jobs` table: rows wait as `queued` until a worker takes
+  them, so slow or retryable work happens outside the web request. (8.1)
+- **Producer / consumer** — the producer adds work to a queue (the API calling `enqueue()`); the consumer takes
+  it off and does it (the worker process). Neither waits for the other. (8.1)
+- **Transactional outbox** — write the "do this later" message in the same database transaction as the data
+  it's about. Both commit or neither does, so no job points at unsaved data and no saved data misses its job.
+  (8.1)

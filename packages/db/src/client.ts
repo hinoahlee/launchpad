@@ -11,3 +11,7 @@ export function createDb(databaseUrl: string) {
 }
 
 export type Database = ReturnType<typeof createDb>;
+
+// The `tx` handed to `db.transaction(async (tx) => ...)`. Functions that write take `Database | Transaction`,
+// so the caller decides whether the write joins a larger transaction.
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];

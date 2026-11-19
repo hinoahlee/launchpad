@@ -3,6 +3,7 @@ import {
 	type Database,
 	type NewUser,
 	runMigrations,
+	type Transaction,
 	type User,
 	users,
 } from "@launchpad/db";
@@ -91,10 +92,11 @@ export function createTestDb(): Database {
 	return createDb(testDatabaseUrl());
 }
 
-// Factory: a valid user with unique defaults. Pass only the fields a test is about.
+// Factory: a valid user with unique defaults. Pass only the fields a test is about. Takes a `tx` too, to insert
+// inside a test's transaction.
 let sequence = 0;
 export async function insertUser(
-	db: Database,
+	db: Database | Transaction,
 	overrides: Partial<NewUser> = {},
 ): Promise<User> {
 	sequence += 1;
