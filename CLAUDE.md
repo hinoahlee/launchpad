@@ -24,6 +24,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
   is the one migrate entrypoint (deploy: `node dist/migrate.js`; dev: `pnpm db:migrate`). Test helpers
   (`@launchpad/db/testing`): `_test`-only guard, schema reset, `truncateAll`, factories like `insertUser`.
+- `e2e`: Playwright tests (phone + desktop) against the production server (`apps/api/dist/server.js` serving
+  the web build, real CSP). Import `test`/`expect` from `#support/fixtures.ts`: any console error fails a test.
 - `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
 - References (read-only): `../turborepo`, `../mixmallow`
 
@@ -37,6 +39,8 @@ pnpm typecheck   # turbo: tsc in every package
 pnpm lint        # biome check (lint + format check), no writes
 pnpm format      # biome check --write: fix formatting and safe lint fixes
 pnpm test        # turbo: tests in every package (needs `pnpm db:up`: tests use launchpad_test)
+pnpm e2e         # build, then Playwright in a browser (needs `pnpm db:up`; first time:
+                 #   pnpm --filter @launchpad/e2e exec playwright install chromium)
 pnpm verify      # lint, then typecheck + test + build + db:check: "is this safe to merge?"
 pnpm db:up       # start local Postgres (compose.dev.yml) and wait until it's ready
 pnpm db:down     # stop it (data kept in the volume)

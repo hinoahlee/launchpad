@@ -1,0 +1,21 @@
+{
+	"name": "@launchpad/e2e",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"imports": {
+		"#*": "./*"
+	},
+	"scripts": {
+		"e2e": "playwright test",
+		"typecheck": "tsc"
+	},
+	"devDependencies": {
+		"@launchpad/api": "workspace:*",
+		"@launchpad/tsconfig": "workspace:*",
+		"@launchpad/web": "workspace:*",
+		"@playwright/test": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:"
+	}
+}
