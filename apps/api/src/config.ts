@@ -6,6 +6,10 @@ const optionalUrl = z
 	.optional()
 	.or(z.literal("").transform(() => undefined));
 
+const postgresUrl = z
+	.url({ protocol: /^postgres(ql)?$/ })
+	.describe("postgres://user:password@host:port/database");
+
 // Every environment variable the API reads, parsed once at boot. Nothing else reads process.env.
 const envSchema = z.object({
 	NODE_ENV: z
@@ -20,9 +24,13 @@ const envSchema = z.object({
 	GIT_SHA: z.string().default("dev"),
 	// Postgres connection string: postgres://user:password@host:port/database. Required: every process
 	// (server, worker, migrate) needs the database, so a missing value stops the boot.
-	DATABASE_URL: z
-		.url({ protocol: /^postgres(ql)?$/ })
-		.describe("postgres://user:password@host:port/database"),
+	DATABASE_URL: postgresUrl,
+	// A connection straight to Postgres, for when DATABASE_URL goes through a connection pooler in transaction
+	// mode (Render's pooled URL, port 6432). That mode hands each transaction to any of its real connections, so
+	// anything that lives on one connection breaks: the worker's LISTEN, and migrations. Unset: DATABASE_URL.
+	DATABASE_DIRECT_URL: postgresUrl
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
 	// Where errors are reported (Sentry project launchpad-api → Client Keys). Unset: Sentry is off.
 	SENTRY_DSN: optionalUrl,
 	// The environment tag on every error (production, staging...). Unset: NODE_ENV.
@@ -36,6 +44,10 @@ const envSchema = z.object({
 });
 
 export type Config = z.infer<typeof envSchema>;
+
+// The URL for processes that need their own session: the worker (LISTEN) and migrate.
+export const directDatabaseUrl = (config: Config) =>
+	config.DATABASE_DIRECT_URL ?? config.DATABASE_URL;
 
 // Fail fast: a bad value stops the process at boot with a readable message, not on the first request.
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {

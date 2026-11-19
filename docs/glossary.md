@@ -205,6 +205,8 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   for uniqueness and lookups, while the original casing is kept for display. (5.2)
 - **Connection pool** — a set of open database connections a process keeps and reuses, so a request doesn't
   pay for a new connection (several network round-trips plus authentication) each time. (5.3)
+  Each process has its own pool (postgres.js: up to 10), and all of them count against the server's
+  `max_connections` (Render: 100 under 8 GB). (8.4)
 - **Timeout** — the longest you'll wait for something before treating it as failed, so a stuck dependency
   can't hang your code forever. (5.3)
 - **HTTP 503 (Service Unavailable)** — "I'm running but can't serve right now", e.g. the database is down.
@@ -328,3 +330,12 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   the jobs like any other. Every worker runs one, so there's no single scheduler process to keep alive. (8.3)
 - **Singleton job** — a job that must exist at most once, however many processes try to create it. Here: a
   unique `jobs.key` (`prune-jobs:2026-01-01T10:00:00.000Z`), so the second insert does nothing. (8.3)
+- **Worker process** — a long-running process that serves no traffic and only does background work. Ours is the
+  same image as the web service, started as `node dist/worker.js`; Render calls it a background worker. (8.4)
+- **Connection pooler** — a separate program (e.g. PgBouncer) between the app and Postgres: apps connect to it,
+  and it shares a few real Postgres connections among them. Pays off with many processes or short-lived ones;
+  a single long-running process gains nothing over its own pool. (8.4)
+- **Session vs. transaction mode** — how a pooler lends its real connections. Session mode: one per client
+  until it disconnects; everything works. Transaction mode: one per transaction, then back to the pool; far
+  fewer real connections, but whatever lives on a connection breaks (`LISTEN`, `SET`, prepared statements,
+  session advisory locks, temp tables). Render's pooler is transaction mode, port 6432. (8.4)

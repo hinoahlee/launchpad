@@ -45,6 +45,11 @@ Follow-ups noticed along the way:
   `@fastify/static` packages. Bump when they ship patched versions, or add `overrides` like the esbuild one.
 - Phase 15 (operations): a runbook to inspect and requeue `failed` jobs (8.2 keeps them; nothing retries them),
   and an alert when jobs fail. `prune-jobs` (8.3) only deletes `done` jobs.
+- When the first real job ships: resume the Render worker (suspended after the 8.4 check to save ~$7/mo) and
+  add the GitHub secret `RENDER_WORKER_DEPLOY_HOOK_URL` back. Until then nothing runs jobs on Render.
+- Phase 15 (operations): the deploy job only starts the worker's deploy (no URL to poll, and a Render API key
+  is too powerful to keep in GitHub). A worker heartbeat (its commit in the database, shown by `/api/version`)
+  would let the job wait for it too.
 - Phase 15 (rotate secrets): the 5.6 drill rotated the database password after a leak. Learned: a new Render
   credential reaches the app only after a Blueprint **Manual Sync** and a redeploy; check `session_user` (the
   login), not `current_user` (Render's new login acts as the original owner role), before deleting the old one.

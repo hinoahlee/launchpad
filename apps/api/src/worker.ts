@@ -1,5 +1,5 @@
 import { createDb } from "@launchpad/db";
-import { loadConfig } from "./config.ts";
+import { directDatabaseUrl, loadConfig } from "./config.ts";
 import { startScheduler } from "./lib/jobs/scheduler.ts";
 import { startWorker } from "./lib/jobs/worker.ts";
 import { createLogger } from "./lib/logger.ts";
@@ -15,7 +15,8 @@ const SHUTDOWN_TIMEOUT_MS = 25_000;
 const config = loadConfig();
 initSentry(config);
 const log = createLogger(config.LOG_LEVEL);
-const db = createDb(config.DATABASE_URL);
+// Direct, not through a transaction-mode pooler: LISTEN needs a connection of its own (config.ts).
+const db = createDb(directDatabaseUrl(config));
 
 let worker: Awaited<ReturnType<typeof startWorker>>;
 let scheduler: ReturnType<typeof startScheduler>;

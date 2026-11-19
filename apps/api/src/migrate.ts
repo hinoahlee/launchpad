@@ -1,5 +1,5 @@
 import { runMigrations } from "@launchpad/db";
-import { loadConfig } from "./config.ts";
+import { directDatabaseUrl, loadConfig } from "./config.ts";
 import { createLogger } from "./lib/logger.ts";
 
 // Migration process. Deploys run `node dist/migrate.js` (the platform's pre-deploy step) once, before the
@@ -10,7 +10,7 @@ const log = createLogger(config.LOG_LEVEL);
 
 try {
 	log.info("applying migrations");
-	const { applied, total } = await runMigrations(config.DATABASE_URL);
+	const { applied, total } = await runMigrations(directDatabaseUrl(config));
 	// The deploy log's proof of what this release changed: "applied 1" before the new code starts.
 	log.info(
 		applied > 0
