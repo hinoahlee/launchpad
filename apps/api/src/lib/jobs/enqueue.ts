@@ -1,5 +1,6 @@
 import { type Database, jobs, type Transaction } from "@launchpad/db";
 import { type JobInput, type JobType, jobTypes } from "./job-types.ts";
+import { notifyWorkers } from "./queue.ts";
 
 export type EnqueueOptions = {
 	// Don't run before this time (default: as soon as a worker is free).
@@ -22,5 +23,7 @@ export async function enqueue<T extends JobType>(
 		.values({ type, payload: parsed, ...(runAfter && { runAfter }) })
 		.returning({ id: jobs.id });
 	if (!job) throw new Error("insert returned no row");
+	// Wakes idle workers at once instead of at their next poll. Sent on commit; dropped on rollback.
+	await notifyWorkers(tx);
 	return job.id;
 }
