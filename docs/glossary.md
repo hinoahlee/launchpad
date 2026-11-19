@@ -287,3 +287,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   you made or on a "refresh" click (`queryClient.invalidateQueries`). (7.3)
 - **Design tokens** — named design values (`--background`, `--primary`, `--radius`) that components use instead
   of raw colors, so dark mode or a rebrand changes one file (`index.css`). (7.3)
+- **Responsive design** — one layout that adapts to the screen's width instead of separate mobile and desktop
+  sites. "Mobile first": write the phone styles first, then add changes for wider screens. (7.4)
+- **Breakpoint** — the width where the layout changes, e.g. Tailwind's `sm:` (640px) or `lg:` (1024px).
+  `sm:grid-cols-2` means "two columns from 640px up". (7.4)
+- **Touch target** — the area that responds to a tap. A fingertip needs about 44px; on touch screens
+  (`pointer: coarse`) our buttons and links grow to that, a mouse keeps the compact sizes. (7.4)
+- **Safe area** — the part of a phone screen not covered by the notch, rounded corners or home bar;
+  `env(safe-area-inset-*)` pads content into it. (7.4)
