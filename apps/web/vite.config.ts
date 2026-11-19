@@ -1,4 +1,6 @@
 import { sentryVitePlugin } from "@sentry/bundler-plugins/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
@@ -22,7 +24,11 @@ export default defineConfig({
 		sourcemap: uploadSourceMaps ? "hidden" : false,
 	},
 	plugins: [
+		// Before react(): it writes src/routeTree.gen.ts from src/routes/ and splits each route into its own chunk,
+		// loaded when first visited.
+		tanstackRouter({ target: "react", autoCodeSplitting: true }),
 		react(),
+		tailwindcss(),
 		// Last, as Sentry's docs ask: it reads the final output of the other plugins.
 		uploadSourceMaps &&
 			sentryVitePlugin({
