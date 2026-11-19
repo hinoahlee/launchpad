@@ -15,6 +15,10 @@ safety rules and code conventions. During a phase, read only that phase's file i
   (listen, signals). Dev runs `.ts` directly with Node; `pnpm build` bundles `server`, `worker`, `migrate`
   into `dist/` with tsdown.
 - `apps/web`: Vite + React SPA. In dev, Vite proxies `/api` to the API (one origin, as in production).
+  `src/routes/` (TanStack Router file routes; `routeTree.gen.ts` is generated, not committed), TanStack Query
+  for server data via `lib/api.ts` (parses with `@launchpad/shared`), Tailwind tokens in `index.css`,
+  shadcn/ui components copied into `components/ui/`. The CSP allows no inline scripts or styles.
+- `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
   is the one migrate entrypoint (deploy: `node dist/migrate.js`; dev: `pnpm db:migrate`). Test helpers

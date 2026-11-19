@@ -42,3 +42,6 @@ Thumbs.db
 
 # Database dumps from restore drills (docs/runbooks/restore-database.md). Real data: never commit.
 .drill/
+
+# TanStack Router's route tree: generated from src/routes/ by `vite` and by `tsr generate` (typecheck)
+apps/web/src/routeTree.gen.ts

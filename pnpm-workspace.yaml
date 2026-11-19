@@ -39,20 +39,33 @@ catalog:
   "@sentry/node": 11.10.0
   "@sentry/react": 11.10.0
   "@fastify/static": 10.1.11
+  "@tailwindcss/vite": 4.3.4
+  "@tanstack/react-query": 5.106.0
+  "@tanstack/react-router": 1.170.46
+  # The CLI (`tsr generate`, for typecheck) and the Vite plugin share @tanstack/router-generator 1.167.46, so
+  # both write the same routeTree.gen.ts. Bump them together.
+  "@tanstack/router-cli": 1.167.46
+  "@tanstack/router-plugin": 1.168.48
   "@types/node": 24.19.2
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
   "@vitejs/plugin-react": 6.3.0
+  class-variance-authority: 0.7.1
+  clsx: 2.1.1
   drizzle-kit: 0.31.11
   drizzle-orm: 0.45.4
   fastify: 5.12.8
   fastify-type-provider-zod: 7.0.0
+  lucide-react: 1.68.0
   # The version Fastify itself uses, so there is one copy (and one set of types).
   pino: 10.4.0
   # 3.x, not 4.x: drizzle-orm 0.45 predates postgres.js 4 (Oct 2026). Renovate proposes the major later.
   postgres: 3.4.9
+  radix-ui: 1.8.1
   react: 19.3.1
   react-dom: 19.3.1
+  tailwind-merge: 3.7.0
+  tailwindcss: 4.3.4
   tsdown: 0.23.7
   turbo: 2.11.11
   typescript: 7.0.2

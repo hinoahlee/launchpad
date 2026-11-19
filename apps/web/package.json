@@ -10,21 +10,32 @@
 		"dev": "vite",
 		"build": "vite build",
 		"preview": "vite preview",
-		"typecheck": "tsc"
+		"typecheck": "tsr generate && tsc"
 	},
 	"dependencies": {
 		"@launchpad/shared": "workspace:*",
 		"@sentry/react": "catalog:",
+		"@tanstack/react-query": "catalog:",
+		"@tanstack/react-router": "catalog:",
+		"class-variance-authority": "catalog:",
+		"clsx": "catalog:",
+		"lucide-react": "catalog:",
+		"radix-ui": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
+		"tailwind-merge": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@launchpad/tsconfig": "workspace:*",
 		"@sentry/bundler-plugins": "catalog:",
+		"@tailwindcss/vite": "catalog:",
+		"@tanstack/router-cli": "catalog:",
+		"@tanstack/router-plugin": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
+		"tailwindcss": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:"
 	}

@@ -278,3 +278,12 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   IP on `/api`), so one script can't guess passwords or overload the app. (7.2)
 - **Reverse proxy headers** — `X-Forwarded-For` (and `-Proto`, `-Host`): what each proxy in front of the app
   adds so the app can see the real client. Clients can send them too, so trust only the hops you run. (7.2)
+- **Client-side routing** — the browser app maps URLs to pages itself: a link click changes the URL and swaps
+  the page without asking the server for new HTML. The server only sends `index.html` once. (7.3)
+- **Server state vs. client state** — server state is data the API owns (users, files); the browser keeps only a
+  cached copy that can go stale (TanStack Query). Client state belongs to this browser alone (theme, an open
+  menu). (7.3)
+- **Cache invalidation** — marking cached server data as out of date so it is fetched again, e.g. after a change
+  you made or on a "refresh" click (`queryClient.invalidateQueries`). (7.3)
+- **Design tokens** — named design values (`--background`, `--primary`, `--radius`) that components use instead
+  of raw colors, so dark mode or a rebrand changes one file (`index.css`). (7.3)

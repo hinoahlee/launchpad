@@ -9,6 +9,11 @@
 		"ignoreUnknown": true,
 		"includes": ["**", "!**/*.md", "!**/*.svg", "!packages/db/migrations"]
 	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
 	"linter": {
 		"rules": {
 			"style": {
