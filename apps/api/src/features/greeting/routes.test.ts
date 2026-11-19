@@ -4,16 +4,10 @@ import {
 } from "@launchpad/shared";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
+import { testConfig } from "#testing/config.ts";
 
 // No route here touches the database.
-const app = buildApp({
-	NODE_ENV: "test",
-	PORT: 0,
-	LOG_LEVEL: "silent",
-	GIT_SHA: "abc123",
-	DEBUG_ERROR_ROUTE: false,
-	DATABASE_URL: "postgres://test:test@127.0.0.1:1/test",
-});
+const app = buildApp(testConfig());
 afterAll(() => app.close());
 
 describe("GET /api/greeting", () => {

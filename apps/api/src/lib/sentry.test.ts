@@ -1,7 +1,7 @@
 import type * as Sentry from "@sentry/node";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
-import type { Config } from "#config.ts";
+import { testConfig } from "#testing/config.ts";
 import { flushSentry, initSentry } from "./sentry.ts";
 
 type Transport = ReturnType<NonNullable<Sentry.NodeOptions["transport"]>>;
@@ -9,16 +9,11 @@ type Envelope = Parameters<Transport["send"]>[0];
 // One item of an envelope: [header, payload]. Loosely typed: the test only reads a few fields.
 type EnvelopeItem = [{ type?: string }, Record<string, unknown>];
 
-const config: Config = {
-	NODE_ENV: "test",
-	PORT: 0,
-	LOG_LEVEL: "silent",
-	GIT_SHA: "abc123",
-	DATABASE_URL: "postgres://test:test@127.0.0.1:1/test",
+const config = testConfig({
 	SENTRY_DSN: "https://public@o0.ingest.sentry.io/0",
 	SENTRY_ENVIRONMENT: "ci",
 	DEBUG_ERROR_ROUTE: true,
-};
+});
 
 // Instead of sending events over the network, keep them here.
 const envelopes: Envelope[] = [];
