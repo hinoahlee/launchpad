@@ -53,8 +53,9 @@ jobs:
 
       - run: pnpm verify
 
-  # End-to-end tests: the production build in a real browser, as a phone and a desktop (e2e/). In parallel with
-  # `verify`; both must pass before an image is published.
+  # End-to-end tests: the production build in a real browser, as a phone and a desktop (e2e/). A job of its own so
+  # it runs at the same time as `verify` on another machine, and a red check names which kind of test failed. Not
+  # optional: both must pass before an image is published.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
