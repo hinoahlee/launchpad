@@ -6,6 +6,10 @@ dist/
 build/
 coverage/
 
+# Playwright output (reports, traces, failure screenshots)
+e2e/playwright-report/
+e2e/test-results/
+
 # Tool caches
 .turbo/
 .vite/

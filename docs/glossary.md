@@ -295,3 +295,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   (`pointer: coarse`) our buttons and links grow to that, a mouse keeps the compact sizes. (7.4)
 - **Safe area** — the part of a phone screen not covered by the notch, rounded corners or home bar;
   `env(safe-area-inset-*)` pads content into it. (7.4)
+- **End-to-end (E2E) test** — a test that drives the real app in a real browser, like a user: open a page, click,
+  check what's on screen. Slow but proves the pieces work together (Playwright, `e2e/`). (7.5)
+- **Flaky test** — a test that sometimes passes and sometimes fails on the same code, usually from timing.
+  CI retries failures twice and reports a pass-on-retry as "flaky": a bug to fix, not noise. (7.5)
+- **Test pyramid** — many fast unit/integration tests at the bottom, few slow E2E tests on top. Test each thing
+  at the lowest level that can catch its bug. (7.5)

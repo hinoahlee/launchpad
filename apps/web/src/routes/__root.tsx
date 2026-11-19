@@ -5,7 +5,7 @@ import {
 	Outlet,
 } from "@tanstack/react-router";
 import { PageLayout } from "#components/layout/page-layout.tsx";
-import { Button } from "#components/ui/button.tsx";
+import { buttonVariants } from "#components/ui/button.tsx";
 import { pageTitle } from "#lib/site.ts";
 
 // What every route can reach through `context` (e.g. a `loader` prefetching with the query client).
@@ -36,9 +36,14 @@ function NotFound() {
 			<p className="text-muted-foreground">
 				The page you're looking for doesn't exist or has moved.
 			</p>
-			<Button size="lg" nativeButton={false} render={<Link to="/" />}>
+			{/* A link styled as a button (see routes/index.tsx). */}
+			<Link
+				to="/"
+				data-slot="button"
+				className={buttonVariants({ size: "lg" })}
+			>
 				Back to home
-			</Button>
+			</Link>
 		</div>
 	);
 }

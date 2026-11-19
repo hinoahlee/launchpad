@@ -7,7 +7,7 @@ import {
 	GitBranch,
 	ShieldCheck,
 } from "lucide-react";
-import { Button } from "#components/ui/button.tsx";
+import { buttonVariants } from "#components/ui/button.tsx";
 import {
 	Card,
 	CardDescription,
@@ -77,23 +77,23 @@ function Home() {
 					</p>
 				</div>
 				<div className="flex flex-col gap-3 sm:flex-row">
-					{/* A link that looks like a button: Base UI renders the <a>, `nativeButton={false}` drops button
-					    semantics so it stays a real link (open in new tab, etc.). */}
-					<Button
-						size="lg"
-						nativeButton={false}
-						render={<a href={site.repoUrl} />}
+					{/* Links that look like buttons: shadcn's buttonVariants on a plain <a>, so screen readers still
+					    announce a link. (<Button render={<a />}> would add role="button".) data-slot="button" gives
+					    them the 44px touch size from index.css. */}
+					<a
+						href={site.repoUrl}
+						data-slot="button"
+						className={buttonVariants({ size: "lg" })}
 					>
 						View on GitHub
-					</Button>
-					<Button
-						variant="outline"
-						size="lg"
-						nativeButton={false}
-						render={<a href={`${site.repoUrl}/tree/main/docs/roadmap`} />}
+					</a>
+					<a
+						href={`${site.repoUrl}/tree/main/docs/roadmap`}
+						data-slot="button"
+						className={buttonVariants({ variant: "outline", size: "lg" })}
 					>
 						Read the roadmap
-					</Button>
+					</a>
 				</div>
 			</section>
 
