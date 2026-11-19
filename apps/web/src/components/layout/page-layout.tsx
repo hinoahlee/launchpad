@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ThemeToggle } from "#components/layout/theme-toggle.tsx";
+import { ModeToggle } from "#components/layout/mode-toggle.tsx";
 
 // The frame around every page: header, content, footer. Phone first: full width with a 1rem gutter, wider
 // and centered from the `sm` breakpoint up. `env(safe-area-inset-*)` keeps content clear of a phone's notch.
@@ -15,7 +15,7 @@ export function PageLayout({ children }: { children: ReactNode }) {
 					>
 						launchpad
 					</Link>
-					<ThemeToggle />
+					<ModeToggle />
 				</div>
 			</header>
 			<main className="mx-auto flex w-full max-w-2xl flex-1 flex-col pt-6 pr-[max(1rem,env(safe-area-inset-right))] pb-10 pl-[max(1rem,env(safe-area-inset-left))] sm:px-6 sm:pt-10">

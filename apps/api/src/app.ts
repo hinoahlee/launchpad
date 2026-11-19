@@ -132,7 +132,9 @@ export function buildApp(
 				defaultSrc: ["'self'"],
 				scriptSrc: ["'self'"],
 				scriptSrcAttr: ["'none'"],
-				styleSrc: ["'self'"],
+				// Inline styles allowed: Radix (shadcn/ui's menus and dialogs) injects a <style> tag to lock page
+				// scroll while open. Injected CSS can't run code; scripts stay locked to our own files.
+				styleSrc: ["'self'", "'unsafe-inline'"],
 				imgSrc: ["'self'", "data:"],
 				fontSrc: ["'self'"],
 				// The browser's Sentry SDK posts errors to its ingest host (the DSN's), e.g. o1.ingest.us.sentry.io.

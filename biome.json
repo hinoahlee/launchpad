@@ -7,7 +7,13 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!**/*.md", "!**/*.svg", "!packages/db/migrations"]
+		"includes": [
+			"**",
+			"!**/*.md",
+			"!**/*.svg",
+			"!packages/db/migrations",
+			"!apps/web/src/routeTree.gen.ts"
+		]
 	},
 	"css": {
 		"parser": {
