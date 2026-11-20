@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 // The app exactly as it ships: the API's production server (dist/server.js) serving the built web app, with
@@ -6,6 +7,14 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const CI = Boolean(process.env.CI);
+// Its own database on the Postgres from `pnpm db:up` (CI runs the same server). Not `launchpad` (your dev data)
+// and not `launchpad_test` (Vitest wipes it at the start of `pnpm test`, which may run at the same time).
+const DATABASE_URL =
+	"postgres://launchpad:launchpad@localhost:5433/launchpad_e2e";
+const emptyDatabase = path.join(
+	import.meta.dirname,
+	"support/empty-database.ts",
+);
 
 // Starts from Playwright's own template (`npm init playwright`); changes are commented.
 export default defineConfig({
@@ -28,19 +37,22 @@ export default defineConfig({
 		{ name: "desktop", use: { ...devices["Desktop Chrome"] } },
 	],
 	webServer: {
-		command: "node dist/server.js",
+		// An empty database, then the shipped migrate bundle (as a deploy runs it), then the server.
+		command: `node ${emptyDatabase} ${DATABASE_URL} && node dist/migrate.js && node dist/server.js`,
 		cwd: "../apps/api",
 		url: `${BASE_URL}/api/health`,
 		env: {
 			NODE_ENV: "production",
 			PORT: String(PORT),
 			LOG_LEVEL: "warn",
-			// The Postgres from `pnpm db:up` (compose.dev.yml), which CI runs too. Today's pages don't touch the
-			// database, but the server needs the setting to boot.
-			DATABASE_URL: "postgres://launchpad:launchpad@localhost:5433/launchpad",
+			DATABASE_URL,
 			// Required in production. The origin the tests browse; a throwaway secret (this server holds no real users).
 			APP_URL: BASE_URL,
 			BETTER_AUTH_SECRET: "e2e-only-secret-not-used-anywhere-else",
+			// A made-up Google client: enough for the sign-in button to start the flow. Tests stop the browser at
+			// Google's door (tests/auth.spec.ts), so Google never sees these.
+			GOOGLE_CLIENT_ID: "e2e.apps.googleusercontent.com",
+			GOOGLE_CLIENT_SECRET: "e2e-not-a-real-secret",
 		},
 		// Locally, reuse a server you already started on the port; CI always starts a fresh one.
 		reuseExistingServer: !CI,

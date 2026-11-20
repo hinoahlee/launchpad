@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ModeToggle } from "#components/layout/mode-toggle.tsx";
+import { UserMenu } from "#features/auth/user-menu.tsx";
 import { site } from "#lib/site.ts";
 
 // Footer links: 44px tall on touch screens (`pointer-coarse:`), so a thumb can't miss them.
@@ -20,7 +21,10 @@ export function PageLayout({ children }: { children: ReactNode }) {
 					>
 						{site.name}
 					</Link>
-					<ModeToggle />
+					<div className="flex items-center gap-2">
+						<UserMenu />
+						<ModeToggle />
+					</div>
 				</div>
 			</header>
 			<main className="mx-auto flex w-full max-w-5xl flex-1 flex-col pt-6 pr-[max(1rem,env(safe-area-inset-right))] pb-12 pl-[max(1rem,env(safe-area-inset-left))] sm:px-6 sm:pt-10">

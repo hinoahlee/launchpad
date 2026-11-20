@@ -14,6 +14,7 @@ const pages = [
 		heading: "Terms of service",
 		title: "Terms of service · Launchpad",
 	},
+	{ path: "/sign-in", heading: "Sign in", title: "Sign in · Launchpad" },
 ];
 
 for (const { path, heading, title } of pages) {

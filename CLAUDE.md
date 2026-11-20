@@ -26,6 +26,9 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `apps/api/src/features/auth`: Better Auth (decision 009) at `/api/auth/*`: `auth.ts` (`createAuth`, on `app.auth`),
   `routes.ts` (Fastify ↔ web `Request`/`Response`). Its tables (`users`, `sessions`, `accounts`, `verifications`)
   are in `@launchpad/db`'s schema; a test fails if they drift from what Better Auth expects.
+  Google sign-in when `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` are set. Failed callbacks redirect to
+  `/sign-in?error=<code>`. Web: `apps/web/src/features/auth` (session query, sign-in card, header menu), the
+  shapes it reads in `@launchpad/shared` (`auth.ts`).
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
   from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).
@@ -37,7 +40,7 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
   is the one migrate entrypoint (deploy: `node dist/migrate.js`; dev: `pnpm db:migrate`). Test helpers
-  (`@launchpad/db/testing`): `_test`-only guard, schema reset, `truncateAll`, factories like `insertUser`.
+  (`@launchpad/db/testing`): `_test`/`_e2e`-only guard (`assertDisposable`), schema reset, `truncateAll`, factories like `insertUser`.
 - `e2e`: Playwright tests (phone + desktop) against the production server (`apps/api/dist/server.js` serving
   the web build, real CSP). Import `test`/`expect` from `#support/fixtures.ts`: any console error fails a test.
 - `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
@@ -53,7 +56,7 @@ pnpm typecheck   # turbo: tsc in every package
 pnpm lint        # biome check (lint + format check), no writes
 pnpm format      # biome check --write: fix formatting and safe lint fixes
 pnpm test        # turbo: tests in every package (needs `pnpm db:up`: tests use launchpad_test)
-pnpm e2e         # build, then Playwright in a browser (needs `pnpm db:up`; first time:
+pnpm e2e         # build, then Playwright in a browser on a fresh launchpad_e2e (needs `pnpm db:up`; first time:
                  #   pnpm --filter @launchpad/e2e exec playwright install chromium)
 pnpm verify      # lint, then typecheck + test + build + db:check: "is this safe to merge?"
 pnpm db:up       # start local Postgres (compose.dev.yml) and wait until it's ready

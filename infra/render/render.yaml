@@ -60,6 +60,13 @@ services:
       # never appears in this repo or in GitHub. Regenerating it (dashboard) signs everyone out.
       - key: BETTER_AUTH_SECRET
         generateValue: true
+      # Google sign-in: Google Cloud → Google Auth Platform → Clients → launchpad-web. Set both, or neither (Google
+      # sign-in off); one alone stops the boot. The client's redirect URIs must include
+      # https://render.noahlee.xyz/api/auth/callback/google.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
 
   # Background jobs: the same image, started as `node dist/worker.js` (deploy contract, row 3). No traffic, no
   # port, no health check: Render counts it healthy while the process runs and restarts it if it exits.

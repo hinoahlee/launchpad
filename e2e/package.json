@@ -12,6 +12,7 @@
 	},
 	"devDependencies": {
 		"@launchpad/api": "workspace:*",
+		"@launchpad/db": "workspace:*",
 		"@launchpad/tsconfig": "workspace:*",
 		"@launchpad/web": "workspace:*",
 		"@playwright/test": "catalog:",
