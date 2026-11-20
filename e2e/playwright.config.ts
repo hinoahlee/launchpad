@@ -1,5 +1,6 @@
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_DATABASE_URL as DATABASE_URL } from "./support/database.ts";
 
 // The app exactly as it ships: the API's production server (dist/server.js) serving the built web app, with
 // the real security headers. A CSP violation then shows up as a console error and fails the test.
@@ -7,10 +8,6 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const CI = Boolean(process.env.CI);
-// Its own database on the Postgres from `pnpm db:up` (CI runs the same server). Not `launchpad` (your dev data)
-// and not `launchpad_test` (Vitest wipes it at the start of `pnpm test`, which may run at the same time).
-const DATABASE_URL =
-	"postgres://launchpad:launchpad@localhost:5433/launchpad_e2e";
 const emptyDatabase = path.join(
 	import.meta.dirname,
 	"support/empty-database.ts",
@@ -46,6 +43,9 @@ export default defineConfig({
 			PORT: String(PORT),
 			LOG_LEVEL: "warn",
 			DATABASE_URL,
+			// As if one proxy sat in front (like Render's): a test can then send X-Forwarded-For to appear as its
+			// own client IP, so the per-IP sign-in limits (3 codes a minute) don't make tests trip each other.
+			TRUST_PROXY_HOPS: "1",
 			// Required in production. The origin the tests browse; a throwaway secret (this server holds no real users).
 			APP_URL: BASE_URL,
 			BETTER_AUTH_SECRET: "e2e-only-secret-not-used-anywhere-else",

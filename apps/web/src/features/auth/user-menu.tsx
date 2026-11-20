@@ -53,9 +53,12 @@ export function UserMenu() {
 			<DropdownMenuContent align="end" className="min-w-56">
 				<DropdownMenuGroup>
 					<DropdownMenuLabel className="flex flex-col">
-						<span className="truncate font-medium text-foreground">
-							{user.name}
-						</span>
+						{/* Empty for someone who signed up with an email code (no name asked). */}
+						{user.name && (
+							<span className="truncate font-medium text-foreground">
+								{user.name}
+							</span>
+						)}
 						<span className="truncate font-normal">{user.email}</span>
 					</DropdownMenuLabel>
 				</DropdownMenuGroup>

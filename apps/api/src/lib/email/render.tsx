@@ -1,6 +1,10 @@
 import type { ReactElement } from "react";
 import { render, toPlainText } from "react-email";
 import type { EmailMessage } from "./messages.ts";
+import {
+	SignInCodeEmail,
+	signInCodeSubject,
+} from "./templates/sign-in-code.tsx";
 import { WelcomeEmail, welcomeSubject } from "./templates/welcome.tsx";
 
 export type RenderedEmail = { subject: string; html: string; text: string };
@@ -15,6 +19,11 @@ function template(message: EmailMessage): {
 			return {
 				subject: welcomeSubject(),
 				element: <WelcomeEmail {...message.props} />,
+			};
+		case "sign-in-code":
+			return {
+				subject: signInCodeSubject(),
+				element: <SignInCodeEmail {...message.props} />,
 			};
 	}
 }

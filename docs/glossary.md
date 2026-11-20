@@ -400,3 +400,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   Auth checks the signature, then finds or creates the user. (10.2)
 - **OAuth state** — a random value we send to Google and expect back unchanged, stored on our side (or in a
   cookie) until then. A callback with an unknown state wasn't started by this browser: refused. (10.2)
+- **One-time password (OTP)** — a short code that works once and expires soon (ours: 6 digits, 5 minutes), sent
+  to something only the person has, here their inbox. We store only its hash. (10.3)
+- **Passwordless** — signing in without a password: proving you own an inbox (a code) or a Google account. No
+  password to forget, reuse or leak; a first sign-in with a code creates the account. (10.3)
+- **Brute-force protection** — stopping someone from guessing codes until one works. Ours: a code dies after 3
+  wrong guesses, and each IP may ask for 3 codes and make 3 sign-in tries a minute. (10.3)

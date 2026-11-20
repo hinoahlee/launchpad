@@ -1,5 +1,9 @@
 import {
+	type EmailCodeSignInRequest,
+	emailCodeSignInResponseSchema,
+	type SendSignInCodeRequest,
 	type SocialSignInRequest,
+	sendSignInCodeResponseSchema,
 	sessionResponseSchema,
 	signOutResponseSchema,
 	socialSignInResponseSchema,
@@ -32,6 +36,27 @@ export async function signInWithGoogle(): Promise<void> {
 		},
 	);
 	window.location.assign(url);
+}
+
+// Email sign-in, step 1: Better Auth stores a code and the API queues an email with it. The answer is the
+// same whether the address has an account or not (a first sign-in creates one).
+export async function sendSignInCode(email: string): Promise<void> {
+	const request: SendSignInCodeRequest = { email, type: "sign-in" };
+	await api(
+		"/auth/email-otp/send-verification-otp",
+		sendSignInCodeResponseSchema,
+		{ method: "POST", json: request },
+	);
+}
+
+// Step 2: trade the code for a session. Better Auth sets the session cookie on this response.
+export async function signInWithCode(
+	request: EmailCodeSignInRequest,
+): Promise<void> {
+	await api("/auth/sign-in/email-otp", emailCodeSignInResponseSchema, {
+		method: "POST",
+		json: request,
+	});
 }
 
 // Deletes the session row (so the token stops working everywhere) and clears the cookie.

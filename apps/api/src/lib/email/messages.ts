@@ -12,6 +12,15 @@ export const emailMessage = z.discriminatedUnion("template", [
 		to: z.email(),
 		props: z.object({ name: z.string().min(1).max(100) }),
 	}),
+	// The code that signs someone in (Better Auth's email OTP, features/auth). A secret until it's used or expires.
+	z.object({
+		template: z.literal("sign-in-code"),
+		to: z.email(),
+		props: z.object({
+			code: z.string().regex(/^\d{6}$/),
+			expiresInMinutes: z.number().int().positive(),
+		}),
+	}),
 ]);
 
 export type EmailMessage = z.output<typeof emailMessage>;

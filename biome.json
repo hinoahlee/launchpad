@@ -57,6 +57,16 @@
 			}
 		},
 		{
+			"includes": ["apps/web/src/components/ui/label.tsx"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"noLabelWithoutControl": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": [
 				"apps/api/src/config.ts",
 				"apps/web/vite.config.ts",

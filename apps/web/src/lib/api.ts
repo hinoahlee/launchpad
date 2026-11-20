@@ -1,7 +1,11 @@
-import { errorResponseSchema } from "@launchpad/shared";
+import {
+	authErrorResponseSchema,
+	errorResponseSchema,
+} from "@launchpad/shared";
 import type { z } from "zod";
 
-// A non-2xx answer from the API: `code` is the body's `error` ("validation_failed", "not_found"...), for
+// A non-2xx answer from the API: `code` is the body's `error` ("validation_failed", "not_found"...), or Better
+// Auth's `code` ("INVALID_OTP"...), for
 // branching in the UI; `requestId` is what a user quotes in a bug report.
 export class ApiError extends Error {
 	readonly status: number;
@@ -40,10 +44,15 @@ export async function api<S extends z.ZodType>(
 	const body: unknown = await res.json().catch(() => undefined);
 	if (!res.ok) {
 		const error = errorResponseSchema.safeParse(body);
+		if (error.success) {
+			throw new ApiError(res.status, error.data.error, error.data.requestId);
+		}
+		// /api/auth/* answers in Better Auth's shape: `{ code: "INVALID_OTP", message }`.
+		const authError = authErrorResponseSchema.safeParse(body);
 		throw new ApiError(
 			res.status,
-			error.success ? error.data.error : "http_error",
-			error.success ? error.data.requestId : undefined,
+			authError.success ? authError.data.code : "http_error",
+			undefined,
 		);
 	}
 	return schema.parse(body);

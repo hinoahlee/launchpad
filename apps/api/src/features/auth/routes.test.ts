@@ -1,8 +1,15 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { jobs, users, verifications } from "@launchpad/db";
 import { testDatabaseUrl } from "@launchpad/db/testing";
 import {
+	authErrorResponseSchema,
+	emailCodeSignInResponseSchema,
 	sessionResponseSchema,
 	socialSignInResponseSchema,
 } from "@launchpad/shared";
+import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
 import { testConfig } from "#testing/config.ts";
@@ -125,6 +132,166 @@ describe("Google sign-in", () => {
 		const location = new URL(String(res.headers.location));
 		expect(location.origin + location.pathname).toBe(`${APP_URL}/sign-in`);
 		expect(location.searchParams.get("error")).toMatch(/^state_/);
+	});
+});
+
+describe("email code sign-in", () => {
+	const EMAIL = "ada@example.com";
+	const post = (url: string, payload: object, target = app) =>
+		target.inject({
+			method: "POST",
+			url,
+			headers: { origin: APP_URL },
+			payload,
+		});
+	const sendCode = (email = EMAIL, target = app) =>
+		post(
+			"/api/auth/email-otp/send-verification-otp",
+			{ email, type: "sign-in" },
+			target,
+		);
+	const signIn = (otp: string, email = EMAIL) =>
+		post("/api/auth/sign-in/email-otp", { email, otp });
+	// The code as the worker will email it: the payload of the queued send_email job.
+	const queuedCode = async () => {
+		const rows = await app.db.select().from(jobs);
+		expect(rows).toHaveLength(1);
+		const payload = rows[0]?.payload as {
+			template: string;
+			to: string;
+			props: { code: string };
+		};
+		expect(payload).toMatchObject({ template: "sign-in-code", to: EMAIL });
+		return payload.props.code;
+	};
+	const wrong = (code: string) => (code === "000000" ? "111111" : "000000");
+	const errorCode = (res: { json: () => unknown }) =>
+		authErrorResponseSchema.parse(res.json()).code;
+
+	it("queues an email with a 6-digit code, and stores only its hash", async () => {
+		const res = await sendCode();
+		expect(res.statusCode).toBe(200);
+		const code = await queuedCode();
+		expect(code).toMatch(/^\d{6}$/);
+
+		const [stored] = await app.db.select().from(verifications);
+		expect(stored?.identifier).toBe(`sign-in-otp-${EMAIL}`);
+		expect(stored?.value).not.toContain(code);
+	});
+
+	it("signs in a new address: creates the user, verified, and sets the session cookie", async () => {
+		await sendCode();
+		const res = await signIn(await queuedCode());
+		expect(res.statusCode).toBe(200);
+		expect(emailCodeSignInResponseSchema.parse(res.json()).user.email).toBe(
+			EMAIL,
+		);
+
+		const [user] = await app.db
+			.select()
+			.from(users)
+			.where(eq(users.email, EMAIL));
+		expect(user?.emailVerified).toBe(true);
+		expect(user?.lastLoginMethod).toBe("email-otp");
+
+		// `__Secure-` prefix: APP_URL is https, so browsers only send it over https.
+		const cookie = res.cookies.find(
+			(c) => c.name === "__Secure-better-auth.session_token",
+		);
+		expect(cookie).toMatchObject({ httpOnly: true, secure: true });
+		const session = await app.inject({
+			method: "GET",
+			url: "/api/auth/get-session",
+			cookies: { [cookie?.name ?? ""]: cookie?.value ?? "" },
+		});
+		expect(sessionResponseSchema.parse(session.json())?.user.email).toBe(EMAIL);
+	});
+
+	it("works once", async () => {
+		await sendCode();
+		const code = await queuedCode();
+		expect((await signIn(code)).statusCode).toBe(200);
+		const again = await signIn(code);
+		expect(again.statusCode).toBe(400);
+		expect(errorCode(again)).toBe("INVALID_OTP");
+	});
+
+	it("matches the address whatever its case", async () => {
+		await sendCode("Ada@Example.com");
+		const res = await signIn(await queuedCode(), "ADA@example.com");
+		expect(res.statusCode).toBe(200);
+	});
+
+	// Brute-force protection: a guesser gets 3 tries per code, then needs a new email.
+	it("refuses the code after 3 wrong guesses, even the right one", async () => {
+		await sendCode();
+		const code = await queuedCode();
+		for (let i = 0; i < 3; i++) {
+			const res = await signIn(wrong(code));
+			expect(res.statusCode).toBe(400);
+			expect(errorCode(res)).toBe("INVALID_OTP");
+		}
+		const res = await signIn(code);
+		expect(res.statusCode).toBe(403);
+		expect(errorCode(res)).toBe("TOO_MANY_ATTEMPTS");
+		expect(await app.db.select().from(users)).toEqual([]);
+	});
+
+	it("refuses an expired code", async () => {
+		await sendCode();
+		const code = await queuedCode();
+		await app.db
+			.update(verifications)
+			.set({ expiresAt: new Date(Date.now() - 1000) });
+		const res = await signIn(code);
+		expect(res.statusCode).toBe(400);
+		expect(errorCode(res)).toBe("OTP_EXPIRED");
+	});
+
+	it("a new code replaces the old one", async () => {
+		await sendCode();
+		const first = await queuedCode();
+		await app.db.delete(jobs);
+		await sendCode();
+		const second = await queuedCode();
+		if (first !== second) {
+			expect((await signIn(first)).statusCode).toBe(400);
+		}
+		expect((await signIn(second)).statusCode).toBe(200);
+	});
+
+	it("sends nothing for flows this app doesn't use", async () => {
+		const res = await post("/api/auth/email-otp/send-verification-otp", {
+			email: EMAIL,
+			type: "forget-password",
+		});
+		expect(res.statusCode).toBe(200);
+		expect(await app.db.select().from(jobs)).toEqual([]);
+	});
+
+	// Better Auth's limits are on in production only (they're in memory, per app: tests would trip each other).
+	it("limits code emails to 3 a minute per IP in production", async () => {
+		const webRoot = mkdtempSync(path.join(tmpdir(), "launchpad-web-"));
+		writeFileSync(path.join(webRoot, "index.html"), "<!doctype html>");
+		const prod = buildApp(
+			testConfig({
+				NODE_ENV: "production",
+				DATABASE_URL: testDatabaseUrl(),
+				APP_URL,
+				BETTER_AUTH_SECRET: "a-test-secret-that-is-long-enough-1234",
+			}),
+			{ webRoot },
+		);
+		try {
+			for (let i = 0; i < 3; i++) {
+				expect((await sendCode(EMAIL, prod)).statusCode).toBe(200);
+			}
+			expect((await sendCode(EMAIL, prod)).statusCode).toBe(429);
+			// Another address from the same IP: the limit is on the IP, not the address.
+			expect((await sendCode("bob@example.com", prod)).statusCode).toBe(429);
+		} finally {
+			await prod.close();
+		}
 	});
 });
 
