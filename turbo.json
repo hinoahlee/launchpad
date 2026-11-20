@@ -24,6 +24,11 @@
 			"cache": false,
 			"persistent": true
 		},
+		// The API's background worker (apps/api), started next to the server by `pnpm dev`.
+		"dev:worker": {
+			"cache": false,
+			"persistent": true
+		},
 		// Offline: schema.ts vs. the committed migrations. Reruns only when these inputs change.
 		"db:check": {
 			"inputs": [

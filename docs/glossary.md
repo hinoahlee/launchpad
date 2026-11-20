@@ -339,3 +339,18 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   until it disconnects; everything works. Transaction mode: one per transaction, then back to the pool; far
   fewer real connections, but whatever lives on a connection breaks (`LISTEN`, `SET`, prepared statements,
   session advisory locks, temp tables). Render's pooler is transaction mode, port 6432. (8.4)
+
+## Phase 9 — Email
+- **Transactional vs. marketing email** — transactional: one person, triggered by their own action (welcome,
+  sign-in link, receipt). Marketing: bulk, sent to people who opted in. We only send transactional. (9.1)
+- **Adapter pattern** — code depends on one small interface (`EmailDriver`); each provider is an adapter behind
+  it, so tests swap in an in-memory one and a new provider changes no callers. (9.1)
+- **Idempotency key** — an id sent with a request so the receiver can recognize a repeat and act once. Our
+  emails use the job id, so a retried job reuses it and the provider delivers once. (9.1)
+- **JSX** — HTML-like tags inside code (`<Heading>Hi</Heading>`), in `.tsx` files. A build step turns them into
+  plain function calls; plain Node can't read them. (9.1)
+- **SSR vs. SSG** — server-side rendering: HTML made on the server each time, with that moment's data. Static
+  site generation: HTML made once at build time, the same for everyone. Emails are SSR without hydration:
+  rendered per recipient, sent as final HTML, no JavaScript in the inbox. (9.1)
+- **tsx** — a dev tool that runs `.ts`/`.tsx` files by converting them as Node loads them, and restarts on
+  change. Runs the worker in dev; production runs the built bundle instead. (9.1)

@@ -8,7 +8,7 @@
 		"pnpm": ">=12.21.0"
 	},
 	"scripts": {
-		"dev": "turbo run dev",
+		"dev": "turbo run dev dev:worker",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
 		"lint": "biome check .",
