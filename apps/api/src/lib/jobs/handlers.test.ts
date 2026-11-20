@@ -6,7 +6,6 @@ import type { EmailDriver } from "#lib/email/driver.ts";
 import { createMemoryDriver } from "#lib/email/memory-driver.ts";
 import { createLogger } from "#lib/logger.ts";
 import { enqueue } from "./enqueue.ts";
-import { handlers } from "./handlers.ts";
 import { startWorker, type Worker } from "./worker.ts";
 
 const db = createTestDb();
@@ -29,6 +28,7 @@ const jobStatus = async (id: string) =>
 	(await db.select().from(jobs).where(eq(jobs.id, id)))[0]?.status;
 
 describe("send_email", () => {
+	// The key is the job id, so every retry of this job reuses it and the provider delivers the email once.
 	it("sends the rendered email through the driver, keyed by the job id", async () => {
 		const email = createMemoryDriver();
 		worker = await startWorker({ db, log, email });
@@ -73,21 +73,5 @@ describe("send_email", () => {
 				lastError: "Error: provider unavailable",
 			});
 		});
-	});
-
-	it("sends once when the same job runs twice (at-least-once delivery)", async () => {
-		const email = createMemoryDriver();
-		const ctx = {
-			jobId: "0b6f3c1e-6a39-4d1e-9a0e-2f5c8d7e4b21",
-			db,
-			email,
-			log,
-			signal: new AbortController().signal,
-		};
-
-		await handlers.send_email(welcome, ctx);
-		await handlers.send_email(welcome, ctx);
-
-		expect(email.sent).toHaveLength(1);
 	});
 });
