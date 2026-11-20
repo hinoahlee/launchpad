@@ -21,9 +21,7 @@ test("Continue with Google sends the browser to Google", async ({ page }) => {
 	await page.getByRole("button", { name: "Continue with Google" }).click();
 	await expect(page).toHaveURL(/^https:\/\/accounts\.google\.com\//);
 
-	// Google will send the person back to our callback, on the origin they started from.
-	const origin = new URL(page.context().pages()[0]?.url() ?? "").origin;
-	expect(origin).toBe("https://accounts.google.com");
+	// Google will send the person back to our callback.
 	expect(googleUrl?.searchParams.get("redirect_uri")).toMatch(
 		/\/api\/auth\/callback\/google$/,
 	);
