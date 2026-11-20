@@ -32,6 +32,8 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `SENTRY_ENVIRONMENT` | `NODE_ENV` | The environment tag on errors; set it where `NODE_ENV=production` isn't the whole story (staging). |
 | `DEBUG_ERROR_ROUTE` | `false` | `true` adds `GET /api/debug/error`, which throws. Only to check error reporting; turn it off after. |
 | `TRUST_PROXY_HOPS` | `0` | Proxies in front of the app that append to `X-Forwarded-For` (Render: 2; Caddy on a VPS: 1). Too low: every visitor shares the proxy's IP and one rate limit. Too high: clients can fake their IP. |
+| `RESEND_API_KEY` | unset (emails only logged) | Worker only. Resend API key with "Sending access", limited to the sending domain. A secret (Render: `sync: false`). Set with `EMAIL_FROM`, or the boot fails. |
+| `EMAIL_FROM` | unset | Worker only. The sender, `Name <address>`, on a domain verified in Resend (`Launchpad <hello@mail.noahlee.xyz>`). |
 
 New variables are added here in the same PR as `config.ts`.
 

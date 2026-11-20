@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { directDatabaseUrl, loadConfig } from "./config.ts";
 
 const pooled = "postgres://app:pw@db.internal:6432/app";
@@ -26,5 +26,52 @@ describe("directDatabaseUrl", () => {
 		});
 		expect(config.DATABASE_URL).toBe(pooled);
 		expect(directDatabaseUrl(config)).toBe(direct);
+	});
+});
+
+describe("email settings", () => {
+	const base = { DATABASE_URL: direct };
+
+	// loadConfig exits the process on a bad value; stub exit so the test sees it as a throw.
+	function rejects(env: Record<string, string>): string {
+		const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+			throw new Error("exit");
+		});
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			expect(() => loadConfig({ ...base, ...env })).toThrow("exit");
+			return String(error.mock.calls[0]?.[0]);
+		} finally {
+			exit.mockRestore();
+			error.mockRestore();
+		}
+	}
+
+	it("accepts neither (emails are only logged) or both", () => {
+		expect(
+			loadConfig({ ...base, RESEND_API_KEY: "", EMAIL_FROM: "" }),
+		).toMatchObject({
+			RESEND_API_KEY: undefined,
+			EMAIL_FROM: undefined,
+		});
+		expect(
+			loadConfig({
+				...base,
+				RESEND_API_KEY: "re_123",
+				EMAIL_FROM: "Launchpad <hello@mail.example.com>",
+			}),
+		).toMatchObject({ EMAIL_FROM: "Launchpad <hello@mail.example.com>" });
+	});
+
+	it("stops the boot when only one of the two is set", () => {
+		expect(rejects({ RESEND_API_KEY: "re_123" })).toContain(
+			"set RESEND_API_KEY and EMAIL_FROM together",
+		);
+	});
+
+	it("stops the boot on a sender that isn't an address", () => {
+		expect(
+			rejects({ RESEND_API_KEY: "re_123", EMAIL_FROM: "Launchpad" }),
+		).toContain("Name <address> or address");
 	});
 });

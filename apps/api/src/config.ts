@@ -6,6 +6,13 @@ const optionalUrl = z
 	.optional()
 	.or(z.literal("").transform(() => undefined));
 
+// An optional string where an empty value means "not set".
+const optionalString = z
+	.string()
+	.min(1)
+	.optional()
+	.or(z.literal("").transform(() => undefined));
+
 const postgresUrl = z
 	.url({ protocol: /^postgres(ql)?$/ })
 	.describe("postgres://user:password@host:port/database");
@@ -41,6 +48,18 @@ const envSchema = z.object({
 	// is read that many hops from the right, so a client can't fake it by sending its own header. 0: no proxy
 	// (dev). Render: 2 (Cloudflare, then Render's load balancer). Caddy on a VPS: 1.
 	TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
+	// Resend API key (Resend → API Keys; "Sending access", limited to the sending domain). Set with EMAIL_FROM.
+	// Unset: the worker only logs emails. A secret. Only the worker reads it.
+	RESEND_API_KEY: optionalString,
+	// The sender: "Launchpad <hello@mail.example.com>" (or a bare address), on a domain verified in Resend.
+	EMAIL_FROM: z
+		.string()
+		.regex(
+			/^([^<>]+<[^<>\s]+@[^<>\s]+>|[^<>\s]+@[^<>\s]+)$/,
+			"Name <address> or address",
+		)
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
 });
 
 export type Config = z.infer<typeof envSchema>;
@@ -51,7 +70,13 @@ export const directDatabaseUrl = (config: Config) =>
 
 // Fail fast: a bad value stops the process at boot with a readable message, not on the first request.
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-	const result = envSchema.safeParse(env);
+	const result = envSchema
+		// Half an email setup is a mistake: fail at boot rather than silently only logging emails.
+		.refine((c) => !c.RESEND_API_KEY === !c.EMAIL_FROM, {
+			message: "set RESEND_API_KEY and EMAIL_FROM together, or neither",
+			path: ["EMAIL_FROM"],
+		})
+		.safeParse(env);
 	if (!result.success) {
 		console.error(
 			`Invalid environment variables:\n${z.prettifyError(result.error)}`,

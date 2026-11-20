@@ -24,7 +24,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   One handler per type in `handlers.ts` (must be idempotent); `queue.ts` claims/finishes rows; `worker.ts` runs the loop.
   Recurring jobs: add to `schedules.ts` (cron, UTC); `scheduler.ts` queues each run once via `enqueueOnce`.
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
-  from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (worker until a provider is set).
+  from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
+  Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).
   React Email templates in `templates/*.tsx`, rendered by `render.tsx` in the worker only. The dev server runs
   on plain Node, which can't load `.tsx`: nothing the server imports may import a template.
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).

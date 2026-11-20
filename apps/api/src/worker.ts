@@ -1,6 +1,6 @@
 import { createDb } from "@launchpad/db";
 import { directDatabaseUrl, loadConfig } from "./config.ts";
-import { createLogDriver } from "./lib/email/log-driver.ts";
+import { createEmailDriver } from "./lib/email/create-driver.ts";
 import { startScheduler } from "./lib/jobs/scheduler.ts";
 import { startWorker } from "./lib/jobs/worker.ts";
 import { createLogger } from "./lib/logger.ts";
@@ -22,8 +22,11 @@ const db = createDb(directDatabaseUrl(config));
 let worker: Awaited<ReturnType<typeof startWorker>>;
 let scheduler: ReturnType<typeof startScheduler>;
 try {
-	// Logs instead of sending until a provider is configured (step 9.2).
-	worker = await startWorker({ db, log, email: createLogDriver(log) });
+	worker = await startWorker({
+		db,
+		log,
+		email: createEmailDriver(config, log),
+	});
 	scheduler = startScheduler({ db, log });
 } catch (err) {
 	// Most likely the database is unreachable. Exit non-zero: the platform restarts the process.

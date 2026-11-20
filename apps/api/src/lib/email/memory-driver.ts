@@ -13,6 +13,7 @@ export function createMemoryDriver(): MemoryDriver {
 		sent,
 		async send(email) {
 			sent.push(email);
+			return {};
 		},
 	};
 }
