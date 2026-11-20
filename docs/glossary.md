@@ -383,3 +383,20 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   ours. (10.1)
 - **Account linking** — several sign-in methods (Google, an email code) attached to one user. Better Auth links a
   new method to an existing user by email only when the provider vouches the email is theirs. (10.1)
+- **OAuth 2.0** — a standard for letting one site (us) get limited access from another (Google) on a person's
+  behalf, without ever seeing their Google password. Google asks the person, then hands us a code. (10.2)
+- **OpenID Connect (OIDC)** — a layer on OAuth 2.0 for sign-in: besides access, Google tells us *who* the person is
+  (an ID token with their id, email, name). (10.2)
+- **Authorization code flow** — the OAuth flow for servers: the browser goes to Google, comes back to us with a
+  short-lived code, and our server trades the code (plus its client secret) for tokens, server to server. The
+  tokens never pass through the browser. (10.2)
+- **PKCE** — "pixie": before sending the browser to Google, we make a random secret and send only its hash. When
+  trading the code, we send the secret itself. A code stolen on the way back is useless without it. (10.2)
+- **Redirect URI** — where Google sends the browser back with the code: `<APP_URL>/api/auth/callback/google`.
+  Google only sends codes to URIs listed in the client, exactly, so an attacker can't have them sent elsewhere. (10.2)
+- **Scope** — what we ask Google for. Ours: `openid email profile` (who you are, your email, name and picture);
+  nothing else, so Google needs no review of the app. (10.2)
+- **ID token** — a JWT signed by Google stating who signed in (`sub`, `email`, `email_verified`, `name`). Better
+  Auth checks the signature, then finds or creates the user. (10.2)
+- **OAuth state** — a random value we send to Google and expect back unchanged, stored on our side (or in a
+  cookie) until then. A callback with an unknown state wasn't started by this browser: refused. (10.2)

@@ -45,6 +45,24 @@ export function createAuth(
 		// Its four tables (users, sessions, accounts, verifications) are in @launchpad/db's schema and migrate
 		// with ours; `usePlural` maps its model "user" to our export `users`.
 		database: drizzleAdapter(db, { provider: "pg", usePlural: true }),
+		// Sign-in methods. Google only when its client is configured (config.ts requires both values or neither).
+		// Google sends people back to <APP_URL>/api/auth/callback/google: that exact URL must be listed in the
+		// Google client's "Authorized redirect URIs".
+		socialProviders: {
+			...(config.GOOGLE_CLIENT_ID &&
+				config.GOOGLE_CLIENT_SECRET && {
+					google: {
+						clientId: config.GOOGLE_CLIENT_ID,
+						clientSecret: config.GOOGLE_CLIENT_SECRET,
+						// Always show Google's account picker, so someone signed in to several Google accounts picks one.
+						prompt: "select_account" as const,
+					},
+				}),
+		},
+		// When a sign-in fails at the callback (cancelled at Google, expired, a link refused), Better Auth redirects
+		// here with `?error=<code>`. Our sign-in page explains it. Its own fallback is an HTML page whose inline
+		// styles our CSP blocks.
+		onAPIError: { errorURL: `${origin}/sign-in` },
 		// Records how each user last signed in ("google", "email-otp"...) in users.last_login_method. Its
 		// cookie copy is off: nothing in the browser needs it.
 		plugins: [

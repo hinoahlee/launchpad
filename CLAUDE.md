@@ -26,6 +26,9 @@ safety rules and code conventions. During a phase, read only that phase's file i
 - `apps/api/src/features/auth`: Better Auth (decision 009) at `/api/auth/*`: `auth.ts` (`createAuth`, on `app.auth`),
   `routes.ts` (Fastify ↔ web `Request`/`Response`). Its tables (`users`, `sessions`, `accounts`, `verifications`)
   are in `@launchpad/db`'s schema; a test fails if they drift from what Better Auth expects.
+  Google sign-in when `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` are set. Failed callbacks redirect to
+  `/sign-in?error=<code>`. Web: `apps/web/src/features/auth` (session query, sign-in card, header menu), the
+  shapes it reads in `@launchpad/shared` (`auth.ts`).
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
   from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).

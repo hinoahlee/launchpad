@@ -85,3 +85,72 @@ describe("email settings", () => {
 		);
 	});
 });
+
+describe("Google settings", () => {
+	const base = { DATABASE_URL: direct };
+
+	it("accepts neither (Google sign-in off) or both", () => {
+		expect(
+			loadConfig({ ...base, GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" }),
+		).toMatchObject({
+			GOOGLE_CLIENT_ID: undefined,
+			GOOGLE_CLIENT_SECRET: undefined,
+		});
+		expect(
+			loadConfig({
+				...base,
+				GOOGLE_CLIENT_ID: "id",
+				GOOGLE_CLIENT_SECRET: "s",
+			}),
+		).toMatchObject({ GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "s" });
+	});
+
+	it("stops the boot when only one of the two is set", () => {
+		const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+			throw new Error("exit");
+		});
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			expect(() => loadConfig({ ...base, GOOGLE_CLIENT_ID: "id" })).toThrow(
+				"exit",
+			);
+			expect(String(error.mock.calls[0]?.[0])).toContain(
+				"set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET together",
+			);
+		} finally {
+			exit.mockRestore();
+			error.mockRestore();
+		}
+	});
+});
+
+describe("APP_URL", () => {
+	const base = { DATABASE_URL: direct };
+
+	// .env.example ships `APP_URL=`: it must mean "unset", not crash the boot.
+	it("treats an empty value as unset", () => {
+		expect(loadConfig({ ...base, APP_URL: "" }).APP_URL).toBeUndefined();
+	});
+
+	it("accepts an origin", () => {
+		expect(
+			loadConfig({ ...base, APP_URL: "https://app.example.com" }).APP_URL,
+		).toBe("https://app.example.com");
+	});
+
+	it("stops the boot on a URL with a path, or not a URL", () => {
+		for (const APP_URL of ["https://app.example.com/app", "app.example.com"]) {
+			const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+				throw new Error("exit");
+			});
+			const error = vi.spyOn(console, "error").mockImplementation(() => {});
+			try {
+				expect(() => loadConfig({ ...base, APP_URL })).toThrow("exit");
+				expect(error).toHaveBeenCalled();
+			} finally {
+				exit.mockRestore();
+				error.mockRestore();
+			}
+		}
+	});
+});

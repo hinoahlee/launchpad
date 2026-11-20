@@ -72,7 +72,11 @@ const envSchema = z.object({
 	// production for the server; in dev, Vite's origin (it proxies /api to us).
 	APP_URL: z
 		.url({ protocol: /^https?$/ })
-		.refine((u) => new URL(u).pathname === "/", "an origin, without a path")
+		// canParse first: Zod runs this even when the URL check above failed, and `new URL("")` would throw.
+		.refine(
+			(u) => URL.canParse(u) && new URL(u).pathname === "/",
+			"an origin, without a path",
+		)
 		.optional()
 		.or(z.literal("").transform(() => undefined)),
 	// Signs the session cookie and encrypts what Better Auth stores. 32+ random bytes, e.g. `openssl rand -base64
@@ -83,6 +87,10 @@ const envSchema = z.object({
 		.min(32, "at least 32 characters: openssl rand -base64 32")
 		.optional()
 		.or(z.literal("").transform(() => undefined)),
+	// Google sign-in (Google Cloud → Google Auth Platform → Clients → the web client). Set both, or neither: unset,
+	// Google sign-in is off. The secret is a secret. Only the server reads them.
+	GOOGLE_CLIENT_ID: optionalString,
+	GOOGLE_CLIENT_SECRET: optionalString,
 });
 
 export type Config = z.infer<typeof envSchema>;
@@ -98,6 +106,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 		.refine((c) => !c.RESEND_API_KEY === !c.EMAIL_FROM, {
 			message: "set RESEND_API_KEY and EMAIL_FROM together, or neither",
 			path: ["EMAIL_FROM"],
+		})
+		// Same for Google: half a client is a typo, not a choice.
+		.refine((c) => !c.GOOGLE_CLIENT_ID === !c.GOOGLE_CLIENT_SECRET, {
+			message:
+				"set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET together, or neither",
+			path: ["GOOGLE_CLIENT_SECRET"],
 		})
 		.safeParse(env);
 	if (!result.success) {
