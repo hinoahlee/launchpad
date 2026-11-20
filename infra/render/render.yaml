@@ -53,6 +53,13 @@ services:
       # Unset: no webhook route, so bounces and complaints aren't recorded.
       - key: RESEND_WEBHOOK_SECRET
         sync: false
+      # Auth: the public origin (sign-in links and the CSRF check use it). Keep in sync with `domains` above.
+      - key: APP_URL
+        value: https://render.noahlee.xyz
+      # Signs session cookies. Render makes a random 256-bit value once, when the Blueprint first adds the key; it
+      # never appears in this repo or in GitHub. Regenerating it (dashboard) signs everyone out.
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
 
   # Background jobs: the same image, started as `node dist/worker.js` (deploy contract, row 3). No traffic, no
   # port, no health check: Render counts it healthy while the process runs and restarts it if it exits.

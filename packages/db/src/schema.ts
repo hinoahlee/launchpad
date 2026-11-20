@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+	boolean,
 	check,
 	customType,
 	index,
@@ -8,6 +9,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 
@@ -20,11 +22,24 @@ const citext = customType<{ data: string }>({ dataType: () => "citext" });
 const timestamptz = (name: string) =>
 	timestamp(name, { withTimezone: true, precision: 3 });
 
+// Auth tables (step 10.1): `users`, `sessions`, `accounts`, `verifications`. Better Auth reads and writes them
+// through its Drizzle adapter, matching its models (user, session...) to these exports by name (`usePlural`) and
+// its fields to the property names below. Their shape is Better Auth's core schema; it checks it at boot outside
+// production, and apps/api/src/features/auth tests it. A plugin that adds fields adds them here too.
+
+// One row per person, however many ways they sign in (those are `accounts`).
 export const users = pgTable("users", {
 	// Random (v4) UUID made by Postgres: ids can't be guessed or counted, unlike 1, 2, 3.
 	id: uuid("id").defaultRandom().primaryKey(),
 	email: citext("email").notNull().unique(),
 	name: text("name").notNull(),
+	// True once the person proved they own the address (an email code, or a provider that vouches for it).
+	// Better Auth links a new sign-in method to an existing user by email only when it's verified.
+	emailVerified: boolean("email_verified").default(false).notNull(),
+	// Profile picture URL, from the provider (Google) or later an upload.
+	image: text("image"),
+	// How they last signed in: "google", "email-otp"... (Better Auth's lastLoginMethod plugin).
+	lastLoginMethod: text("last_login_method"),
 	createdAt: timestamptz("created_at").defaultNow().notNull(),
 	// $onUpdate is applied by Drizzle on every UPDATE it builds; raw SQL updates must set it themselves.
 	updatedAt: timestamptz("updated_at")
@@ -35,6 +50,88 @@ export const users = pgTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+// One row per signed-in device or browser. The client holds `token` (the browser in a cookie); each request
+// looks it up here, so deleting a row signs that device out at once.
+export const sessions = pgTable(
+	"sessions",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		// Random, unguessable. Whoever has it is signed in as this user until expiresAt.
+		token: text("token").notNull().unique(),
+		// Pushed forward while the session is used (Better Auth: 7 days, renewed at most once a day).
+		expiresAt: timestamptz("expires_at").notNull(),
+		// Where it was created, to show "Chrome on macOS, 1.2.3.4" in the account page's session list (10.4).
+		ipAddress: text("ip_address"),
+		userAgent: text("user_agent"),
+		createdAt: timestamptz("created_at").defaultNow().notNull(),
+		updatedAt: timestamptz("updated_at")
+			.defaultNow()
+			.notNull()
+			.$onUpdate(() => new Date()),
+	},
+	(t) => [index("sessions_user_id_idx").on(t.userId)],
+);
+
+export type Session = typeof sessions.$inferSelect;
+
+// One row per way a user signs in: a Google account, later Apple or a password. `providerId` names the method
+// ("google", "credential" for a password), `accountId` is the user's id at that provider.
+export const accounts = pgTable(
+	"accounts",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		providerId: text("provider_id").notNull(),
+		accountId: text("account_id").notNull(),
+		// The provider's tokens, for calling its API on the user's behalf (we don't yet). Secrets: never returned
+		// by Better Auth's endpoints.
+		accessToken: text("access_token"),
+		refreshToken: text("refresh_token"),
+		idToken: text("id_token"),
+		accessTokenExpiresAt: timestamptz("access_token_expires_at"),
+		refreshTokenExpiresAt: timestamptz("refresh_token_expires_at"),
+		scope: text("scope"),
+		// Password hash, for the "credential" provider only. We don't enable passwords; kept because the schema
+		// is Better Auth's.
+		password: text("password"),
+		createdAt: timestamptz("created_at").defaultNow().notNull(),
+		updatedAt: timestamptz("updated_at")
+			.defaultNow()
+			.notNull()
+			.$onUpdate(() => new Date()),
+	},
+	(t) => [
+		index("accounts_user_id_idx").on(t.userId),
+		// Ours, not Better Auth's: one provider account belongs to one user, even if two sign-ins race.
+		uniqueIndex("accounts_provider_account_idx").on(t.providerId, t.accountId),
+	],
+);
+
+export type Account = typeof accounts.$inferSelect;
+
+// Short-lived secrets Better Auth checks later: an email code (10.3), OAuth state. Deleted once used or expired.
+export const verifications = pgTable(
+	"verifications",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		// What it's for, e.g. the email address a code was sent to.
+		identifier: text("identifier").notNull(),
+		value: text("value").notNull(),
+		expiresAt: timestamptz("expires_at").notNull(),
+		createdAt: timestamptz("created_at").defaultNow().notNull(),
+		updatedAt: timestamptz("updated_at")
+			.defaultNow()
+			.notNull()
+			.$onUpdate(() => new Date()),
+	},
+	(t) => [index("verifications_identifier_idx").on(t.identifier)],
+);
 
 export const JOB_STATUSES = ["queued", "running", "done", "failed"] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];

@@ -67,6 +67,22 @@ const envSchema = z.object({
 		.regex(/^whsec_[A-Za-z0-9+/=]+$/, "whsec_ followed by base64")
 		.optional()
 		.or(z.literal("").transform(() => undefined)),
+	// The public origin people open, e.g. https://render.noahlee.xyz (no path). Auth builds its links from it,
+	// and accepts browser requests that change something (sign in, sign out) only from this origin. Required in
+	// production for the server; in dev, Vite's origin (it proxies /api to us).
+	APP_URL: z
+		.url({ protocol: /^https?$/ })
+		.refine((u) => new URL(u).pathname === "/", "an origin, without a path")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
+	// Signs the session cookie and encrypts what Better Auth stores. 32+ random bytes, e.g. `openssl rand -base64
+	// 32`. Changing it signs everyone out. A secret. Required in production for the server; dev and tests fall back
+	// to a fixed value.
+	BETTER_AUTH_SECRET: z
+		.string()
+		.min(32, "at least 32 characters: openssl rand -base64 32")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
 });
 
 export type Config = z.infer<typeof envSchema>;

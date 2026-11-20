@@ -38,6 +38,9 @@ export default defineConfig({
 			// The Postgres from `pnpm db:up` (compose.dev.yml), which CI runs too. Today's pages don't touch the
 			// database, but the server needs the setting to boot.
 			DATABASE_URL: "postgres://launchpad:launchpad@localhost:5433/launchpad",
+			// Required in production. The origin the tests browse; a throwaway secret (this server holds no real users).
+			APP_URL: BASE_URL,
+			BETTER_AUTH_SECRET: "e2e-only-secret-not-used-anywhere-else",
 		},
 		// Locally, reuse a server you already started on the port; CI always starts a fresh one.
 		reuseExistingServer: !CI,

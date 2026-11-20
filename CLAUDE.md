@@ -23,6 +23,9 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `enqueue(tx, type, payload)` inside the transaction that saves the job's data (`jobs` table in `@launchpad/db`).
   One handler per type in `handlers.ts` (must be idempotent); `queue.ts` claims/finishes rows; `worker.ts` runs the loop.
   Recurring jobs: add to `schedules.ts` (cron, UTC); `scheduler.ts` queues each run once via `enqueueOnce`.
+- `apps/api/src/features/auth`: Better Auth (decision 009) at `/api/auth/*`: `auth.ts` (`createAuth`, on `app.auth`),
+  `routes.ts` (Fastify ↔ web `Request`/`Response`). Its tables (`users`, `sessions`, `accounts`, `verifications`)
+  are in `@launchpad/db`'s schema; a test fails if they drift from what Better Auth expects.
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
   from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).
