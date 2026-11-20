@@ -76,6 +76,12 @@ services:
       # The same DSN as the web service (one Sentry project for the API's processes).
       - key: SENTRY_DSN
         sync: false
+      # Email (only the worker sends). Resend → API Keys: a production key of its own, "Sending access",
+      # limited to mail.noahlee.xyz. Unset: emails are only logged, with a warning at boot.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: Launchpad <hello@mail.noahlee.xyz>
 
 databases:
   - name: launchpad-db

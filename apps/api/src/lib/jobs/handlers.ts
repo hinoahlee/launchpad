@@ -36,11 +36,11 @@ export const handlers: JobHandlers = {
 	// through (but wasn't marked done) is dropped by the provider instead of delivered twice.
 	send_email: async (message, { jobId, email, log, signal }) => {
 		const rendered = await renderEmail(message);
-		await email.send(
+		const { providerId } = await email.send(
 			{ to: message.to, ...rendered, idempotencyKey: jobId },
 			signal,
 		);
-		log.info({ template: message.template }, "email sent");
+		log.info({ template: message.template, providerId }, "email sent");
 	},
 	// Idempotent as it is: a second run finds nothing left to delete.
 	"prune-jobs": async ({ olderThanDays }, { db, log }) => {

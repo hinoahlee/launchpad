@@ -14,7 +14,13 @@ export type OutgoingEmail = {
 	idempotencyKey: string;
 };
 
+export type SendResult = {
+	// The provider's id for this email, logged so it can be found in the provider's dashboard. Unset when
+	// nothing was sent to a provider (memory, log).
+	providerId?: string;
+};
+
 export type EmailDriver = {
 	// Resolves once the provider accepted the email; throws if it didn't, so the job retries.
-	send: (email: OutgoingEmail, signal: AbortSignal) => Promise<void>;
+	send: (email: OutgoingEmail, signal: AbortSignal) => Promise<SendResult>;
 };
