@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import type { EmailDriver } from "#lib/email/driver.ts";
 import { createMemoryDriver } from "#lib/email/memory-driver.ts";
+import { suppress } from "#lib/email/suppression.ts";
 import { createLogger } from "#lib/logger.ts";
 import { enqueue } from "./enqueue.ts";
 import { startWorker, type Worker } from "./worker.ts";
@@ -54,6 +55,17 @@ describe("send_email", () => {
 			enqueue(db, "send_email", { ...welcome, template: "nope" }),
 		).rejects.toThrow();
 		expect(await db.select().from(jobs)).toHaveLength(0);
+	});
+
+	it("skips an address that bounced or complained, and finishes the job", async () => {
+		const email = createMemoryDriver();
+		worker = await startWorker({ db, log, email });
+		// Different case on purpose: it's the same mailbox.
+		await suppress(db, "ADA@example.com", "bounce");
+
+		const id = await enqueue(db, "send_email", welcome);
+		await vi.waitFor(async () => expect(await jobStatus(id)).toBe("done"));
+		expect(email.sent).toEqual([]);
 	});
 
 	it("retries when the provider fails", async () => {

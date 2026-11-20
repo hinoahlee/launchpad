@@ -354,3 +354,18 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   rendered per recipient, sent as final HTML, no JavaScript in the inbox. (9.1)
 - **tsx** — a dev tool that runs `.ts`/`.tsx` files by converting them as Node loads them, and restarts on
   change. Runs the worker in dev; production runs the built bundle instead. (9.1)
+- **SPF** — a DNS record listing the servers allowed to send for a domain. The receiver checks the sending server
+  against it. Ours is on `send.mail.noahlee.xyz`, the bounce address Resend uses. (9.2)
+- **DKIM** — a signature the sending server adds to each email, checked against a public key in DNS
+  (`resend._domainkey.mail`). Proves the domain sent it and nothing changed on the way. (9.2)
+- **DMARC** — a DNS record (`_dmarc`) telling receivers what to do when an email claiming to be from the domain
+  fails: `p=none` (only report), `quarantine` (spam folder), `reject`. Passes when SPF or DKIM passes for
+  the same domain as the visible From. (9.2)
+- **Sender reputation** — how much inbox providers trust a sending domain, built from its history: bounces, spam
+  complaints and failed checks lower it, and a low one sends all its email to spam. Why we send from a subdomain. (9.2)
+- **Hard vs. soft bounce** — hard (Resend: `Permanent`): the address doesn't exist or refuses us for good; never
+  send to it again. Soft (`Temporary`): full mailbox, server down; usually clears up, so we keep sending. (9.3)
+- **Spam complaint** — the recipient pressed "Report spam". Inbox providers count these heavily; we stop emailing
+  that address. (9.3)
+- **Webhook signature** — an HMAC of the request body, keyed with a secret only the sender and we know, sent in a
+  header. A match proves the sender sent this exact body; a timestamp in the signed text stops replays. (9.3)

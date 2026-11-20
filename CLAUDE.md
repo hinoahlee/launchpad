@@ -28,6 +28,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).
   React Email templates in `templates/*.tsx`, rendered by `render.tsx` in the worker only. The dev server runs
   on plain Node, which can't load `.tsx`: nothing the server imports may import a template.
+  Suppression: `POST /api/webhooks/resend` (`features/email-webhooks`, signature checked by `webhook-signature.ts`)
+  records hard bounces and complaints in `email_suppressions`; `send_email` skips those addresses.
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`

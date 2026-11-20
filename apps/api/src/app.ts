@@ -26,6 +26,7 @@ import {
 } from "fastify-type-provider-zod";
 import type { DestinationStream } from "pino";
 import type { Config } from "./config.ts";
+import { resendWebhookRoutes } from "./features/email-webhooks/routes.ts";
 import { greetingRoutes } from "./features/greeting/routes.ts";
 import { loggerOptions } from "./lib/logger.ts";
 import { reportError } from "./lib/sentry.ts";
@@ -280,6 +281,11 @@ export function buildApp(
 			);
 
 			api.register(greetingRoutes);
+
+			// Off until the webhook's signing secret is set: without it no request could be verified.
+			if (config.RESEND_WEBHOOK_SECRET) {
+				api.register(resendWebhookRoutes(config.RESEND_WEBHOOK_SECRET));
+			}
 
 			// Off unless DEBUG_ERROR_ROUTE=true: a public route that throws would let anyone fill the Sentry quota.
 			if (config.DEBUG_ERROR_ROUTE) {
