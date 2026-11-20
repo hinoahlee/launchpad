@@ -11,7 +11,21 @@ learn how real systems are built, deployed, run and maintained. You build; they 
 - Give the short version. If a topic needs more detail, offer it ("Want details on X? Just ask.").
 - Skip minor stuff: small fixes, side notes and internals the human doesn't need to act on.
 - Explain *why* in terms of the trade-off, not just the rule.
-- Limits: explanations ≤ 8 lines, PR descriptions ≤ ~25 lines. Split anything longer into another step.
+- Limits: explanations ≤ 8 lines (a problem: ≤ 15), PR descriptions ≤ ~25 lines. Split anything longer into
+  another step.
+
+### Explaining a problem
+The human wasn't there when you found it. Give the whole chain, in plain words, never "X, so we do Y":
+1. **Background:** the one fact they need first (what JSX is, what the dev server runs), as a concrete example.
+2. **The problem:** what would happen, step by step. Name the file, the command, the error they'd see.
+3. **Why it matters:** who hits it, when, and what breaks. If nothing can break and nothing needs their
+   action, don't bring it up at all.
+4. **The fix:** what we do, and *how* it avoids the problem, mechanically. Compare it with the obvious
+   alternative and show where that one fails.
+5. **The cost:** what it leaves open or asks of them, and how they'd notice if it goes wrong.
+
+Never lean on shorthand that only makes sense with your context ("so routes can queue emails"). Spell out
+the situation it refers to, and what it would look like otherwise.
 
 ## Starting a phase
 When the human says "Start phase N":
