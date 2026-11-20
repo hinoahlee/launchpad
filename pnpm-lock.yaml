@@ -488,6 +488,9 @@ importers:
       '@launchpad/api':
         specifier: workspace:*
         version: link:../apps/api
+      '@launchpad/db':
+        specifier: workspace:*
+        version: link:../packages/db
       '@launchpad/tsconfig':
         specifier: workspace:*
         version: link:../packages/tsconfig
