@@ -241,9 +241,15 @@ describe("web app", () => {
 
 	it("production refuses to boot without a web build", () => {
 		expect(() =>
-			buildApp(testConfig({ NODE_ENV: "production" }), {
-				webRoot: path.join(webRoot, "missing"),
-			}),
+			buildApp(
+				testConfig({
+					NODE_ENV: "production",
+					// Production also requires these (auth); set so only the missing build can stop the boot.
+					APP_URL: "https://app.example.test",
+					BETTER_AUTH_SECRET: "x".repeat(32),
+				}),
+				{ webRoot: path.join(webRoot, "missing") },
+			),
 		).toThrow(/SPA build not found/);
 	});
 });

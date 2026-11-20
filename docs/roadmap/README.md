@@ -1,4 +1,4 @@
-# Roadmap
+﻿# Roadmap
 
 A production-grade app template, built step by step. An agent builds each step as a small PR; you review it
 like you're shadowing a principal engineer.
@@ -21,7 +21,7 @@ like you're shadowing a principal engineer.
 | 7 | [App foundations](phases/07-app-foundations.md) | done |
 | 8 | [Background jobs](phases/08-jobs.md) | done |
 | 9 | [Email](phases/09-email.md) | done |
-| 10 | [Auth](phases/10-auth.md) | not started |
+| 10 | [Auth](phases/10-auth.md) | in progress (10.1 done) |
 | 11 | [File storage](phases/11-storage.md) | not started |
 | 12 | [Organizations](phases/12-organizations.md) | not started |
 | 13 | [Billing](phases/13-billing.md) | not started |
@@ -32,7 +32,7 @@ like you're shadowing a principal engineer.
 | 18 | [AWS staging (optional)](phases/18-aws-staging.md) | not started |
 | 19 | [AWS data + operations (optional)](phases/19-aws-data-ops.md) | not started |
 | 20 | [AWS production (optional)](phases/20-aws-prod.md) | not started |
-| 21 | [Later: mobile, enterprise](phases/21-later.md) | — |
+| 21 | [Later: mobile, enterprise](phases/21-later.md) | â€” |
 
 Follow-ups noticed along the way:
 - Phase 14 (hardening): a Sentry `tunnel` (browser errors sent via our own `/api` route), so ad blockers
@@ -81,7 +81,7 @@ flowchart LR
   ci --> reg[("Image in GHCR")]
   reg --> render["Render: web + worker + Postgres"]
   reg -.-> vps["VPS: Compose + Caddy + Postgres"]
-  reg -.-> aws["AWS: staging → approval → prod (optional)"]
+  reg -.-> aws["AWS: staging â†’ approval â†’ prod (optional)"]
 ```
 
 ### On Render

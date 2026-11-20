@@ -26,15 +26,18 @@ import {
 } from "fastify-type-provider-zod";
 import type { DestinationStream } from "pino";
 import type { Config } from "./config.ts";
+import { type Auth, appUrl, createAuth } from "./features/auth/auth.ts";
+import { authRoutes } from "./features/auth/routes.ts";
 import { resendWebhookRoutes } from "./features/email-webhooks/routes.ts";
 import { greetingRoutes } from "./features/greeting/routes.ts";
 import { loggerOptions } from "./lib/logger.ts";
 import { reportError } from "./lib/sentry.ts";
 
-// `app.db` in every route and plugin, typed.
+// `app.db` and `app.auth` in every route and plugin, typed.
 declare module "fastify" {
 	interface FastifyInstance {
 		db: Database;
+		auth: Auth;
 	}
 }
 
@@ -166,6 +169,10 @@ export function buildApp(
 		await db.$client.end({ timeout: 5 });
 	});
 
+	// Sign-in and sessions (Better Auth), on the same pool. Throws in production without APP_URL or the secret.
+	const auth = createAuth(config, db, app.log);
+	app.decorate("auth", auth);
+
 	// Echo the ID back so a user or another service can quote it when reporting a problem.
 	app.addHook("onRequest", async (request, reply) => {
 		reply.header("x-request-id", request.id);
@@ -280,6 +287,7 @@ export function buildApp(
 				async () => ({ sha: config.GIT_SHA }),
 			);
 
+			api.register(authRoutes(auth, appUrl(config)), { prefix: "/auth" });
 			api.register(greetingRoutes);
 
 			// Off until the webhook's signing secret is set: without it no request could be verified.

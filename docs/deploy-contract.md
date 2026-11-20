@@ -16,7 +16,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Bucket in phase 11. |
 | 10 | Migrations are backward compatible with the previous release (expand/contract). | [Decision 005](decisions/005-expand-contract.md). |
 | 11 | Unexpected errors (5xx) go to Sentry when `SENTRY_DSN` is set, tagged with release (= `GIT_SHA`), environment and `requestId`. | `lib/sentry.ts`, the error handler in `app.ts`. Web: `apps/web/src/lib/sentry.ts`, DSN baked in at build (below). |
-| 12 | The platform terminates TLS and sets `TRUST_PROXY_HOPS` to the number of proxies that append to `X-Forwarded-For`. The app sends security headers (CSP, HSTS), compresses responses and rate-limits `/api` per client IP (in memory, so per instance). | `app.ts` (helmet, compress, rate-limit; `trustProxy`). Render: 2, in the Blueprint. |
+| 12 | The platform terminates TLS and sets `TRUST_PROXY_HOPS` to the number of proxies that append to `X-Forwarded-For`. The app sends security headers (CSP, HSTS), compresses responses and rate-limits `/api` per client IP (in memory, so per instance); Better Auth adds stricter limits on `/api/auth/*`, keyed on the same IP. | `app.ts` (helmet, compress, rate-limit; `trustProxy`). Render: 2, in the Blueprint. |
 
 ## Environment variables
 
@@ -35,6 +35,9 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `RESEND_API_KEY` | unset (emails only logged) | Worker only. Resend API key with "Sending access", limited to the sending domain. A secret (Render: `sync: false`). Set with `EMAIL_FROM`, or the boot fails. |
 | `EMAIL_FROM` | unset | Worker only. The sender, `Name <address>`, on a domain verified in Resend (`Launchpad <hello@mail.noahlee.xyz>`). |
 | `RESEND_WEBHOOK_SECRET` | unset (no webhook route) | Server only. The Resend webhook's signing secret (`whsec_...`). Turns on `POST /api/webhooks/resend`, which records hard bounces and spam complaints so the worker skips those addresses. A secret (Render: `sync: false`). |
+
+| `APP_URL` | `http://localhost:5173` (dev) | Server only; required in production. The public origin (`https://render.noahlee.xyz`, no path). Better Auth builds its links from it and accepts state-changing requests only from it (CSRF). |
+| `BETTER_AUTH_SECRET` | dev-only fixed value | Server only; required in production (32+ characters). Signs session cookies. A secret (Render: `generateValue`). Changing it signs everyone out. |
 
 New variables are added here in the same PR as `config.ts`.
 

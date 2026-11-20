@@ -19,6 +19,7 @@
 		"db:migrate": "node --env-file-if-exists=.env src/migrate.ts"
 	},
 	"dependencies": {
+		"@better-auth/drizzle-adapter": "catalog:",
 		"@fastify/compress": "catalog:",
 		"@fastify/helmet": "catalog:",
 		"@fastify/rate-limit": "catalog:",
@@ -26,6 +27,7 @@
 		"@launchpad/db": "workspace:*",
 		"@launchpad/shared": "workspace:*",
 		"@sentry/node": "catalog:",
+		"better-auth": "catalog:",
 		"croner": "catalog:",
 		"drizzle-orm": "catalog:",
 		"fastify": "catalog:",

@@ -57,6 +57,10 @@ catalog:
   cn: 0.5.2
   # Cron expressions → run times, for recurring jobs. 11.0.0, not 11.0.1: two-week rule.
   croner: 11.0.0
+  # Auth (decision 009). Same version for both: the adapter is released with the core. 1.7.18: the newest release
+  # at least two weeks old; includes the 1.7.16 security fixes.
+  "@better-auth/drizzle-adapter": 1.7.18
+  better-auth: 1.7.18
   drizzle-kit: 0.31.11
   drizzle-orm: 0.45.4
   fastify: 5.12.8

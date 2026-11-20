@@ -369,3 +369,17 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   that address. (9.3)
 - **Webhook signature** — an HMAC of the request body, keyed with a secret only the sender and we know, sent in a
   header. A match proves the sender sent this exact body; a timestamp in the signed text stops replays. (9.3)
+
+## Phase 10 — Auth
+- **Session** — the server's record that a person is signed in on one device: a row in `sessions` with who and
+  until when. Deleting the row signs that device out. (10.1)
+- **Session token** — the random, unguessable string a client holds to prove which session is theirs. The browser
+  keeps it in a cookie; a mobile app will send it in a header. Whoever has it is signed in. (10.1)
+- **Cookie attributes** — rules the server attaches to a cookie. `HttpOnly`: page JavaScript can't read it, so an
+  injected script can't steal it. `Secure`: sent over HTTPS only. `SameSite=Lax`: not sent on requests other sites
+  start in the background (forms, fetch), only on normal link clicks. (10.1)
+- **CSRF (cross-site request forgery)** — another site makes your browser send a request to ours, and the browser
+  attaches your cookie, so it runs as you. Stopped by `SameSite` and by checking the `Origin` header against
+  ours. (10.1)
+- **Account linking** — several sign-in methods (Google, an email code) attached to one user. Better Auth links a
+  new method to an existing user by email only when the provider vouches the email is theirs. (10.1)
