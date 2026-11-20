@@ -60,6 +60,13 @@ const envSchema = z.object({
 		)
 		.optional()
 		.or(z.literal("").transform(() => undefined)),
+	// Signing secret of the Resend webhook (Resend → Webhooks → the endpoint → Signing secret, "whsec_..."). Turns on
+	// POST /api/webhooks/resend, which records bounced and complaining addresses. A secret. Only the server reads it.
+	RESEND_WEBHOOK_SECRET: z
+		.string()
+		.regex(/^whsec_[A-Za-z0-9+/=]+$/, "whsec_ followed by base64")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
 });
 
 export type Config = z.infer<typeof envSchema>;

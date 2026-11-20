@@ -83,3 +83,28 @@ export const jobs = pgTable(
 );
 
 export type Job = typeof jobs.$inferSelect;
+
+export const SUPPRESSION_REASONS = ["bounce", "complaint"] as const;
+export type SuppressionReason = (typeof SUPPRESSION_REASONS)[number];
+
+// Addresses we never email again: their mail server said the mailbox doesn't exist (a hard bounce), or the
+// person marked one of our emails as spam (a complaint). Sending to them again hurts the domain's reputation,
+// which pushes every email we send toward spam. Filled from the provider's webhook (step 9.3).
+export const emailSuppressions = pgTable(
+	"email_suppressions",
+	{
+		// citext: Bob@X.com and bob@x.com are the same mailbox.
+		email: citext("email").primaryKey(),
+		reason: text("reason").$type<SuppressionReason>().notNull(),
+		createdAt: timestamptz("created_at").defaultNow().notNull(),
+	},
+	(t) => [
+		// Keep in sync with SUPPRESSION_REASONS.
+		check(
+			"email_suppressions_reason_check",
+			sql`${t.reason} in ('bounce', 'complaint')`,
+		),
+	],
+);
+
+export type EmailSuppression = typeof emailSuppressions.$inferSelect;

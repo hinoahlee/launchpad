@@ -74,4 +74,14 @@ describe("email settings", () => {
 			rejects({ RESEND_API_KEY: "re_123", EMAIL_FROM: "Launchpad" }),
 		).toContain("Name <address> or address");
 	});
+
+	// A pasted API key (re_...) instead of the webhook secret would turn the route on and reject every real event.
+	it("stops the boot on a webhook secret that isn't whsec_...", () => {
+		expect(loadConfig({ ...base, RESEND_WEBHOOK_SECRET: "" })).toMatchObject({
+			RESEND_WEBHOOK_SECRET: undefined,
+		});
+		expect(rejects({ RESEND_WEBHOOK_SECRET: "re_123" })).toContain(
+			"whsec_ followed by base64",
+		);
+	});
 });

@@ -49,6 +49,10 @@ services:
       # never in this file. Unset: error tracking is off. (The web app's DSN is a GitHub variable, baked in by CI.)
       - key: SENTRY_DSN
         sync: false
+      # Resend → Webhooks → the endpoint for https://render.noahlee.xyz/api/webhooks/resend → Signing secret.
+      # Unset: no webhook route, so bounces and complaints aren't recorded.
+      - key: RESEND_WEBHOOK_SECRET
+        sync: false
 
   # Background jobs: the same image, started as `node dist/worker.js` (deploy contract, row 3). No traffic, no
   # port, no health check: Render counts it healthy while the process runs and restarts it if it exits.

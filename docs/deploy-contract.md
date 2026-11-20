@@ -34,6 +34,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `TRUST_PROXY_HOPS` | `0` | Proxies in front of the app that append to `X-Forwarded-For` (Render: 2; Caddy on a VPS: 1). Too low: every visitor shares the proxy's IP and one rate limit. Too high: clients can fake their IP. |
 | `RESEND_API_KEY` | unset (emails only logged) | Worker only. Resend API key with "Sending access", limited to the sending domain. A secret (Render: `sync: false`). Set with `EMAIL_FROM`, or the boot fails. |
 | `EMAIL_FROM` | unset | Worker only. The sender, `Name <address>`, on a domain verified in Resend (`Launchpad <hello@mail.noahlee.xyz>`). |
+| `RESEND_WEBHOOK_SECRET` | unset (no webhook route) | Server only. The Resend webhook's signing secret (`whsec_...`). Turns on `POST /api/webhooks/resend`, which records hard bounces and spam complaints so the worker skips those addresses. A secret (Render: `sync: false`). |
 
 New variables are added here in the same PR as `config.ts`.
 
