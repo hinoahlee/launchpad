@@ -68,6 +68,9 @@ catalog:
   postgres: 3.4.9
   react: 19.3.1
   react-dom: 19.3.1
+  # Email templates: components (Html, Text...) and render() to HTML + plain text. Since v6 it also ships its
+  # preview CLI as dependencies (~60 MB in the image, never run). 6.11.6: the newest release at least two weeks old.
+  react-email: 6.11.6
   # The shadcn/ui CLI (`pnpm --filter @launchpad/web exec shadcn add <component>`), plus the shared Tailwind
   # utilities its components rely on (`@import "shadcn/tailwind.css"`).
   shadcn: 4.23.0

@@ -1,4 +1,5 @@
 // The product's identity: the one place to rename it. Used by the header, footer, page titles and legal pages.
+// The API's emails can't import it: rename `productName` in apps/api/src/lib/email/templates/ too.
 export const site = {
 	name: "Launchpad",
 	tagline: "A production-grade app template, built step by step.",

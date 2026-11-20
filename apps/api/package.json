@@ -31,11 +31,15 @@
 		"fastify-type-provider-zod": "catalog:",
 		"pino": "catalog:",
 		"postgres": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"react-email": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@launchpad/tsconfig": "workspace:*",
 		"@types/node": "catalog:",
+		"@types/react": "catalog:",
 		"tsdown": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:"

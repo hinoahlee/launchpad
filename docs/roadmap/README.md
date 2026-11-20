@@ -50,6 +50,9 @@ Follow-ups noticed along the way:
 - Phase 15 (operations): the deploy job only starts the worker's deploy (no URL to poll, and a Render API key
   is too powerful to keep in GitHub). A worker heartbeat (its commit in the database, shown by `/api/version`)
   would let the job wait for it too.
+- Phase 14 (hardening): `react-email` 6 ships its preview CLI (esbuild, Babel, Tailwind, Prettier...) as runtime
+  dependencies: ~67 MB in the image the worker never runs (9.1). Bundling only its components failed: its modules
+  aren't marked side-effect free, so tree-shaking keeps the CLI's imports. Revisit if it splits or marks them.
 - Phase 15 (rotate secrets): the 5.6 drill rotated the database password after a leak. Learned: a new Render
   credential reaches the app only after a Blueprint **Manual Sync** and a redeploy; check `session_user` (the
   login), not `current_user` (Render's new login acts as the original owner role), before deleting the old one.

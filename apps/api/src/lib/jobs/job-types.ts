@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { emailMessage } from "#lib/email/messages.ts";
 
 // Every kind of background job, by name, with the Zod schema its payload must match. Add a job type here; the
 // compiler then checks every `enqueue()` call against its schema, and requires a handler in handlers.ts.
@@ -7,6 +8,8 @@ import { z } from "zod";
 export const jobTypes = {
 	// A sample job: proves the queue end to end. Real types (send an email, ...) arrive with their features.
 	echo: z.object({ message: z.string().min(1).max(200) }),
+	// Renders an email template and sends it (lib/email). Queued in the request; failed sends retry.
+	send_email: emailMessage,
 	// Deletes finished jobs, so the table doesn't grow forever. Queued every hour by schedules.ts. `{}` is a valid
 	// input: the default fills in olderThanDays.
 	"prune-jobs": z.object({

@@ -2,6 +2,7 @@ import { jobs } from "@launchpad/db";
 import { createTestDb } from "@launchpad/db/testing";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { createMemoryDriver } from "#lib/email/memory-driver.ts";
 import { createLogger } from "#lib/logger.ts";
 import { enqueue } from "./enqueue.ts";
 import { handlers, type JobHandlers } from "./handlers.ts";
@@ -25,6 +26,7 @@ async function start(
 	worker = await startWorker({
 		db,
 		log,
+		email: createMemoryDriver(),
 		handlers: { ...handlers, echo },
 		pollIntervalMs: 60_000,
 		...options,

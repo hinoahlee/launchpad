@@ -1,10 +1,14 @@
 import type { Database } from "@launchpad/db";
 import type { Logger } from "pino";
+import type { EmailDriver } from "#lib/email/driver.ts";
+import { renderEmail } from "#lib/email/render.tsx";
 import type { JobPayload, JobType } from "./job-types.ts";
 import { pruneDoneJobs } from "./queue.ts";
 
 export type JobContext = {
+	jobId: string;
 	db: Database;
+	email: EmailDriver;
 	// Already tagged with jobId, jobType and attempt.
 	log: Logger;
 	// Aborted when the worker shuts down or the job's lease runs out. Pass it to fetch() and other slow calls,
@@ -27,6 +31,16 @@ export type JobHandlers = { [T in JobType]: JobHandler<T> };
 export const handlers: JobHandlers = {
 	echo: async ({ message }, { log }) => {
 		log.info({ message }, "echo");
+	},
+	// Idempotent through the provider: the job id is the idempotency key, so a retry after a send that went
+	// through (but wasn't marked done) is dropped by the provider instead of delivered twice.
+	send_email: async (message, { jobId, email, log, signal }) => {
+		const rendered = await renderEmail(message);
+		await email.send(
+			{ to: message.to, ...rendered, idempotencyKey: jobId },
+			signal,
+		);
+		log.info({ template: message.template }, "email sent");
 	},
 	// Idempotent as it is: a second run finds nothing left to delete.
 	"prune-jobs": async ({ olderThanDays }, { db, log }) => {
