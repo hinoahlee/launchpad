@@ -6,7 +6,7 @@ import {
 } from "#features/legal/legal-page.tsx";
 import { site } from "#lib/site.ts";
 
-// Starting terms for a free app with no accounts. Billing (phase 13) adds payment terms. Not legal advice.
+// Starting terms for a free app with accounts. Billing (phase 13) adds payment terms. Not legal advice.
 export const Route = createFileRoute("/terms")({
 	component: Terms,
 });
@@ -26,6 +26,19 @@ function Terms() {
 						Don't try to break it, overload it, or get around its security or
 						rate limits.
 					</li>
+				</ul>
+			</LegalSection>
+
+			<LegalSection title="Your account">
+				<ul>
+					<li>
+						Keep access to your account to yourself: anyone who can read your
+						email or use your Google account can sign in as you.
+					</li>
+					<li>
+						You can delete your account at any time from your account page.
+					</li>
+					<li>We may suspend or delete accounts that break these terms.</li>
 				</ul>
 			</LegalSection>
 
