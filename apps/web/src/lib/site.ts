@@ -5,7 +5,7 @@ export const site = {
 	tagline: "A production-grade app template, built step by step.",
 	description:
 		"A Fastify API and a React app in one container image, with Postgres, CI/CD, error tracking and security headers. It deploys to Render today, and to a VPS or AWS later.",
-	repoUrl: "https://github.com/noah-lee/launchpad",
+	repoUrl: "https://github.com/hinoahlee/launchpad",
 	// Shown on the privacy policy and terms. Replace it with a real inbox someone reads before launch.
 	contactEmail: "hello@example.com",
 	// Bump when /privacy or /terms changes.
