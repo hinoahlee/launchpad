@@ -91,6 +91,17 @@ const envSchema = z.object({
 	// Google sign-in is off. The secret is a secret. Only the server reads them.
 	GOOGLE_CLIENT_ID: optionalString,
 	GOOGLE_CLIENT_SECRET: optionalString,
+	// File storage: any S3-compatible bucket (runbook: docs/runbooks/r2-bucket.md). Set the bucket and both keys
+	// together, or none: unset, file uploads are off. Only the server reads them.
+	// The S3 API's address. R2: https://<ACCOUNT_ID>.r2.cloudflarestorage.com. Unset: AWS S3 (the SDK picks it).
+	S3_ENDPOINT: optionalUrl,
+	// R2: "auto". AWS S3: the bucket's region (us-east-1...).
+	S3_REGION: z.string().min(1).default("auto"),
+	S3_BUCKET: optionalString,
+	// An access key that can only read and write objects in S3_BUCKET (R2: an "Object Read & Write" token
+	// limited to that bucket). The secret is a secret.
+	S3_ACCESS_KEY_ID: optionalString,
+	S3_SECRET_ACCESS_KEY: optionalString,
 });
 
 export type Config = z.infer<typeof envSchema>;
@@ -112,6 +123,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 			message:
 				"set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET together, or neither",
 			path: ["GOOGLE_CLIENT_SECRET"],
+		})
+		// Storage: a bucket without keys (or keys without a bucket) is half a setup, so fail at boot.
+		.refine(
+			(c) => {
+				const set = [c.S3_BUCKET, c.S3_ACCESS_KEY_ID, c.S3_SECRET_ACCESS_KEY];
+				return set.every((v) => !v) || set.every(Boolean);
+			},
+			{
+				message:
+					"set S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY together, or none",
+				path: ["S3_BUCKET"],
+			},
+		)
+		// No endpoint means AWS S3, which has no "auto" region: requests would fail at upload time, not here.
+		.refine((c) => !c.S3_BUCKET || c.S3_ENDPOINT || c.S3_REGION !== "auto", {
+			message: "AWS S3 (no S3_ENDPOINT) needs S3_REGION, e.g. us-east-1",
+			path: ["S3_REGION"],
 		})
 		.safeParse(env);
 	if (!result.success) {

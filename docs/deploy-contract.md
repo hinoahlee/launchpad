@@ -13,7 +13,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 6 | `/api/health` = process alive. `/api/ready` = can serve traffic (checks the DB). `/api/version` = the build's commit. | `app.ts`. `/ready` runs `select 1` with a 2 s timeout → 503 `database_unavailable`. The image's `HEALTHCHECK` calls `/api/health`, so it fits the server only: a platform that runs it for the worker must turn it off there. |
 | 7 | On `SIGTERM`: stop taking work, finish or hand back what's in flight, exit within 25 s. | `server.ts` (`app.close()`, 25 s timeout; closes the DB pool last), `worker.ts` (stops claiming, aborts the running handler, hands its job back; a handler still running after 20 s is left to its lease) |
 | 8 | JSON logs to stdout with a request ID; no secrets. | One logger config (`apps/api/src/lib/logger.ts`, pino) for server, worker and migrate; secret fields redacted. The server writes one `request` line per request (method, route, url without query, status, durationMs, requestId); error bodies include `requestId`. |
-| 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Bucket in phase 11. |
+| 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Files: any S3-compatible bucket (`S3_*` below; R2 on Render, [runbook](runbooks/r2-bucket.md)). |
 | 10 | Migrations are backward compatible with the previous release (expand/contract). | [Decision 005](decisions/005-expand-contract.md). |
 | 11 | Unexpected errors (5xx) go to Sentry when `SENTRY_DSN` is set, tagged with release (= `GIT_SHA`), environment and `requestId`. | `lib/sentry.ts`, the error handler in `app.ts`. Web: `apps/web/src/lib/sentry.ts`, DSN baked in at build (below). |
 | 12 | The platform terminates TLS and sets `TRUST_PROXY_HOPS` to the number of proxies that append to `X-Forwarded-For`. The app sends security headers (CSP, HSTS), compresses responses and rate-limits `/api` per client IP (in memory, so per instance); Better Auth adds stricter limits on `/api/auth/*`, keyed on the same IP. | `app.ts` (helmet, compress, rate-limit; `trustProxy`). Render: 2, in the Blueprint. |
@@ -39,6 +39,10 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `BETTER_AUTH_SECRET` | dev-only fixed value | Server only; required in production (32+ characters). Signs session cookies. A secret (Render: `generateValue`). Changing it signs everyone out. |
 | `GOOGLE_CLIENT_ID` | unset (Google sign-in off) | Server only. The Google OAuth client's ID. Set with `GOOGLE_CLIENT_SECRET`, or the boot fails. The client must list `<APP_URL>/api/auth/callback/google` as a redirect URI. |
 | `GOOGLE_CLIENT_SECRET` | unset | Server only. The Google OAuth client's secret. A secret (Render: `sync: false`). |
+| `S3_ENDPOINT` | unset (AWS S3) | Server only. The S3 API's address; R2: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`. |
+| `S3_REGION` | `auto` | Server only. `auto` for R2; the bucket's region for AWS S3 (required there: boot fails on `auto` without an endpoint). |
+| `S3_BUCKET` | unset (uploads off) | Server only. The bucket's name (`launchpad-prod` on Render). Set with both keys, or the boot fails. |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | unset | Server only. A key that can only read and write objects in that bucket. The secret is a secret (Render: `sync: false`). |
 
 New variables are added here in the same PR as `config.ts`.
 
