@@ -22,7 +22,7 @@ like you're shadowing a principal engineer.
 | 8 | [Background jobs](phases/08-jobs.md) | done |
 | 9 | [Email](phases/09-email.md) | done |
 | 10 | [Auth](phases/10-auth.md) | done |
-| 11 | [File storage](phases/11-storage.md) | not started |
+| 11 | [File storage](phases/11-storage.md) | in progress |
 | 12 | [Organizations](phases/12-organizations.md) | not started |
 | 13 | [Billing](phases/13-billing.md) | not started |
 | 14 | [Hardening + scale](phases/14-hardening.md) | not started |

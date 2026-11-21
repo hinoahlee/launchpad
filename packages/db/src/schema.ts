@@ -205,3 +205,28 @@ export const emailSuppressions = pgTable(
 );
 
 export type EmailSuppression = typeof emailSuppressions.$inferSelect;
+
+// Files people upload (phase 11). The bytes live in the bucket under `storageKey`; this row says who owns them
+// and what they are. A row starts pending (`uploadedAt` null) when the browser asks to upload, and counts as
+// uploaded once the API has checked the object in the bucket has the size registered here.
+export const files = pgTable(
+	"files",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		// Cascade: deleting a user deletes their rows. The objects in the bucket go separately (step 11.4).
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		// The name the person gave it, shown in lists and used when they download it. Never part of the key.
+		fileName: text("file_name").notNull(),
+		contentType: text("content_type").notNull(),
+		sizeBytes: integer("size_bytes").notNull(),
+		// Where the object is in the bucket: users/<userId>/<random uuid>. Unique per upload.
+		storageKey: text("storage_key").notNull().unique(),
+		uploadedAt: timestamptz("uploaded_at"),
+		createdAt: timestamptz("created_at").defaultNow().notNull(),
+	},
+	(t) => [index("files_user_id_idx").on(t.userId)],
+);
+
+export type FileRow = typeof files.$inferSelect;

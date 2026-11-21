@@ -1,0 +1,97 @@
+import {
+	DeleteObjectCommand,
+	GetObjectCommand,
+	HeadObjectCommand,
+	NotFound,
+	PutObjectCommand,
+	S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import {
+	attachmentDisposition,
+	DOWNLOAD_URL_TTL_MS,
+	type StorageDriver,
+	UPLOAD_URL_TTL_MS,
+} from "./driver.ts";
+
+export type S3Settings = {
+	// Unset: AWS S3 (the SDK builds the address from the region).
+	endpoint?: string;
+	region: string;
+	bucket: string;
+	accessKeyId: string;
+	secretAccessKey: string;
+};
+
+const seconds = (ms: number) => Math.floor(ms / 1000);
+
+// Any S3-compatible bucket (R2, AWS S3). Signing a URL is local math with the secret key: no request leaves the
+// API. Only sizeOf and delete call the bucket.
+export function createS3Driver(settings: S3Settings): StorageDriver {
+	const client = new S3Client({
+		...(settings.endpoint && { endpoint: settings.endpoint }),
+		region: settings.region,
+		credentials: {
+			accessKeyId: settings.accessKeyId,
+			secretAccessKey: settings.secretAccessKey,
+		},
+		// The SDK would otherwise sign a checksum of the request body. A presigned PUT has no body yet (the
+		// browser sends it later), so the real file would never match and the bucket would reject it.
+		requestChecksumCalculation: "WHEN_REQUIRED",
+		responseChecksumValidation: "WHEN_REQUIRED",
+	});
+	const Bucket = settings.bucket;
+
+	return {
+		async presignUpload({ key, contentType, sizeBytes }) {
+			const expiresAt = new Date(Date.now() + UPLOAD_URL_TTL_MS);
+			const url = await getSignedUrl(
+				client,
+				new PutObjectCommand({
+					Bucket,
+					Key: key,
+					ContentType: contentType,
+					ContentLength: sizeBytes,
+				}),
+				{
+					expiresIn: seconds(UPLOAD_URL_TTL_MS),
+					// Put both in the signature: the bucket rejects a PUT whose type or size differs from what was
+					// registered. The browser sets Content-Length itself from the file (scripts can't set it).
+					signableHeaders: new Set(["content-type", "content-length"]),
+				},
+			);
+			return { url, headers: { "Content-Type": contentType }, expiresAt };
+		},
+
+		async presignDownload({ key, fileName }) {
+			const expiresAt = new Date(Date.now() + DOWNLOAD_URL_TTL_MS);
+			const url = await getSignedUrl(
+				client,
+				new GetObjectCommand({
+					Bucket,
+					Key: key,
+					// The bucket answers with this header (part of the signed URL, so it can't be changed).
+					ResponseContentDisposition: attachmentDisposition(fileName),
+				}),
+				{ expiresIn: seconds(DOWNLOAD_URL_TTL_MS) },
+			);
+			return { url, expiresAt };
+		},
+
+		async sizeOf(key) {
+			try {
+				const head = await client.send(
+					new HeadObjectCommand({ Bucket, Key: key }),
+				);
+				return head.ContentLength ?? null;
+			} catch (err) {
+				if (err instanceof NotFound) return null;
+				throw err;
+			}
+		},
+
+		async delete(key) {
+			await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
+		},
+	};
+}

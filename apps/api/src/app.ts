@@ -30,9 +30,12 @@ import { accountRoutes } from "./features/account/routes.ts";
 import { type Auth, appUrl, createAuth } from "./features/auth/auth.ts";
 import { authRoutes } from "./features/auth/routes.ts";
 import { resendWebhookRoutes } from "./features/email-webhooks/routes.ts";
+import { fileRoutes } from "./features/files/routes.ts";
 import { greetingRoutes } from "./features/greeting/routes.ts";
 import { loggerOptions } from "./lib/logger.ts";
 import { reportError } from "./lib/sentry.ts";
+import { createStorageDriver } from "./lib/storage/create-driver.ts";
+import type { StorageDriver } from "./lib/storage/driver.ts";
 
 // `app.db` and `app.auth` in every route and plugin, typed.
 declare module "fastify" {
@@ -75,6 +78,8 @@ export type BuildOptions = {
 	logStream?: DestinationStream;
 	// Requests per minute per client IP on /api. Tests lower it.
 	rateLimitMax?: number;
+	// The bucket. Default: from config (S3_*), or none (uploads off). Tests pass the in-memory driver.
+	storage?: StorageDriver;
 };
 
 const RATE_LIMIT_MAX = 100;
@@ -97,6 +102,7 @@ export function buildApp(
 		readyTimeoutMs = READY_TIMEOUT_MS,
 		logStream,
 		rateLimitMax = RATE_LIMIT_MAX,
+		storage = createStorageDriver(config),
 	}: BuildOptions = {},
 ): FastifyInstance {
 	const app = Fastify({
@@ -293,6 +299,11 @@ export function buildApp(
 			api.register(authRoutes(auth, appUrl(config)), { prefix: "/auth" });
 			api.register(greetingRoutes);
 			api.register(accountRoutes);
+
+			// Off until a bucket is set (S3_*): without one there is nowhere to put files.
+			if (storage) {
+				api.register(fileRoutes(storage));
+			}
 
 			// Off until the webhook's signing secret is set: without it no request could be verified.
 			if (config.RESEND_WEBHOOK_SECRET) {

@@ -19,6 +19,8 @@
 		"db:migrate": "node --env-file-if-exists=.env src/migrate.ts"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "catalog:",
+		"@aws-sdk/s3-request-presigner": "catalog:",
 		"@better-auth/drizzle-adapter": "catalog:",
 		"@fastify/compress": "catalog:",
 		"@fastify/helmet": "catalog:",
