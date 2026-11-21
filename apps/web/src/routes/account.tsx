@@ -11,6 +11,7 @@ import { Button } from "#components/ui/button.tsx";
 import { DeleteAccountCard } from "#features/account/delete-account-card.tsx";
 import { SessionsCard } from "#features/account/sessions-card.tsx";
 import { sessionQuery, signOut } from "#features/auth/api.ts";
+import { FilesCard } from "#features/files/files-card.tsx";
 import { pageTitle } from "#lib/site.ts";
 
 // /account: signed-in users only. The guard runs before the page loads: no session, off to /sign-in, which
@@ -85,6 +86,7 @@ function Account() {
 					<LogOut /> Sign out
 				</Button>
 			</div>
+			<FilesCard />
 			<SessionsCard />
 			<DeleteAccountCard
 				onDeleted={onDeleted}

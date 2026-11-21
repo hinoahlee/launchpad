@@ -16,7 +16,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | 9 | No local state: files go to the bucket, everything else to Postgres. | Nothing writes to disk; the code is read-only to `node`. Files: any S3-compatible bucket (`S3_*` below; R2 on Render, [runbook](runbooks/r2-bucket.md)). |
 | 10 | Migrations are backward compatible with the previous release (expand/contract). | [Decision 005](decisions/005-expand-contract.md). |
 | 11 | Unexpected errors (5xx) go to Sentry when `SENTRY_DSN` is set, tagged with release (= `GIT_SHA`), environment and `requestId`. | `lib/sentry.ts`, the error handler in `app.ts`. Web: `apps/web/src/lib/sentry.ts`, DSN baked in at build (below). |
-| 12 | The platform terminates TLS and sets `TRUST_PROXY_HOPS` to the number of proxies that append to `X-Forwarded-For`. The app sends security headers (CSP, HSTS), compresses responses and rate-limits `/api` per client IP (in memory, so per instance); Better Auth adds stricter limits on `/api/auth/*`, keyed on the same IP. | `app.ts` (helmet, compress, rate-limit; `trustProxy`). Render: 2, in the Blueprint. |
+| 12 | The platform terminates TLS and sets `TRUST_PROXY_HOPS` to the number of proxies that append to `X-Forwarded-For`. The app sends security headers (CSP, HSTS; the CSP's `connect-src` allows the bucket's origin, from `S3_ENDPOINT`), compresses responses and rate-limits `/api` per client IP (in memory, so per instance); Better Auth adds stricter limits on `/api/auth/*`, keyed on the same IP. | `app.ts` (helmet, compress, rate-limit; `trustProxy`). Render: 2, in the Blueprint. |
 
 ## Environment variables
 

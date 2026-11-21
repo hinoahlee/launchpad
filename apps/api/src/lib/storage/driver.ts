@@ -16,6 +16,8 @@ export type PresignedUpload = {
 export type PresignedDownload = { url: string; expiresAt: Date };
 
 export type StorageDriver = {
+	// Where the browser sends uploads (scheme + host). The page's CSP must allow it (`connect-src`, app.ts).
+	origin: string;
 	// A URL that accepts one PUT of exactly `sizeBytes` bytes of `contentType` to `key`, until it expires.
 	presignUpload(input: {
 		key: string;

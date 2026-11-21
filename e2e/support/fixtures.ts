@@ -22,9 +22,16 @@ export const test = base.extend<{
 }>({
 	expectedErrors: [[], { option: true }],
 	// Every test's browser appears to the server as its own client IP (see clientIp). Auto, like the check below.
+	// Only on requests to our server: on a cross-origin request (the bucket) the extra header would need the
+	// bucket's CORS to allow it, and real browsers never send it.
 	ownClientIp: [
-		async ({ context }, use) => {
-			await context.setExtraHTTPHeaders({ "x-forwarded-for": clientIp() });
+		async ({ context, baseURL }, use) => {
+			const ip = clientIp();
+			await context.route(`${baseURL}/**`, (route) =>
+				route.continue({
+					headers: { ...route.request().headers(), "x-forwarded-for": ip },
+				}),
+			);
 			await use(undefined);
 		},
 		{ auto: true },

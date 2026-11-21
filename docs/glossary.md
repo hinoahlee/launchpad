@@ -450,4 +450,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   Ours is signed into the upload URL, so the upload must send the type that was registered. (11.2)
 - **`Content-Disposition`** — a response header saying how to treat the body: `inline` (show it) or `attachment;
   filename=...` (save it). Downloads use `attachment`, so an uploaded HTML or SVG file never runs in a page. (11.2)
+- **Path-style vs. virtual-hosted URL** — two ways to address an object: `https://<endpoint>/<bucket>/<key>`
+  (path-style) or `https://<bucket>.<endpoint>/<key>` (virtual-hosted). We use path-style: the bucket's origin
+  is then the endpoint's, which the CSP allows, and a local fake bucket works on 127.0.0.1. (11.3)
 

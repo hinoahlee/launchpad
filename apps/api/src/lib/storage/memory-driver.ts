@@ -20,6 +20,7 @@ const keyOf = (url: string) =>
 export function createMemoryStorageDriver(): MemoryStorageDriver {
 	const objects = new Map<string, number>();
 	return {
+		origin: MEMORY_STORAGE_ORIGIN,
 		objects,
 		put(uploadUrl, sizeBytes) {
 			objects.set(keyOf(uploadUrl), sizeBytes);

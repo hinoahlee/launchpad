@@ -31,6 +31,10 @@ export function createS3Driver(settings: S3Settings): StorageDriver {
 	const client = new S3Client({
 		...(settings.endpoint && { endpoint: settings.endpoint }),
 		region: settings.region,
+		// Path-style URLs: https://<endpoint>/<bucket>/<key>, rather than https://<bucket>.<endpoint>/<key>. The
+		// origin is then the endpoint's, known without the SDK, and a local fake bucket (E2E) works on 127.0.0.1.
+		// R2 and AWS S3 both accept it.
+		forcePathStyle: true,
 		credentials: {
 			accessKeyId: settings.accessKeyId,
 			secretAccessKey: settings.secretAccessKey,
@@ -43,6 +47,10 @@ export function createS3Driver(settings: S3Settings): StorageDriver {
 	const Bucket = settings.bucket;
 
 	return {
+		origin: settings.endpoint
+			? new URL(settings.endpoint).origin
+			: `https://s3.${settings.region}.amazonaws.com`,
+
 		async presignUpload({ key, contentType, sizeBytes }) {
 			const expiresAt = new Date(Date.now() + UPLOAD_URL_TTL_MS);
 			const url = await getSignedUrl(

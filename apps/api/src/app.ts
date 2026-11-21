@@ -152,6 +152,8 @@ export function buildApp(
 					"https://*.ingest.sentry.io",
 					"https://*.ingest.us.sentry.io",
 					"https://*.ingest.de.sentry.io",
+					// The bucket: the browser uploads straight to it (fetch PUT). Downloads are navigations, not fetches.
+					...(storage ? [storage.origin] : []),
 				],
 				objectSrc: ["'none'"],
 				baseUri: ["'self'"],
