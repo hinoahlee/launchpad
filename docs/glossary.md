@@ -406,3 +406,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   password to forget, reuse or leak; a first sign-in with a code creates the account. (10.3)
 - **Brute-force protection** — stopping someone from guessing codes until one works. Ours: a code dies after 3
   wrong guesses, and each IP may ask for 3 codes and make 3 sign-in tries a minute. (10.3)
+- **Authentication vs. authorization** — authentication: *who* are you (a valid session; `requireSession`).
+  Authorization: *what* may you touch (a route only reads or changes rows with your user id). Both, every
+  request. (10.4)
+- **401 vs. 403** — 401 Unauthorized: we don't know who you are, so sign in and retry. 403 Forbidden: we know,
+  and the answer is no. For someone else's row we answer 404, as if it didn't exist, so the answer doesn't
+  confirm it's there. (10.4)
+- **Session revocation** — ending a session before it expires by deleting its row: that device is signed out on
+  its next request. The account page does it per device. (10.4)

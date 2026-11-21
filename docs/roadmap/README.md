@@ -21,7 +21,7 @@ like you're shadowing a principal engineer.
 | 7 | [App foundations](phases/07-app-foundations.md) | done |
 | 8 | [Background jobs](phases/08-jobs.md) | done |
 | 9 | [Email](phases/09-email.md) | done |
-| 10 | [Auth](phases/10-auth.md) | in progress (10.2 done) |
+| 10 | [Auth](phases/10-auth.md) | in progress (10.3 done) |
 | 11 | [File storage](phases/11-storage.md) | not started |
 | 12 | [Organizations](phases/12-organizations.md) | not started |
 | 13 | [Billing](phases/13-billing.md) | not started |
@@ -41,6 +41,9 @@ Follow-ups noticed along the way:
 - Phase 14 (hardening): confirm rate limits key on each visitor's real IP (`TRUST_PROXY_HOPS`, 7.2) by hitting
   production from a second network. E2E (7.5) can't check it: one machine, no proxy in front.
 - Before launch: replace the placeholder `contactEmail` in `apps/web/src/lib/site.ts` (7.4).
+- End of phase 10: the privacy policy (`apps/web/src/routes/privacy.tsx`) still says there are no accounts and
+  no cookies. Since 10.2 it's wrong: accounts (email, name, picture), a session cookie, sign-in emails (Resend).
+  Update it, and `site.legalUpdated`, once 10.6 (account deletion) settles what's kept and for how long.
 - Next dependency update: Dependabot flags `glob` and `minimatch` (moderate, build-time) via the Sentry and
   `@fastify/static` packages. Bump when they ship patched versions, or add `overrides` like the esbuild one.
 - Phase 15 (operations): a runbook to inspect and requeue `failed` jobs (8.2 keeps them; nothing retries them),

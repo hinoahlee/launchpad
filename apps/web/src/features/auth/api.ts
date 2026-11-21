@@ -20,11 +20,11 @@ export const sessionQuery = queryOptions({
 
 // Step 1 of signing in with Google: Better Auth answers with Google's sign-in page (state and PKCE values
 // included), and the browser goes there. Google sends it back to /api/auth/callback/google, Better Auth sets
-// the session cookie and redirects to `callbackURL`, or to `errorCallbackURL?error=<code>` if it failed.
-export async function signInWithGoogle(): Promise<void> {
+// the session cookie and redirects to `callbackURL` (a path here: Better Auth refuses other sites), or to `errorCallbackURL?error=<code>` if it failed.
+export async function signInWithGoogle(callbackURL = "/"): Promise<void> {
 	const request: SocialSignInRequest = {
 		provider: "google",
-		callbackURL: "/",
+		callbackURL,
 		errorCallbackURL: "/sign-in",
 	};
 	const { url } = await api(
