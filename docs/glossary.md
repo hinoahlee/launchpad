@@ -441,4 +441,13 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   one driver then work with all of them; only the endpoint changes. (11.1)
 - **Scoped access key** — a key limited to the least it needs: here, read and write objects in one bucket. If it
   leaks, other buckets and the account's settings stay safe. (11.1)
+- **Presigned URL** — a bucket URL with a signature in its query string that allows one action (PUT this key,
+  GET that key) until it expires. The API makes it; whoever holds it can use it, with no key of their own. (11.2)
+- **Signature** — a hash of the request's details (method, key, expiry, chosen headers) made with the secret
+  key. The bucket recomputes it; change any signed detail and it no longer matches (403). The secret never
+  leaves the API. (11.2)
+- **Content type** — the `Content-Type` header: what kind of data the bytes are (`image/png`, `text/plain`).
+  Ours is signed into the upload URL, so the upload must send the type that was registered. (11.2)
+- **`Content-Disposition`** — a response header saying how to treat the body: `inline` (show it) or `attachment;
+  filename=...` (save it). Downloads use `attachment`, so an uploaded HTML or SVG file never runs in a page. (11.2)
 

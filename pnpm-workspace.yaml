@@ -31,6 +31,10 @@ packageExtensions:
         optional: true
 
 catalog:
+  # File storage over the S3 API (R2, S3): the client, and presigned URLs. Released together: same version.
+  # 3.1164.0: the newest release at least two weeks old.
+  "@aws-sdk/client-s3": 3.1164.0
+  "@aws-sdk/s3-request-presigner": 3.1164.0
   "@biomejs/biome": 2.6.7
   # One version for all three: they share @sentry/core. 11.10.0: the newest release at least two weeks old.
   "@sentry/bundler-plugins": 11.10.0
