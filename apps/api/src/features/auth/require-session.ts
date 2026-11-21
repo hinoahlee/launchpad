@@ -14,7 +14,8 @@ declare module "fastify" {
 
 // Authentication for our own routes: an `onRequest` hook. Add it to a plugin, and every route in that plugin
 // (and only there: Fastify scopes hooks to their plugin) answers 401 unless the request carries a valid
-// session, from the cookie (browsers) or, later, an Authorization header (10.5). It only says *who* is asking;
+// session, from the cookie (browsers) or an `Authorization: Bearer` header (other clients; the bearer plugin in
+// auth.ts turns it into the cookie before Better Auth looks). It only says *who* is asking;
 // each route still decides what that user may touch (authorization), by filtering on their id.
 export async function requireSession(
 	request: FastifyRequest,

@@ -414,3 +414,8 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   confirm it's there. (10.4)
 - **Session revocation** — ending a session before it expires by deleting its row: that device is signed out on
   its next request. The account page does it per device. (10.4)
+- **Bearer token** — a secret that works by being held ("bearer"): the client sends `Authorization: Bearer
+  <token>` on every request. For clients without cookies (mobile apps, scripts); ours is the same session token
+  the browser keeps in its cookie, so it revokes the same way. (10.5)
+- **Secure storage** — the OS's encrypted store for secrets: Keychain on iOS, Keystore on Android. Where a
+  mobile app keeps its bearer token, instead of plain files that backups or other apps could read. (10.5)
