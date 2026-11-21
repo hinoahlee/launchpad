@@ -1,4 +1,4 @@
-import { type FileRow, files } from "@launchpad/db";
+import { type FileRow, files, users } from "@launchpad/db";
 import {
 	createFileBodySchema,
 	createFileResponseSchema,
@@ -8,8 +8,9 @@ import {
 	fileListResponseSchema,
 	fileParamsSchema,
 	fileSchema,
+	STORAGE_QUOTA_BYTES,
 } from "@launchpad/shared";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { requireSession, sessionOf } from "#features/auth/require-session.ts";
@@ -57,24 +58,47 @@ export const fileRoutes =
 			{
 				schema: {
 					body: createFileBodySchema,
-					response: { 201: createFileResponseSchema },
+					response: { 201: createFileResponseSchema, 413: errorResponseSchema },
 				},
 			},
 			async (request, reply) => {
 				const { user } = sessionOf(request);
 				const { fileName, contentType, sizeBytes } = request.body;
 				const key = storageKey(user.id);
-				const [row] = await app.db
-					.insert(files)
-					.values({
-						userId: user.id,
-						fileName,
-						contentType,
-						sizeBytes,
-						storageKey: key,
-					})
-					.returning({ id: files.id });
-				if (!row) throw new Error("files insert returned no row");
+				const row = await app.db.transaction(async (tx) => {
+					// Lock this user's row until the insert commits, so two uploads at once can't both see room for one.
+					await tx
+						.select({ id: users.id })
+						.from(users)
+						.where(eq(users.id, user.id))
+						.for("update");
+					// Pending rows count: their bytes may already be in the bucket, completed or not.
+					const [usage] = await tx
+						.select({
+							used: sql<string>`coalesce(sum(${files.sizeBytes}), 0)::bigint`,
+						})
+						.from(files)
+						.where(eq(files.userId, user.id));
+					if (Number(usage?.used ?? 0) + sizeBytes > STORAGE_QUOTA_BYTES) {
+						return null;
+					}
+					const [inserted] = await tx
+						.insert(files)
+						.values({
+							userId: user.id,
+							fileName,
+							contentType,
+							sizeBytes,
+							storageKey: key,
+						})
+						.returning({ id: files.id });
+					if (!inserted) throw new Error("files insert returned no row");
+					return inserted;
+				});
+				if (!row) {
+					reply.code(413);
+					return { error: "storage_quota_exceeded" };
+				}
 				const upload = await storage.presignUpload({
 					key,
 					contentType,

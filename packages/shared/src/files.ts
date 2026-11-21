@@ -10,6 +10,10 @@ import { z } from "zod";
 // restarts from zero). Kept small: the free tier is 10 GB in all.
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
+// How much one user may store, pending uploads included (a pending upload may already be in the bucket). Stops
+// one account from filling the bucket, and the bill. Registering past it: 413 `storage_quota_exceeded`.
+export const STORAGE_QUOTA_BYTES = 1024 * 1024 * 1024;
+
 export const fileSchema = z.object({
 	id: z.uuid(),
 	fileName: z.string(),

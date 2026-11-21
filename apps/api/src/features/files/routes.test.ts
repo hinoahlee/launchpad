@@ -8,7 +8,9 @@ import {
 	fileListResponseSchema,
 	fileSchema,
 	MAX_FILE_BYTES,
+	STORAGE_QUOTA_BYTES,
 } from "@launchpad/shared";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
 import { createMemoryStorageDriver } from "#lib/storage/memory-driver.ts";
@@ -132,6 +134,59 @@ describe("POST /api/files (register)", () => {
 			);
 		}
 		expect(await app.db.select().from(files)).toEqual([]);
+	});
+});
+
+// One file can't reach the quota (25 MB of 1 GB), so the tests grow a registered row to fill the rest.
+describe("storage quota", () => {
+	async function fillUpTo(cookie: string, usedBytes: number) {
+		const target = createFileResponseSchema.parse(
+			(await register(cookie)).json(),
+		);
+		await app.db
+			.update(files)
+			.set({ sizeBytes: usedBytes })
+			.where(eq(files.id, target.id));
+	}
+
+	it("413 when the upload would pass the quota; exactly up to it is fine", async () => {
+		const cookie = await signIn("ada@example.com");
+		await fillUpTo(cookie, STORAGE_QUOTA_BYTES - 11);
+
+		const over = await register(cookie, { ...notes, sizeBytes: 12 });
+		expect(over.statusCode).toBe(413);
+		expect(errorResponseSchema.parse(over.json()).error).toBe(
+			"storage_quota_exceeded",
+		);
+		expect(
+			(await register(cookie, { ...notes, sizeBytes: 11 })).statusCode,
+		).toBe(201);
+	});
+
+	it("counts pending uploads: their bytes may already be in the bucket", async () => {
+		const cookie = await signIn("ada@example.com");
+		await fillUpTo(cookie, STORAGE_QUOTA_BYTES); // registered, never completed
+		expect((await register(cookie)).statusCode).toBe(413);
+	});
+
+	it("deleting a file frees its space", async () => {
+		const cookie = await signIn("ada@example.com");
+		const file = await upload(cookie);
+		await app.db
+			.update(files)
+			.set({ sizeBytes: STORAGE_QUOTA_BYTES })
+			.where(eq(files.id, file.id));
+		expect((await register(cookie)).statusCode).toBe(413);
+
+		await remove(file.id, cookie);
+		expect((await register(cookie)).statusCode).toBe(201);
+	});
+
+	it("is per user: A's full quota doesn't block B", async () => {
+		const ada = await signIn("ada@example.com");
+		const bob = await signIn("bob@example.com");
+		await fillUpTo(ada, STORAGE_QUOTA_BYTES);
+		expect((await register(bob)).statusCode).toBe(201);
 	});
 });
 
