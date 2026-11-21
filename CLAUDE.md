@@ -52,13 +52,15 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `S3_*` via `create-driver.ts`) and in-memory (tests: `buildApp(config, { storage })`). The API only signs URLs;
   bytes go browser ↔ bucket. Flow in `features/files`: register (pending row + presigned PUT, type and size
   signed) → `complete` (asks the bucket for the size) → presigned GET as an attachment. No bucket: no file routes.
+  Path-style URLs; the CSP's `connect-src` allows `storage.origin`. Web: `features/files` (card on /account).
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`
   is the one migrate entrypoint (deploy: `node dist/migrate.js`; dev: `pnpm db:migrate`). Test helpers
   (`@launchpad/db/testing`): `_test`/`_e2e`-only guard (`assertDisposable`), schema reset, `truncateAll`, factories like `insertUser`.
 - `e2e`: Playwright tests (phone + desktop) against the production server (`apps/api/dist/server.js` serving
-  the web build, real CSP). Import `test`/`expect` from `#support/fixtures.ts`: any console error fails a test.
+  the web build, real CSP) and a fake bucket (`support/fake-bucket.ts`: just enough S3, CORS like R2's). Import
+  `test`/`expect` from `#support/fixtures.ts`: any console error fails a test.
 - `packages/tsconfig`: shared strict TS configs (`base.json` for Node, `react.json` for the web app)
 - References (read-only): `../turborepo`, `../mixmallow`
 

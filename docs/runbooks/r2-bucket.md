@@ -45,6 +45,8 @@ Deletes are free. Check https://developers.cloudflare.com/r2/pricing/ before rel
 2. Check an upload works, then delete the old token (**API Tokens** → the token → **Delete**).
 
 ## If uploads fail
+- Browser console says Content Security Policy (`connect-src`): the page and the API disagree on the bucket's
+  origin. The CSP allows the origin of `S3_ENDPOINT` (URLs are path-style: `<endpoint>/<bucket>/<key>`).
 - Browser console says CORS: the page's origin isn't in the bucket's `AllowedOrigins` (exact match, no path, no
   trailing slash), or a header the browser sends isn't in `AllowedHeaders`.
 - 403 `ExpiredRequest`: the signed URL expired (it carries no CORS headers, so it can look like a CORS error).

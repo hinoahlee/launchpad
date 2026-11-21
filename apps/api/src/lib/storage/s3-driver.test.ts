@@ -12,6 +12,28 @@ const driver = createS3Driver({
 });
 
 describe("S3 driver: presigned URLs", () => {
+	// The CSP allows `origin`; a URL anywhere else would be blocked in the browser.
+	it("signs URLs on its origin, with the bucket in the path", async () => {
+		const { url } = await driver.presignUpload({
+			key: "users/u1/f1",
+			contentType: "image/png",
+			sizeBytes: 1,
+		});
+		expect(driver.origin).toBe("https://account123.r2.cloudflarestorage.com");
+		expect(new URL(url).origin).toBe(driver.origin);
+		expect(new URL(url).pathname).toBe("/launchpad-test/users/u1/f1");
+
+		const aws = createS3Driver({
+			region: "eu-west-1",
+			bucket: "b",
+			accessKeyId: "k",
+			secretAccessKey: "s",
+		});
+		const awsUrl = (await aws.presignDownload({ key: "k1", fileName: "a" }))
+			.url;
+		expect(new URL(awsUrl).origin).toBe(aws.origin);
+	});
+
 	it("upload URL: signs the type and size, and no body checksum", async () => {
 		const { url, headers } = await driver.presignUpload({
 			key: "users/u1/f1",
