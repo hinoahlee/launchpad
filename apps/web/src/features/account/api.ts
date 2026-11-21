@@ -1,4 +1,7 @@
-import { accountSessionsResponseSchema } from "@launchpad/shared";
+import {
+	accountSessionsResponseSchema,
+	deleteAccountResponseSchema,
+} from "@launchpad/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { ApiError, api } from "#lib/api.ts";
@@ -9,6 +12,14 @@ export const accountSessionsQuery = queryOptions({
 	queryFn: ({ signal }) =>
 		api("/account/sessions", accountSessionsResponseSchema, { signal }),
 });
+
+// Deletes the account for good (Better Auth's endpoint; the API deletes every session and clears the cookie).
+// Throws ApiError with code "SESSION_EXPIRED" when the sign-in isn't recent enough: sign in again first.
+export const deleteAccount = () =>
+	api("/auth/delete-user", deleteAccountResponseSchema, {
+		method: "POST",
+		json: {},
+	});
 
 // Signs one device out (204, no body).
 export async function revokeSession(id: string): Promise<void> {
