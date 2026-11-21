@@ -1,7 +1,7 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import type { Database } from "@launchpad/db";
 import { betterAuth } from "better-auth";
-import { emailOTP, lastLoginMethod } from "better-auth/plugins";
+import { bearer, emailOTP, lastLoginMethod } from "better-auth/plugins";
 import type { FastifyBaseLogger } from "fastify";
 import type { Config } from "#config.ts";
 import { enqueue } from "#lib/jobs/enqueue.ts";
@@ -108,6 +108,14 @@ export function createAuth(
 				storeInDatabase: true,
 				beforeStoreCookie: () => false,
 			}),
+			// Clients without cookies (a mobile app, curl): a sign-in answers with the session token in a
+			// `set-auth-token` header, and `Authorization: Bearer <token>` then counts as the session cookie, on
+			// /api/auth/* and our own routes (requireSession). Same session row, same revocation. See
+			// docs/api-clients.md. No CSRF risk: browsers attach cookies by themselves, never this header.
+			// requireSignature: only the signed form (`<token>.<signature>`, what set-auth-token holds) works. Without
+			// it the bare token would too, and that's what `sessions.token` stores: a database leak would hand out
+			// working sessions.
+			bearer({ requireSignature: true }),
 		],
 		advanced: {
 			// Ids are uuid columns that Postgres fills in (gen_random_uuid()), like every other table.
