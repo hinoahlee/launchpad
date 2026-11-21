@@ -1,4 +1,4 @@
-﻿# Roadmap
+# Roadmap
 
 A production-grade app template, built step by step. An agent builds each step as a small PR; you review it
 like you're shadowing a principal engineer.
@@ -21,7 +21,7 @@ like you're shadowing a principal engineer.
 | 7 | [App foundations](phases/07-app-foundations.md) | done |
 | 8 | [Background jobs](phases/08-jobs.md) | done |
 | 9 | [Email](phases/09-email.md) | done |
-| 10 | [Auth](phases/10-auth.md) | in progress (10.6 done) |
+| 10 | [Auth](phases/10-auth.md) | done |
 | 11 | [File storage](phases/11-storage.md) | not started |
 | 12 | [Organizations](phases/12-organizations.md) | not started |
 | 13 | [Billing](phases/13-billing.md) | not started |
