@@ -9,7 +9,7 @@ export const site = {
 	// Shown on the privacy policy and terms. Replace it with a real inbox someone reads before launch.
 	contactEmail: "hello@example.com",
 	// Bump when /privacy or /terms changes.
-	legalUpdated: "November 18, 2026",
+	legalUpdated: "November 21, 2026",
 } as const;
 
 // "Privacy policy · Launchpad": the page first, so it stays readable in a narrow browser tab.
