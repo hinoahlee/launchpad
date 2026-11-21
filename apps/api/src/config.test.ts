@@ -154,3 +154,68 @@ describe("APP_URL", () => {
 		}
 	});
 });
+
+describe("storage settings", () => {
+	const base = { DATABASE_URL: direct };
+	const r2 = {
+		S3_ENDPOINT: "https://abc123.r2.cloudflarestorage.com",
+		S3_BUCKET: "launchpad-dev",
+		S3_ACCESS_KEY_ID: "key",
+		S3_SECRET_ACCESS_KEY: "secret",
+	};
+
+	function rejects(env: Record<string, string>): string {
+		const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+			throw new Error("exit");
+		});
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			expect(() => loadConfig({ ...base, ...env })).toThrow("exit");
+			return String(error.mock.calls[0]?.[0]);
+		} finally {
+			exit.mockRestore();
+			error.mockRestore();
+		}
+	}
+
+	// .env.example ships every S3_ key empty: that means "uploads off", not a crash.
+	it("treats empty values as unset (uploads off)", () => {
+		expect(
+			loadConfig({
+				...base,
+				S3_ENDPOINT: "",
+				S3_BUCKET: "",
+				S3_ACCESS_KEY_ID: "",
+				S3_SECRET_ACCESS_KEY: "",
+			}),
+		).toMatchObject({ S3_BUCKET: undefined, S3_ENDPOINT: undefined });
+	});
+
+	it("accepts R2 with the default region, auto", () => {
+		expect(loadConfig({ ...base, ...r2 })).toMatchObject({
+			S3_BUCKET: "launchpad-dev",
+			S3_REGION: "auto",
+		});
+	});
+
+	it("accepts AWS S3: no endpoint, a real region", () => {
+		const { S3_ENDPOINT: _, ...aws } = r2;
+		const config = loadConfig({ ...base, ...aws, S3_REGION: "us-east-1" });
+		expect(config.S3_ENDPOINT).toBeUndefined();
+		expect(config.S3_REGION).toBe("us-east-1");
+	});
+
+	it("stops the boot on a bucket without keys, or keys without a bucket", () => {
+		expect(rejects({ S3_BUCKET: "launchpad-dev" })).toContain(
+			"set S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY together",
+		);
+		expect(
+			rejects({ S3_ACCESS_KEY_ID: "key", S3_SECRET_ACCESS_KEY: "secret" }),
+		).toContain("together");
+	});
+
+	it("stops the boot on AWS S3 without a region", () => {
+		const { S3_ENDPOINT: _, ...aws } = r2;
+		expect(rejects(aws)).toContain("needs S3_REGION");
+	});
+});

@@ -14,6 +14,7 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
 		DEBUG_ERROR_ROUTE: false,
 		DATABASE_URL: UNREACHABLE_DB,
 		TRUST_PROXY_HOPS: 0,
+		S3_REGION: "auto",
 		...overrides,
 	};
 }

@@ -426,3 +426,19 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   privacy policy. (10.6)
 - **Fresh session (step-up)** — a session started a few minutes ago (ours: 10). Risky actions like deleting the
   account require one, so an old or stolen session can't do them: the person signs in again first. (10.6)
+
+## Phase 11 — File storage
+- **Object storage** — a service that keeps files ("objects") by name in a flat store, served over HTTP. No disk to
+  manage or fill; it scales by itself. R2 and S3 are object storage. (11.1)
+- **Bucket** — one named container of objects, with its own access rules and settings (CORS, lifecycle). We use
+  one per environment: `launchpad-dev`, `launchpad-prod`. (11.1)
+- **Object key** — an object's full name inside its bucket, e.g. `users/<id>/<uuid>`. Slashes look like folders
+  but are just characters; a prefix (`users/<id>/`) groups objects. (11.1)
+- **CORS (Cross-Origin Resource Sharing)** — rules a server sends so a browser lets a page on one origin call
+  another origin. Our page (render.noahlee.xyz) uploads straight to the bucket's origin, so the bucket must allow
+  it. (11.1)
+- **S3-compatible API** — the HTTP API Amazon S3 defined, which other stores (R2, MinIO) also speak. One SDK and
+  one driver then work with all of them; only the endpoint changes. (11.1)
+- **Scoped access key** — a key limited to the least it needs: here, read and write objects in one bucket. If it
+  leaks, other buckets and the account's settings stay safe. (11.1)
+

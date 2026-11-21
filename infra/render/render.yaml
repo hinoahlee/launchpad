@@ -67,6 +67,17 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      # File storage: the R2 bucket launchpad-prod (docs/runbooks/r2-bucket.md). All four `sync: false` and set
+      # together in the dashboard: a bucket without its keys stops the boot. Unset: uploads are off. The endpoint
+      # holds the Cloudflare account ID, kept out of this public file. S3_REGION stays at its default, auto.
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
 
   # Background jobs: the same image, started as `node dist/worker.js` (deploy contract, row 3). No traffic, no
   # port, no health check: Render counts it healthy while the process runs and restarts it if it exits.
