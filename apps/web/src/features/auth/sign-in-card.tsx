@@ -12,6 +12,7 @@ import {
 import { ApiError } from "#lib/api.ts";
 import { site } from "#lib/site.ts";
 import { signInWithGoogle } from "./api.ts";
+import { EmailCodeForm } from "./email-code-form.tsx";
 import { GoogleLogo } from "./google-logo.tsx";
 import { signInErrorMessage } from "./sign-in-error.ts";
 
@@ -68,6 +69,12 @@ export function SignInCard({
 					<GoogleLogo />
 					{busy ? "Redirecting to Google…" : "Continue with Google"}
 				</Button>
+				<div className="flex items-center gap-3 text-xs text-muted-foreground uppercase">
+					<span aria-hidden className="h-px flex-1 bg-border" />
+					or
+					<span aria-hidden className="h-px flex-1 bg-border" />
+				</div>
+				<EmailCodeForm />
 			</CardContent>
 		</Card>
 	);

@@ -19,5 +19,7 @@ export function createEmailDriver(config: Config, log: Logger): EmailDriver {
 	log[level](
 		"email: no provider configured (RESEND_API_KEY), emails are only logged",
 	);
-	return createLogDriver(log);
+	return createLogDriver(log, {
+		includeText: config.NODE_ENV === "development",
+	});
 }

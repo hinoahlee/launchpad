@@ -21,7 +21,7 @@ like you're shadowing a principal engineer.
 | 7 | [App foundations](phases/07-app-foundations.md) | done |
 | 8 | [Background jobs](phases/08-jobs.md) | done |
 | 9 | [Email](phases/09-email.md) | done |
-| 10 | [Auth](phases/10-auth.md) | in progress (10.1 done) |
+| 10 | [Auth](phases/10-auth.md) | in progress (10.2 done) |
 | 11 | [File storage](phases/11-storage.md) | not started |
 | 12 | [Organizations](phases/12-organizations.md) | not started |
 | 13 | [Billing](phases/13-billing.md) | not started |
@@ -45,8 +45,6 @@ Follow-ups noticed along the way:
   `@fastify/static` packages. Bump when they ship patched versions, or add `overrides` like the esbuild one.
 - Phase 15 (operations): a runbook to inspect and requeue `failed` jobs (8.2 keeps them; nothing retries them),
   and an alert when jobs fail. `prune-jobs` (8.3) only deletes `done` jobs.
-- When the first real job ships: resume the Render worker (suspended after the 8.4 check to save ~$7/mo) and
-  add the GitHub secret `RENDER_WORKER_DEPLOY_HOOK_URL` back. Until then nothing runs jobs on Render.
 - Phase 15 (operations): the deploy job only starts the worker's deploy (no URL to poll, and a Render API key
   is too powerful to keep in GitHub). A worker heartbeat (its commit in the database, shown by `/api/version`)
   would let the job wait for it too.

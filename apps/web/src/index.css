@@ -135,12 +135,13 @@
 	}
 }
 
-/* Ours, not shadcn's. Touch targets: on touch screens (a coarse pointer), every button and menu item is at
-   least 44px, the size Apple and Android recommend for a fingertip. Mouse users keep shadcn's compact sizes.
+/* Ours, not shadcn's. Touch targets: on touch screens (a coarse pointer), every button, input and menu item is
+   at least 44px tall, the size Apple and Android recommend for a fingertip. Mouse users keep shadcn's compact sizes.
    One rule here instead of edits to the generated components, so `shadcn add` can still update them. */
 @layer base {
 	@media (pointer: coarse) {
 		[data-slot="button"],
+		[data-slot="input"],
 		[data-slot="dropdown-menu-trigger"],
 		[data-slot="dropdown-menu-item"] {
 			min-height: 2.75rem;

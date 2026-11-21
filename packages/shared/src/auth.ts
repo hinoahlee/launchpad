@@ -36,5 +36,39 @@ export const sessionResponseSchema = z
 
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 
+// Better Auth's error body (its endpoints don't use our `{ error }` shape). `code` names the failure:
+// "INVALID_OTP", "OTP_EXPIRED", "TOO_MANY_ATTEMPTS"...
+export const authErrorResponseSchema = z.object({
+	code: z.string(),
+	message: z.string(),
+});
+
+export type AuthErrorResponse = z.infer<typeof authErrorResponseSchema>;
+
+// POST /api/auth/email-otp/send-verification-otp: email a sign-in code. Answers the same whether the address
+// has an account or not.
+export const sendSignInCodeRequestSchema = z.object({
+	email: z.email(),
+	type: z.literal("sign-in"),
+});
+
+export type SendSignInCodeRequest = z.infer<typeof sendSignInCodeRequestSchema>;
+
+export const sendSignInCodeResponseSchema = z.object({ success: z.boolean() });
+
+// POST /api/auth/sign-in/email-otp: trade the code for a session (cookie). Creates the user on first sign-in.
+export const emailCodeSignInRequestSchema = z.object({
+	email: z.email(),
+	otp: z.string(),
+});
+
+export type EmailCodeSignInRequest = z.infer<
+	typeof emailCodeSignInRequestSchema
+>;
+
+export const emailCodeSignInResponseSchema = z.object({
+	user: sessionUserSchema,
+});
+
 // POST /api/auth/sign-out.
 export const signOutResponseSchema = z.object({ success: z.boolean() });
