@@ -6,7 +6,9 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
+import { useState } from "react";
 import { Button } from "#components/ui/button.tsx";
+import { DeleteAccountCard } from "#features/account/delete-account-card.tsx";
 import { SessionsCard } from "#features/account/sessions-card.tsx";
 import { sessionQuery, signOut } from "#features/auth/api.ts";
 import { pageTitle } from "#lib/site.ts";
@@ -39,10 +41,27 @@ function Account() {
 			queryClient.removeQueries({ queryKey: ["account"] });
 		},
 	});
+	// Account deleted: home, signed out. Navigate first, so the "signed out while here" redirect below doesn't
+	// send them to sign-in.
+	const [leaving, setLeaving] = useState(false);
+	const onDeleted = async () => {
+		setLeaving(true);
+		await navigate({ to: "/" });
+		queryClient.setQueryData(sessionQuery.queryKey, null);
+		queryClient.removeQueries({ queryKey: ["account"] });
+	};
+	// Too long since signing in to delete: sign out, and the redirect below takes them to sign-in and back here.
+	const signInAgain = useMutation({
+		mutationFn: signOut,
+		onSuccess: () => {
+			queryClient.setQueryData(sessionQuery.queryKey, null);
+			queryClient.removeQueries({ queryKey: ["account"] });
+		},
+	});
 	const user = session.data?.user;
 
 	// Signed out while here (the header menu, another tab, the session revoked elsewhere): back to sign-in.
-	if (session.data === null && !signOutMutation.isPending) {
+	if (session.data === null && !signOutMutation.isPending && !leaving) {
 		return <Navigate to="/sign-in" search={{ redirect: "/account" }} replace />;
 	}
 
@@ -67,6 +86,10 @@ function Account() {
 				</Button>
 			</div>
 			<SessionsCard />
+			<DeleteAccountCard
+				onDeleted={onDeleted}
+				onSignInAgain={() => signInAgain.mutate()}
+			/>
 		</div>
 	);
 }

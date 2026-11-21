@@ -25,3 +25,26 @@ export async function sentSignInCode(email: string): Promise<string> {
 		await db.$client.end();
 	}
 }
+
+// Pretends every session of `email` started `minutes` ago (actions that need a recent sign-in refuse them).
+export async function ageSessions(email: string, minutes: number) {
+	const db = createDb(E2E_DATABASE_URL);
+	try {
+		await db.$client`
+			update sessions set created_at = now() - make_interval(mins => ${minutes})
+			where user_id = (select id from users where email = ${email})`;
+	} finally {
+		await db.$client.end();
+	}
+}
+
+// Whether an account exists for `email`.
+export async function userExists(email: string): Promise<boolean> {
+	const db = createDb(E2E_DATABASE_URL);
+	try {
+		const rows = await db.$client`select 1 from users where email = ${email}`;
+		return rows.length > 0;
+	} finally {
+		await db.$client.end();
+	}
+}

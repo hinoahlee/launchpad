@@ -419,3 +419,10 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   the browser keeps in its cookie, so it revokes the same way. (10.5)
 - **Secure storage** — the OS's encrypted store for secrets: Keychain on iOS, Keystore on Android. Where a
   mobile app keeps its bearer token, instead of plain files that backups or other apps could read. (10.5)
+- **Hard vs. soft delete** — hard: the row is gone (`DELETE`). Soft: the row stays, marked `deleted_at`, and
+  every query must skip it. Soft allows undo but keeps the personal data. Accounts here are hard-deleted. (10.6)
+- **Right to erasure (GDPR)** — under the EU's GDPR, a person can ask for their personal data to be deleted,
+  without undue delay. A self-serve "Delete account" answers it; what must stay (legal, fraud) is named in the
+  privacy policy. (10.6)
+- **Fresh session (step-up)** — a session started a few minutes ago (ours: 10). Risky actions like deleting the
+  account require one, so an old or stolen session can't do them: the person signs in again first. (10.6)

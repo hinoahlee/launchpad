@@ -72,3 +72,10 @@ export const emailCodeSignInResponseSchema = z.object({
 
 // POST /api/auth/sign-out.
 export const signOutResponseSchema = z.object({ success: z.boolean() });
+
+// POST /api/auth/delete-user (empty body): deletes the signed-in user, if their session is fresh (signed in
+// within the last few minutes); otherwise 400 with code "SESSION_EXPIRED".
+export const deleteAccountResponseSchema = z.object({
+	success: z.boolean(),
+	message: z.literal("User deleted"),
+});

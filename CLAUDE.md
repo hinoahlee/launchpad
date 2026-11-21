@@ -37,6 +37,10 @@ safety rules and code conventions. During a phase, read only that phase's file i
   Web: a route's `beforeLoad` redirects visitors to `/sign-in?redirect=<path>` (`routes/account.tsx`).
   Non-browser clients: `bearer` plugin; sign-in returns `set-auth-token`, then `Authorization: Bearer` works
   everywhere a cookie does. Browsers never get that header (`routes.ts`). Walkthrough: `docs/api-clients.md`.
+  Account deletion: Better Auth's `POST /api/auth/delete-user` (hard delete), only with a session from the last
+  `RECENT_SIGN_IN_MINUTES` (else 400 `SESSION_EXPIRED`). New tables pointing at `users` need `ON DELETE CASCADE`;
+  cleanup outside Postgres (files, billing) goes in `deleteUser`'s `beforeDelete`/`afterDelete` in `auth.ts`.
+  E2E: a test that provokes a console error on purpose declares it with `test.use({ expectedErrors: [...] })`.
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
   from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).

@@ -18,6 +18,9 @@ const DEV_SECRET = "dev-only-secret-never-used-in-production";
 export const SIGN_IN_CODE_MINUTES = 5;
 // Wrong guesses one code survives; the next guess is refused even if right, and a new code must be sent.
 export const SIGN_IN_CODE_ATTEMPTS = 3;
+// Deleting the account needs a session at most this old. An older one (a laptop left signed in, a stolen token)
+// gets 400 SESSION_EXPIRED: sign in again, proving it's still you, then delete.
+export const RECENT_SIGN_IN_MINUTES = 10;
 // The public origin. Unset in dev: Vite's dev server, which proxies /api to us, so it's the origin the browser sees.
 export const appUrl = (config: Config) =>
 	config.APP_URL ?? "http://localhost:5173";
@@ -72,6 +75,23 @@ export function createAuth(
 		// here with `?error=<code>`. Our sign-in page explains it. Its own fallback is an HTML page whose inline
 		// styles our CSP blocks.
 		onAPIError: { errorURL: `${origin}/sign-in` },
+		// "Fresh": signed in at most this long ago. Better Auth checks it on delete-user (below) and on two endpoints
+		// we don't use (/list-sessions, /unlink-account). Its default is a day.
+		session: { freshAge: RECENT_SIGN_IN_MINUTES * 60 },
+		user: {
+			// POST /api/auth/delete-user with a fresh session: a hard delete. Better Auth deletes the user's sessions,
+			// their accounts (Google links) and the users row, then clears the cookie. Every table that points at
+			// users must do so with ON DELETE CASCADE, so nothing of theirs outlives the row.
+			// Later phases plug in here: beforeDelete can refuse (an unpaid invoice, the last owner of an org);
+			// afterDelete queues jobs for what lives outside Postgres (their uploaded files, the billing customer).
+			deleteUser: {
+				enabled: true,
+				afterDelete: async (user) => {
+					// The id only: the email is personal data, and logs are kept longer than the account.
+					log.info({ userId: user.id }, "auth: account deleted");
+				},
+			},
+		},
 		plugins: [
 			// Passwordless sign-in with a one-time code by email. POST /api/auth/email-otp/send-verification-otp
 			// stores the code and queues the email; POST /api/auth/sign-in/email-otp checks it and starts a session.

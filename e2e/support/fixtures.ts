@@ -11,10 +11,16 @@ import { clientIp } from "./sign-in.ts";
 //
 // How to use it: import `test` and `expect` from this file instead of from @playwright/test. Every test then
 // gets this check automatically; nothing to add to the test itself.
+//
+// A test that provokes an error on purpose (a request the API refuses, and the browser logs) lists it:
+// `test.use({ expectedErrors: [/delete-user/] })`. Each pattern must match one of the collected lines; others
+// still fail the test.
 export const test = base.extend<{
+	expectedErrors: RegExp[];
 	failOnPageErrors: undefined;
 	ownClientIp: undefined;
 }>({
+	expectedErrors: [[], { option: true }],
 	// Every test's browser appears to the server as its own client IP (see clientIp). Auto, like the check below.
 	ownClientIp: [
 		async ({ context }, use) => {
@@ -24,7 +30,7 @@ export const test = base.extend<{
 		{ auto: true },
 	],
 	failOnPageErrors: [
-		async ({ page }, use) => {
+		async ({ page, expectedErrors }, use) => {
 			// Before the test: collect uncaught errors and console.error messages as they happen.
 			const errors: string[] = [];
 			page.on("pageerror", (error) =>
@@ -40,7 +46,15 @@ export const test = base.extend<{
 			// The test runs here.
 			await use(undefined);
 			// After the test: fail if anything was collected, listing each error.
-			expect(errors, "errors in the page or console").toEqual([]);
+			const unexpected = errors.filter(
+				(error) => !expectedErrors.some((pattern) => pattern.test(error)),
+			);
+			expect(unexpected, "errors in the page or console").toEqual([]);
+			// An expected error that never happened is a stale pattern (or the test stopped provoking it).
+			const unseen = expectedErrors.filter(
+				(pattern) => !errors.some((error) => pattern.test(error)),
+			);
+			expect(unseen, "expected errors that didn't happen").toEqual([]);
 		},
 		// `auto`: runs for every test, even though no test asks for `failOnPageErrors` by name.
 		{ auto: true },
