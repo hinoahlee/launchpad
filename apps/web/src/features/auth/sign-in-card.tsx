@@ -30,12 +30,17 @@ function startErrorMessage(error: Error): string {
 }
 
 // `callbackError`: the code Better Auth put in ?error= after a failed sign-in, if any.
+// `redirectTo`: the path to land on once signed in (Google comes back there).
 export function SignInCard({
 	callbackError,
+	redirectTo,
 }: {
 	callbackError?: string | undefined;
+	redirectTo: string;
 }) {
-	const google = useMutation({ mutationFn: signInWithGoogle });
+	const google = useMutation({
+		mutationFn: () => signInWithGoogle(redirectTo),
+	});
 	// A new attempt hides the old callback error; a failed attempt shows its own.
 	const error = google.error
 		? startErrorMessage(google.error)

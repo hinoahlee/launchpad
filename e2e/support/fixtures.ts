@@ -1,4 +1,5 @@
 import { test as base, expect } from "@playwright/test";
+import { clientIp } from "./sign-in.ts";
 
 // What this does: while each test runs, it listens for errors in the browser (the ones you'd see in red in
 // DevTools' Console). When the test ends, it fails if there were any, even when everything the test checked
@@ -10,7 +11,18 @@ import { test as base, expect } from "@playwright/test";
 //
 // How to use it: import `test` and `expect` from this file instead of from @playwright/test. Every test then
 // gets this check automatically; nothing to add to the test itself.
-export const test = base.extend<{ failOnPageErrors: undefined }>({
+export const test = base.extend<{
+	failOnPageErrors: undefined;
+	ownClientIp: undefined;
+}>({
+	// Every test's browser appears to the server as its own client IP (see clientIp). Auto, like the check below.
+	ownClientIp: [
+		async ({ context }, use) => {
+			await context.setExtraHTTPHeaders({ "x-forwarded-for": clientIp() });
+			await use(undefined);
+		},
+		{ auto: true },
+	],
 	failOnPageErrors: [
 		async ({ page }, use) => {
 			// Before the test: collect uncaught errors and console.error messages as they happen.

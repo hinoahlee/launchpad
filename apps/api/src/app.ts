@@ -26,6 +26,7 @@ import {
 } from "fastify-type-provider-zod";
 import type { DestinationStream } from "pino";
 import type { Config } from "./config.ts";
+import { accountRoutes } from "./features/account/routes.ts";
 import { type Auth, appUrl, createAuth } from "./features/auth/auth.ts";
 import { authRoutes } from "./features/auth/routes.ts";
 import { resendWebhookRoutes } from "./features/email-webhooks/routes.ts";
@@ -172,6 +173,8 @@ export function buildApp(
 	// Sign-in and sessions (Better Auth), on the same pool. Throws in production without APP_URL or the secret.
 	const auth = createAuth(config, db, app.log);
 	app.decorate("auth", auth);
+	// Filled in by the requireSession hook on routes that need a signed-in user (features/auth/require-session.ts).
+	app.decorateRequest("authSession", null);
 
 	// Echo the ID back so a user or another service can quote it when reporting a problem.
 	app.addHook("onRequest", async (request, reply) => {
@@ -289,6 +292,7 @@ export function buildApp(
 
 			api.register(authRoutes(auth, appUrl(config)), { prefix: "/auth" });
 			api.register(greetingRoutes);
+			api.register(accountRoutes);
 
 			// Off until the webhook's signing secret is set: without it no request could be verified.
 			if (config.RESEND_WEBHOOK_SECRET) {

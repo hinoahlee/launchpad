@@ -31,6 +31,10 @@ safety rules and code conventions. During a phase, read only that phase's file i
   Google sign-in when `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` are set. Failed callbacks redirect to
   `/sign-in?error=<code>`. Web: `apps/web/src/features/auth` (session query, sign-in card, header menu), the
   shapes it reads in `@launchpad/shared` (`auth.ts`).
+  Protected routes: add `requireSession` (`features/auth/require-session.ts`) as an `onRequest` hook in the
+  route's plugin (401 without a session), read the user with `sessionOf(request)`, and filter every query on
+  that user's id (another user's row → 404). Example: `features/account` (list and revoke your sessions).
+  Web: a route's `beforeLoad` redirects visitors to `/sign-in?redirect=<path>` (`routes/account.tsx`).
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
   from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).

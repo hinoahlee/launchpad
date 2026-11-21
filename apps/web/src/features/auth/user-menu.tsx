@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { Button, buttonVariants } from "#components/ui/button.tsx";
 import {
 	DropdownMenu,
@@ -63,6 +63,9 @@ export function UserMenu() {
 					</DropdownMenuLabel>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
+				<DropdownMenuItem render={<Link to="/account" />}>
+					<UserRound /> Account
+				</DropdownMenuItem>
 				<DropdownMenuItem
 					disabled={signOutMutation.isPending}
 					onClick={() => signOutMutation.mutate()}
