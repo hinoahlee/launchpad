@@ -14,7 +14,7 @@ services:
       # The default reference, used only for deploys Render starts itself (a Blueprint sync, a settings change).
       # CI deploys by digest. `:main` always points at the newest image published from main, so those deploys
       # never roll back to an old one, as a digest pinned here would. Public package: no credentials needed.
-      url: ghcr.io/noah-lee/launchpad:main
+      url: ghcr.io/hinoahlee/launchpad:main
     # Can't be changed after creation. Oregon is Render's default.
     region: oregon
     # Paid (formerly "Starter", ~$7/mo): 0.5 CPU / 512 MB, always on (no spin-down), pre-deploy commands allowed.
@@ -77,7 +77,7 @@ services:
     name: launchpad-worker
     runtime: image
     image:
-      url: ghcr.io/noah-lee/launchpad:main
+      url: ghcr.io/hinoahlee/launchpad:main
     dockerCommand: node --enable-source-maps dist/worker.js
     region: oregon
     # Workers have no free plan; this is the smallest (0.5 CPU / 512 MB), as for the web service.
