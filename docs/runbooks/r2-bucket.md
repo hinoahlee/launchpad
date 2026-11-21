@@ -18,9 +18,15 @@ Deletes are free. Check https://developers.cloudflare.com/r2/pricing/ before rel
 2. **Create bucket**: the name from the table, **Location**: Automatic, with a location hint of **Western North
    America** if offered (near Render's Oregon; no jurisdiction), **Default storage class**: Standard. Buckets are private by default: leave public
    access (r2.dev subdomain, custom domain) off.
-3. The bucket → **Settings** → **CORS Policy** → **Add CORS policy** → **JSON** tab, paste (with its origin), **Save**:
+3. The bucket → **Settings** → **CORS Policy** → **Add CORS policy** → **JSON** tab, paste its policy, **Save**.
+   `launchpad-prod`:
    ```json
    [{ "AllowedOrigins": ["https://render.noahlee.xyz"], "AllowedMethods": ["PUT", "GET"],
+      "AllowedHeaders": ["Content-Type"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3600 }]
+   ```
+   `launchpad-dev` (the page you open in dev is Vite's, so that's the origin the browser sends):
+   ```json
+   [{ "AllowedOrigins": ["http://localhost:5173"], "AllowedMethods": ["PUT", "GET"],
       "AllowedHeaders": ["Content-Type"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3600 }]
    ```
    Without it the browser blocks the upload. Changes can take up to 30 s to apply.
