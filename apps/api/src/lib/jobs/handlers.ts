@@ -1,8 +1,11 @@
 import type { Database } from "@launchpad/db";
+import { files } from "@launchpad/db";
+import { and, inArray, isNull, lt } from "drizzle-orm";
 import type { Logger } from "pino";
 import type { EmailDriver } from "#lib/email/driver.ts";
 import { renderEmail } from "#lib/email/render.tsx";
 import { suppressionReason } from "#lib/email/suppression.ts";
+import { type StorageDriver, userPrefix } from "#lib/storage/driver.ts";
 import type { JobPayload, JobType } from "./job-types.ts";
 import { pruneDoneJobs } from "./queue.ts";
 
@@ -10,6 +13,8 @@ export type JobContext = {
 	jobId: string;
 	db: Database;
 	email: EmailDriver;
+	// The bucket; undefined when the worker has no S3_* settings.
+	storage: StorageDriver | undefined;
 	// Already tagged with jobId, jobType and attempt.
 	log: Logger;
 	// Aborted when the worker shuts down or the job's lease runs out. Pass it to fetch() and other slow calls,
@@ -58,4 +63,48 @@ export const handlers: JobHandlers = {
 		const deleted = await pruneDoneJobs(db, olderThanDays);
 		log.info({ deleted, olderThanDays }, "pruned done jobs");
 	},
+	// Idempotent: deleting a prefix that's already empty deletes nothing.
+	"delete-user-files": async ({ userId }, { storage, log }) => {
+		if (!storage) throw new Error(missingStorage);
+		const deleted = await storage.deletePrefix(userPrefix(userId));
+		log.info({ userId, deleted }, "deleted a deleted account's files");
+	},
+	// Objects first, then rows: if it stops halfway, the rows are still there and the next run finishes. Deleting
+	// an object that's already gone is not an error.
+	"prune-uploads": async ({ olderThanHours }, { db, storage, log }) => {
+		const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+		const abandoned = and(
+			isNull(files.uploadedAt),
+			lt(files.createdAt, cutoff),
+		);
+		const rows = await db
+			.select({ id: files.id, key: files.storageKey })
+			.from(files)
+			.where(abandoned)
+			.limit(PRUNE_BATCH);
+		if (rows.length === 0) return;
+		if (!storage) throw new Error(missingStorage);
+		for (const row of rows) await storage.delete(row.key);
+		// `abandoned` again: a row completed in the meantime is kept (its object is gone, so its download fails;
+		// only possible for an upload completed more than olderThanHours after it started).
+		await db.delete(files).where(
+			and(
+				inArray(
+					files.id,
+					rows.map((row) => row.id),
+				),
+				abandoned,
+			),
+		);
+		log.info(
+			{ deleted: rows.length, olderThanHours },
+			"pruned abandoned uploads",
+		);
+	},
 };
+
+const missingStorage =
+	"no bucket configured on the worker: set the S3_* variables (docs/runbooks/r2-bucket.md)";
+
+// Per run. Abandoned uploads are rare; a backlog clears over a few hourly runs.
+const PRUNE_BATCH = 500;

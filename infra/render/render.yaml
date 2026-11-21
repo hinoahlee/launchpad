@@ -70,6 +70,7 @@ services:
       # File storage: the R2 bucket launchpad-prod (docs/runbooks/r2-bucket.md). All four `sync: false` and set
       # together in the dashboard: a bucket without its keys stops the boot. Unset: uploads are off. The endpoint
       # holds the Cloudflare account ID, kept out of this public file. S3_REGION stays at its default, auto.
+      # The worker needs the same four (it deletes files).
       - key: S3_ENDPOINT
         sync: false
       - key: S3_BUCKET
@@ -111,6 +112,16 @@ services:
         sync: false
       - key: EMAIL_FROM
         value: Launchpad <hello@mail.noahlee.xyz>
+      # File storage: the same four values as the web service. The worker deletes a deleted account's files and
+      # abandoned uploads; without them those jobs fail (with uploads off there is nothing to delete).
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
 
 databases:
   - name: launchpad-db

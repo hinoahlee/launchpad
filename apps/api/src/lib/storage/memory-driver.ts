@@ -46,5 +46,10 @@ export function createMemoryStorageDriver(): MemoryStorageDriver {
 		async delete(key) {
 			objects.delete(key);
 		},
+		async deletePrefix(prefix) {
+			const keys = [...objects.keys()].filter((key) => key.startsWith(prefix));
+			for (const key of keys) objects.delete(key);
+			return keys.length;
+		},
 	};
 }

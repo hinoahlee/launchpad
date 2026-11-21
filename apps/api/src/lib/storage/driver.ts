@@ -33,12 +33,17 @@ export type StorageDriver = {
 	sizeOf(key: string): Promise<number | null>;
 	// Removes the object; no error if it was already gone.
 	delete(key: string): Promise<void>;
+	// Removes every object whose key starts with `prefix` (e.g. users/<id>/), and returns how many there were.
+	deletePrefix(prefix: string): Promise<number>;
 };
+
+// Every object of one user lives under this prefix (see storageKey).
+export const userPrefix = (userId: string) => `users/${userId}/`;
 
 // users/<userId>/<random uuid>: the prefix groups one person's objects (deleting an account removes the prefix,
 // step 11.4). The random part means a key never reuses the person's file name, which may hold anything.
 export function storageKey(userId: string): string {
-	return `users/${userId}/${crypto.randomUUID()}`;
+	return `${userPrefix(userId)}${crypto.randomUUID()}`;
 }
 
 // Content-Disposition: attachment makes the browser save the file instead of showing it. That matters for

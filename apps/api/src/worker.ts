@@ -5,6 +5,7 @@ import { startScheduler } from "./lib/jobs/scheduler.ts";
 import { startWorker } from "./lib/jobs/worker.ts";
 import { createLogger } from "./lib/logger.ts";
 import { flushSentry, initSentry } from "./lib/sentry.ts";
+import { createStorageDriver } from "./lib/storage/create-driver.ts";
 
 // Background-job process (`node dist/worker.js`): claims jobs from the `jobs` table and runs their handlers, and
 // queues recurring jobs (schedules.ts). Run one or many: each job and each scheduled run happens once.
@@ -26,6 +27,7 @@ try {
 		db,
 		log,
 		email: createEmailDriver(config, log),
+		storage: createStorageDriver(config),
 	});
 	scheduler = startScheduler({ db, log });
 } catch (err) {

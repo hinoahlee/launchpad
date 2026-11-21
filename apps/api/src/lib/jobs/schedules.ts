@@ -24,4 +24,10 @@ export const schedules: Schedule[] = [
 		type: "prune-jobs",
 		payload: {},
 	}),
+	schedule({
+		name: "prune-uploads",
+		cron: "30 * * * *",
+		type: "prune-uploads",
+		payload: {},
+	}),
 ];

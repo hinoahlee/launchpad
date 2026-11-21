@@ -1,7 +1,9 @@
 import {
 	DeleteObjectCommand,
+	DeleteObjectsCommand,
 	GetObjectCommand,
 	HeadObjectCommand,
+	ListObjectsV2Command,
 	NotFound,
 	PutObjectCommand,
 	S3Client,
@@ -100,6 +102,43 @@ export function createS3Driver(settings: S3Settings): StorageDriver {
 
 		async delete(key) {
 			await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
+		},
+
+		// A page of up to 1,000 keys at a time (the S3 limit for both calls), deleted in one request per page.
+		async deletePrefix(prefix) {
+			let deleted = 0;
+			let ContinuationToken: string | undefined;
+			do {
+				const page = await client.send(
+					new ListObjectsV2Command({
+						Bucket,
+						Prefix: prefix,
+						ContinuationToken,
+					}),
+				);
+				const keys = (page.Contents ?? []).flatMap((o) =>
+					o.Key ? [o.Key] : [],
+				);
+				if (keys.length > 0) {
+					const result = await client.send(
+						new DeleteObjectsCommand({
+							Bucket,
+							Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+						}),
+					);
+					// A batch delete answers 200 even when some keys failed; they're listed in Errors.
+					if (result.Errors?.length) {
+						throw new Error(
+							`could not delete ${result.Errors.length} objects under ${prefix}: ${result.Errors[0]?.Code}`,
+						);
+					}
+					deleted += keys.length;
+				}
+				ContinuationToken = page.IsTruncated
+					? page.NextContinuationToken
+					: undefined;
+			} while (ContinuationToken);
+			return deleted;
 		},
 	};
 }
