@@ -6,7 +6,8 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { z } from "zod";
 import { Button } from "#components/ui/button.tsx";
 import { DeleteAccountCard } from "#features/account/delete-account-card.tsx";
 import { SessionsCard } from "#features/account/sessions-card.tsx";
@@ -19,6 +20,10 @@ import { pageTitle } from "#lib/site.ts";
 // sends you back here once you're in. It's for the person, not for security: the API checks the session on
 // every request (requireSession), whatever the browser shows.
 export const Route = createFileRoute("/account")({
+	// Set by Stripe's redirect back here: after Checkout (success) or the Customer Portal (updated).
+	validateSearch: z.object({
+		billing: z.enum(["success", "updated"]).optional().catch(undefined),
+	}),
 	beforeLoad: async ({ context, location }) => {
 		const session = await context.queryClient.ensureQueryData(sessionQuery);
 		if (!session) {
@@ -35,6 +40,11 @@ function Account() {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const session = useQuery(sessionQuery);
+	const search = Route.useSearch();
+	// Back from Stripe: once the card has synced, drop `?billing=` so a reload doesn't sync again.
+	const dropBillingMarker = useCallback(() => {
+		void navigate({ to: "/account", search: {}, replace: true });
+	}, [navigate]);
 	const signOutMutation = useMutation({
 		mutationFn: signOut,
 		onSuccess: async () => {
@@ -89,7 +99,13 @@ function Account() {
 					<LogOut /> Sign out
 				</Button>
 			</div>
-			{organizationId && <BillingCard organizationId={organizationId} />}
+			{organizationId && (
+				<BillingCard
+					organizationId={organizationId}
+					returnedFromStripe={search.billing !== undefined}
+					onReturnHandled={dropBillingMarker}
+				/>
+			)}
 			{organizationId && <FilesCard organizationId={organizationId} />}
 			<SessionsCard />
 			<DeleteAccountCard

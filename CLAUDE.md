@@ -70,6 +70,10 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `buildApp(config, { billing })`). Routes under `/api/organizations/:organizationId/billing`: GET (any member),
   `checkout` and `portal` (admin+) return a Stripe URL. `billing_customers`: one Stripe customer per organization,
   created with an idempotency key. No Stripe settings: GET says `enabled: false`, no checkout or portal. Web: `features/billing` (card on /account).
+  Webhook (13.3): `POST /api/webhooks/stripe` (`STRIPE_WEBHOOK_SECRET`), raw-body signature check. Never trust the
+  payload: `syncSubscription` (`sync.ts`) locks the customer row, re-fetches from Stripe, saves `billing_subscriptions`.
+  The event id goes in `stripe_events` in the same transaction (duplicates: no-op; a failure: 500, Stripe retries).
+  GET reads `billing_subscriptions`; `POST .../billing/sync` refreshes on return from Stripe (`?billing=`).
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`

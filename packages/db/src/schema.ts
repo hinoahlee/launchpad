@@ -343,7 +343,8 @@ export type FileRow = typeof files.$inferSelect;
 
 // Billing (phase 13): which Stripe customer pays for each organization. Made the first time an admin starts a
 // checkout, and kept: the customer holds invoices and payment methods even when no subscription is running.
-// Deleting the organization deletes the row; the customer at Stripe stays (cleanup: a follow-up).
+// Deleting the organization deletes the row; the customer at Stripe stays (cleanup: a follow-up). Webhooks lock
+// this row (SELECT ... FOR UPDATE) while they sync, so two syncs for one organization run one after the other.
 export const billingCustomers = pgTable("billing_customers", {
 	organizationId: uuid("organization_id")
 		.primaryKey()
@@ -354,3 +355,35 @@ export const billingCustomers = pgTable("billing_customers", {
 });
 
 export type BillingCustomer = typeof billingCustomers.$inferSelect;
+
+// Our copy of the organization's subscription (13.3), as Stripe last reported it. Never written from a webhook's
+// payload: every sync asks Stripe for the current subscription and saves that, so a late or out-of-order event
+// can't roll it back. No row: the organization never subscribed. A canceled one stays, with status "canceled".
+export const billingSubscriptions = pgTable("billing_subscriptions", {
+	organizationId: uuid("organization_id")
+		.primaryKey()
+		.references(() => organizations.id, { onDelete: "cascade" }),
+	// "sub_...". Unique: one subscription never counts for two organizations.
+	stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
+	// Stripe's status, as is: active, trialing, past_due, unpaid, paused, incomplete, incomplete_expired, canceled.
+	// Text, not an enum: Stripe adds statuses, and an unknown one shouldn't break a sync.
+	status: text("status").notNull(),
+	// Which price it's for ("price_..."): 13.4 maps it to a plan.
+	priceId: text("price_id").notNull(),
+	// The end of the period already paid for. Canceled "at period end", access lasts until then.
+	currentPeriodEnd: timestamptz("current_period_end").notNull(),
+	cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull(),
+	// When we last synced it from Stripe.
+	updatedAt: timestamptz("updated_at").defaultNow().notNull(),
+});
+
+export type BillingSubscription = typeof billingSubscriptions.$inferSelect;
+
+// Stripe events we've handled, by id ("evt_..."). Stripe delivers at least once (it retries until we answer 2xx),
+// so the same event can arrive twice. The id is inserted in the same transaction as the event's change: a repeat
+// finds it and does nothing; a crash rolls both back, so Stripe's retry runs it again.
+export const stripeEvents = pgTable("stripe_events", {
+	id: text("id").primaryKey(),
+	type: text("type").notNull(),
+	processedAt: timestamptz("processed_at").defaultNow().notNull(),
+});

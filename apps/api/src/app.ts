@@ -32,6 +32,7 @@ import { authRoutes } from "./features/auth/routes.ts";
 import { createBillingDriver } from "./features/billing/create-driver.ts";
 import type { BillingDriver } from "./features/billing/driver.ts";
 import { billingRoutes } from "./features/billing/routes.ts";
+import { stripeWebhookRoutes } from "./features/billing/webhook-routes.ts";
 import { resendWebhookRoutes } from "./features/email-webhooks/routes.ts";
 import { fileRoutes } from "./features/files/routes.ts";
 import { greetingRoutes } from "./features/greeting/routes.ts";
@@ -321,6 +322,13 @@ export function buildApp(
 			api.register(billingRoutes(billing, appUrl(config)), {
 				prefix: "/organizations/:organizationId",
 			});
+
+			// Off until Stripe and the endpoint's signing secret are set: without the secret no event could be verified.
+			if (billing && config.STRIPE_WEBHOOK_SECRET) {
+				api.register(
+					stripeWebhookRoutes(billing, config.STRIPE_WEBHOOK_SECRET),
+				);
+			}
 
 			// Off until the webhook's signing secret is set: without it no request could be verified.
 			if (config.RESEND_WEBHOOK_SECRET) {

@@ -11,7 +11,7 @@ import {
 	CardTitle,
 } from "#components/ui/card.tsx";
 import { ApiError } from "#lib/api.ts";
-import { billingQuery, billingRedirect } from "./api.ts";
+import { billingQuery, billingRedirect, syncBilling } from "./api.ts";
 
 function errorMessage(error: Error): string {
 	if (error instanceof ApiError) {
@@ -26,10 +26,30 @@ function errorMessage(error: Error): string {
 }
 
 // Your organization's plan (each user has exactly one organization, decision 010). Paying and managing happen
-// on Stripe's own pages: the API creates a session, and the browser goes there and comes back to /account.
-export function BillingCard({ organizationId }: { organizationId: string }) {
+// on Stripe's own pages: the API creates a session, and the browser goes there and comes back to /account with
+// `?billing=...` (`returnedFromStripe`). The plan shown comes from our copy, which webhooks update a moment after
+// Stripe; on return the card asks the API to sync right away, then calls `onReturnHandled` to drop the marker.
+export function BillingCard({
+	organizationId,
+	returnedFromStripe,
+	onReturnHandled,
+}: {
+	organizationId: string;
+	returnedFromStripe: boolean;
+	onReturnHandled: () => void;
+}) {
 	const queryClient = useQueryClient();
 	const billing = useQuery(billingQuery(organizationId));
+	const { mutate: sync } = useMutation({
+		mutationFn: () => syncBilling(organizationId),
+		onSuccess: (data) =>
+			queryClient.setQueryData(billingQuery(organizationId).queryKey, data),
+	});
+	useEffect(() => {
+		if (!returnedFromStripe) return;
+		sync();
+		onReturnHandled();
+	}, [returnedFromStripe, sync, onReturnHandled]);
 	const redirect = useMutation({
 		mutationFn: (page: "checkout" | "portal") =>
 			billingRedirect(organizationId, page),
@@ -39,18 +59,16 @@ export function BillingCard({ organizationId }: { organizationId: string }) {
 	const { reset } = redirect;
 
 	// Back from Stripe with the browser's Back button: the browser may show this page exactly as it left it
-	// (the back/forward cache), button still disabled and plan as it was. Re-enable it and ask again.
+	// (the back/forward cache), button still disabled and plan as it was. Re-enable it and sync.
 	useEffect(() => {
 		const onPageShow = (event: PageTransitionEvent) => {
 			if (!event.persisted) return;
 			reset();
-			void queryClient.invalidateQueries({
-				queryKey: billingQuery(organizationId).queryKey,
-			});
+			sync();
 		};
 		window.addEventListener("pageshow", onPageShow);
 		return () => window.removeEventListener("pageshow", onPageShow);
-	}, [queryClient, organizationId, reset]);
+	}, [reset, sync]);
 
 	// Billing is off on this server (no Stripe settings): no card at all.
 	if (billing.data?.enabled === false) return null;

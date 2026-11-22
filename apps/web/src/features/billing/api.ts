@@ -16,6 +16,12 @@ export const billingQuery = (organizationId: string) =>
 			api(billingPath(organizationId), billingResponseSchema, { signal }),
 	});
 
+// Asks the API to refresh its copy from Stripe now, instead of waiting for the webhook. Same answer as the query.
+export const syncBilling = (organizationId: string) =>
+	api(`${billingPath(organizationId)}/sync`, billingResponseSchema, {
+		method: "POST",
+	});
+
 // A Stripe page to send the browser to: Checkout (subscribe) or the Customer Portal (card, cancel, invoices).
 export const billingRedirect = (
 	organizationId: string,

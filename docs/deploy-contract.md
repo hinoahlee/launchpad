@@ -45,6 +45,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | unset | Server and worker. A key that can only read and write objects in that bucket. The secret is a secret (Render: `sync: false`). |
 | `STRIPE_API_KEY` | unset (billing off) | Server only. A Stripe restricted key (`rk_test_…`/`rk_live_…`): Customers, Checkout Sessions, Customer portal (write); Subscriptions, Prices (read). Set with `STRIPE_PRICE_ID`, or the boot fails. A secret (Render: `sync: false`). |
 | `STRIPE_PRICE_ID` | unset | Server only. The monthly price Checkout sells (`price_…`), from the same Stripe account or sandbox as the key. |
+| `STRIPE_WEBHOOK_SECRET` | unset (no webhook) | Server only. The signing secret (`whsec_…`) of the Stripe endpoint `<APP_URL>/api/webhooks/stripe`, subscribed to the events in `features/billing/webhook-routes.ts` (`SYNC_EVENTS`). Needs `STRIPE_API_KEY`. A secret (Render: `sync: false`). |
 
 New variables are added here in the same PR as `config.ts`.
 
