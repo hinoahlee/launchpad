@@ -37,13 +37,17 @@ export type StorageDriver = {
 	deletePrefix(prefix: string): Promise<number>;
 };
 
-// Every object of one user lives under this prefix (see storageKey).
+// Every object of one organization lives under this prefix (see storageKey).
+export const organizationPrefix = (organizationId: string) =>
+	`organizations/${organizationId}/`;
+
+// Where objects uploaded before 12.2 live: users/<userId>/. Only account deletion still reads it, to clean up.
 export const userPrefix = (userId: string) => `users/${userId}/`;
 
-// users/<userId>/<random uuid>: the prefix groups one person's objects (deleting an account removes the prefix,
-// step 11.4). The random part means a key never reuses the person's file name, which may hold anything.
-export function storageKey(userId: string): string {
-	return `${userPrefix(userId)}${crypto.randomUUID()}`;
+// organizations/<organizationId>/<random uuid>: the prefix groups one organization's objects (deleting it removes
+// the prefix). The random part means a key never reuses the file's name, which may hold anything.
+export function storageKey(organizationId: string): string {
+	return `${organizationPrefix(organizationId)}${crypto.randomUUID()}`;
 }
 
 // Content-Disposition: attachment makes the browser save the file instead of showing it. That matters for

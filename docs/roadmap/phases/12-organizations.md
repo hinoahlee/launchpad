@@ -17,5 +17,10 @@ which they own alone (decision 010). Teams (invites, several members, switching)
 - **Ref:** mixmallow `projects/access.ts`, `test/members.test.ts`.
 - **Done when:** tests prove org A's members can't touch org B's data.
 
+### 12.3 Files: organization required (contract)
+- **Build:** once 12.2 is deployed (no release inserts files without an organization any more): backfill the
+  rows the previous release inserted during that deploy, then `files.organization_id` NOT NULL (decision 005).
+- **Done when:** the migration runs on production, and inserting a file without an organization fails.
+
 Dropped from this phase (decision 010): invites (a teams feature) and the membership audit log (no membership or
 role changes happen). Security events go to an audit log in phase 14 (see the roadmap's follow-ups).

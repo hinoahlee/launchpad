@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { type Database, members, organizations, users } from "@launchpad/db";
+import {
+	type Database,
+	members,
+	organizations,
+	type Transaction,
+	users,
+} from "@launchpad/db";
 import { eq, inArray } from "drizzle-orm";
 
 export const PERSONAL_ORGANIZATION_NAME = "Personal";
@@ -44,21 +50,28 @@ export async function initialOrganizationId(
 	});
 }
 
-// Before deleting a user: delete their organization. Their membership row goes with the user (ON DELETE CASCADE);
-// the organization would be left with no member, and nobody able to open it.
+// Before deleting a user: delete their organization, and with it (ON DELETE CASCADE) its rows: files... Their
+// membership row goes with the user; the organization would be left with no member, and nobody able to open it.
+// `afterEach` runs in the same transaction, once per deleted organization: queue the cleanup of what lives
+// outside Postgres there, so it's queued if and only if the rows are gone.
 export async function deleteUserOrganization(
 	db: Database,
 	userId: string,
+	afterEach: (tx: Transaction, organizationId: string) => Promise<void>,
 ): Promise<void> {
-	await db
-		.delete(organizations)
-		.where(
-			inArray(
-				organizations.id,
-				db
-					.select({ id: members.organizationId })
-					.from(members)
-					.where(eq(members.userId, userId)),
-			),
-		);
+	await db.transaction(async (tx) => {
+		const deleted = await tx
+			.delete(organizations)
+			.where(
+				inArray(
+					organizations.id,
+					tx
+						.select({ id: members.organizationId })
+						.from(members)
+						.where(eq(members.userId, userId)),
+				),
+			)
+			.returning({ id: organizations.id });
+		for (const { id } of deleted) await afterEach(tx, id);
+	});
 }

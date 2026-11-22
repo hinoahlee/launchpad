@@ -105,13 +105,27 @@ export function createAuth(
 				// afterwards their membership row is gone and nothing says which organization was theirs. If the delete
 				// then fails, they keep their account and get a new organization at their next sign-in.
 				beforeDelete: async (user) => {
-					await deleteUserOrganization(db, user.id);
+					await deleteUserOrganization(
+						db,
+						user.id,
+						async (tx, organizationId) => {
+							// Its files: the rows went with it; the objects are in the bucket. Delayed past the life of an
+							// upload URL: one signed just before the deletion could still PUT an object.
+							if (config.S3_BUCKET) {
+								await enqueue(
+									tx,
+									"delete-organization-files",
+									{ organizationId },
+									{ runAfter: new Date(Date.now() + DELETE_FILES_DELAY_MS) },
+								);
+							}
+						},
+					);
 				},
 				afterDelete: async (user) => {
 					// The id only: the email is personal data, and logs are kept longer than the account.
 					log.info({ userId: user.id }, "auth: account deleted");
-					// Their files: the rows went with the user (ON DELETE CASCADE); the objects are in the bucket. Delayed
-					// past the life of an upload URL: one signed just before the deletion could still PUT an object.
+					// What they uploaded before 12.2, stored under their user prefix. Same delay, same reason.
 					if (config.S3_BUCKET) {
 						await enqueue(
 							db,

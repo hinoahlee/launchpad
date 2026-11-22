@@ -1,4 +1,4 @@
-import { type FileRow, files, users } from "@launchpad/db";
+import { type FileRow, files, organizations } from "@launchpad/db";
 import {
 	createFileBodySchema,
 	createFileResponseSchema,
@@ -8,11 +8,16 @@ import {
 	fileListResponseSchema,
 	fileParamsSchema,
 	fileSchema,
+	organizationParamsSchema,
 	STORAGE_QUOTA_BYTES,
 } from "@launchpad/shared";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
+import {
+	membershipOf,
+	requireMembership,
+} from "#features/auth/require-membership.ts";
 import { requireSession, sessionOf } from "#features/auth/require-session.ts";
 import { type StorageDriver, storageKey } from "#lib/storage/driver.ts";
 
@@ -26,23 +31,39 @@ function toFileItem(row: FileRow, uploadedAt: Date): FileItem {
 	};
 }
 
-// /api/files: the signed-in user's files. The bytes never pass through the API: it signs a URL, the browser
-// uploads straight to the bucket, then `complete` checks the bucket before the file counts as uploaded. Like
-// features/account, every query filters on the user's id: another user's file is a 404, as if it didn't exist.
+// /api/organizations/:organizationId/files: an organization's files. The bytes never pass through the API: it signs a URL, the browser
+// uploads straight to the bucket, then `complete` checks the bucket before the file counts as uploaded.
+// Tenant isolation (decision 011): every route runs requireMembership (not a member: 404), and every query filters
+// on that membership's organization: another organization's file is a 404, as if it didn't exist.
 export const fileRoutes =
 	(storage: StorageDriver): FastifyPluginAsyncZod =>
 	async (app) => {
 		app.addHook("onRequest", requireSession);
+		// Per route, not for the whole plugin, because the role differs: any member reads and uploads, deleting
+		// needs an admin. A route that forgets it fails with a 500 at membershipOf(), never runs open.
+		const member = requireMembership("member");
+		const admin = requireMembership("admin");
 
 		app.get(
 			"/files",
-			{ schema: { response: { 200: fileListResponseSchema } } },
+			{
+				preHandler: member,
+				schema: {
+					params: organizationParamsSchema,
+					response: { 200: fileListResponseSchema },
+				},
+			},
 			async (request) => {
-				const { user } = sessionOf(request);
+				const { organizationId } = membershipOf(request);
 				const rows = await app.db
 					.select()
 					.from(files)
-					.where(and(eq(files.userId, user.id), isNotNull(files.uploadedAt)))
+					.where(
+						and(
+							eq(files.organizationId, organizationId),
+							isNotNull(files.uploadedAt),
+						),
+					)
 					.orderBy(desc(files.uploadedAt), desc(files.id));
 				return {
 					files: rows.flatMap((row) =>
@@ -56,21 +77,25 @@ export const fileRoutes =
 		app.post(
 			"/files",
 			{
+				preHandler: member,
 				schema: {
+					params: organizationParamsSchema,
 					body: createFileBodySchema,
 					response: { 201: createFileResponseSchema, 413: errorResponseSchema },
 				},
 			},
 			async (request, reply) => {
 				const { user } = sessionOf(request);
+				const { organizationId } = membershipOf(request);
 				const { fileName, contentType, sizeBytes } = request.body;
-				const key = storageKey(user.id);
+				const key = storageKey(organizationId);
 				const row = await app.db.transaction(async (tx) => {
-					// Lock this user's row until the insert commits, so two uploads at once can't both see room for one.
+					// Lock the organization's row until the insert commits, so two uploads at once (by anyone in it)
+					// can't both see room for one.
 					await tx
-						.select({ id: users.id })
-						.from(users)
-						.where(eq(users.id, user.id))
+						.select({ id: organizations.id })
+						.from(organizations)
+						.where(eq(organizations.id, organizationId))
 						.for("update");
 					// Pending rows count: their bytes may already be in the bucket, completed or not.
 					const [usage] = await tx
@@ -78,13 +103,14 @@ export const fileRoutes =
 							used: sql<string>`coalesce(sum(${files.sizeBytes}), 0)::bigint`,
 						})
 						.from(files)
-						.where(eq(files.userId, user.id));
+						.where(eq(files.organizationId, organizationId));
 					if (Number(usage?.used ?? 0) + sizeBytes > STORAGE_QUOTA_BYTES) {
 						return null;
 					}
 					const [inserted] = await tx
 						.insert(files)
 						.values({
+							organizationId,
 							userId: user.id,
 							fileName,
 							contentType,
@@ -119,6 +145,7 @@ export const fileRoutes =
 		app.post(
 			"/files/:id/complete",
 			{
+				preHandler: member,
 				schema: {
 					params: fileParamsSchema,
 					response: {
@@ -130,10 +157,10 @@ export const fileRoutes =
 				},
 			},
 			async (request, reply) => {
-				const { user } = sessionOf(request);
+				const { organizationId } = membershipOf(request);
 				const owned = and(
 					eq(files.id, request.params.id),
-					eq(files.userId, user.id),
+					eq(files.organizationId, organizationId),
 				);
 				const [file] = await app.db.select().from(files).where(owned);
 				if (!file) {
@@ -175,20 +202,21 @@ export const fileRoutes =
 		app.get(
 			"/files/:id/download",
 			{
+				preHandler: member,
 				schema: {
 					params: fileParamsSchema,
 					response: { 200: downloadResponseSchema, 404: errorResponseSchema },
 				},
 			},
 			async (request, reply) => {
-				const { user } = sessionOf(request);
+				const { organizationId } = membershipOf(request);
 				const [file] = await app.db
 					.select()
 					.from(files)
 					.where(
 						and(
 							eq(files.id, request.params.id),
-							eq(files.userId, user.id),
+							eq(files.organizationId, organizationId),
 							isNotNull(files.uploadedAt),
 						),
 					);
@@ -210,17 +238,25 @@ export const fileRoutes =
 		app.delete(
 			"/files/:id",
 			{
+				preHandler: admin,
 				schema: {
 					params: fileParamsSchema,
-					response: { 204: z.null(), 404: errorResponseSchema },
+					response: {
+						204: z.null(),
+						403: errorResponseSchema,
+						404: errorResponseSchema,
+					},
 				},
 			},
 			async (request, reply) => {
-				const { user } = sessionOf(request);
+				const { organizationId } = membershipOf(request);
 				const [removed] = await app.db
 					.delete(files)
 					.where(
-						and(eq(files.id, request.params.id), eq(files.userId, user.id)),
+						and(
+							eq(files.id, request.params.id),
+							eq(files.organizationId, organizationId),
+						),
 					)
 					.returning({ key: files.storageKey });
 				if (!removed) {

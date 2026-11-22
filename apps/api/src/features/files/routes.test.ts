@@ -1,4 +1,4 @@
-import { files, jobs, users } from "@launchpad/db";
+import { files, jobs, members, users } from "@launchpad/db";
 import { testDatabaseUrl } from "@launchpad/db/testing";
 import {
 	type CreateFileBody,
@@ -9,6 +9,7 @@ import {
 	fileSchema,
 	MAX_FILE_BYTES,
 	STORAGE_QUOTA_BYTES,
+	sessionResponseSchema,
 } from "@launchpad/shared";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -22,9 +23,11 @@ import { signInWithCode } from "#testing/sign-in.ts";
 const APP_URL = "https://app.example.test";
 const storage = createMemoryStorageDriver();
 // S3_BUCKET set (the keys don't matter: the memory driver is passed in) so account deletion queues file cleanup.
+// Every request here comes from one IP, and this file makes well over the default 100 a minute; the rate limit
+// has its own test (app.test.ts).
 const app = buildApp(
 	testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL, S3_BUCKET: "test" }),
-	{ storage },
+	{ storage, rateLimitMax: 10_000 },
 );
 afterAll(async () => {
 	await app.close();
@@ -43,41 +46,70 @@ const notes: CreateFileBody = {
 	sizeBytes: 11,
 };
 
-const register = (cookie: string | undefined, body: object = notes) =>
-	app.inject({
-		method: "POST",
-		url: "/api/files",
-		payload: body,
-		...(cookie && { headers: { cookie } }),
-	});
-const complete = (id: string, cookie?: string) =>
-	app.inject({
-		method: "POST",
-		url: `/api/files/${id}/complete`,
-		...(cookie && { headers: { cookie } }),
-	});
-const download = (id: string, cookie?: string) =>
-	app.inject({
-		method: "GET",
-		url: `/api/files/${id}/download`,
-		...(cookie && { headers: { cookie } }),
-	});
-const remove = (id: string, cookie?: string) =>
-	app.inject({
-		method: "DELETE",
-		url: `/api/files/${id}`,
-		...(cookie && { headers: { cookie } }),
-	});
-const list = async (cookie: string) =>
-	fileListResponseSchema.parse(
+const someId = "00000000-0000-4000-8000-000000000000";
+
+// The signed-in user's organization (decision 010: they have exactly one), as the web app reads it.
+// Cached per cookie: one get-session per sign-in, not per request (the API rate-limits each client).
+const orgIds = new Map<string, string>();
+const orgOf = async (cookie: string | undefined) => {
+	if (!cookie) return someId;
+	const cached = orgIds.get(cookie);
+	if (cached) return cached;
+	const session = sessionResponseSchema.parse(
 		(
 			await app.inject({
 				method: "GET",
-				url: "/api/files",
+				url: "/api/auth/get-session",
 				headers: { cookie },
 			})
 		).json(),
-	).files;
+	);
+	const id = session?.session.activeOrganizationId;
+	if (!id) throw new Error("no active organization");
+	orgIds.set(cookie, id);
+	return id;
+};
+// Each helper calls its route in the caller's own organization, or in `org` when given (to try someone else's).
+const filesUrl = async (cookie: string | undefined, path = "", org?: string) =>
+	`/api/organizations/${org ?? (await orgOf(cookie))}/files${path}`;
+
+const register = async (
+	cookie: string | undefined,
+	body: object = notes,
+	org?: string,
+) =>
+	app.inject({
+		method: "POST",
+		url: await filesUrl(cookie, "", org),
+		payload: body,
+		...(cookie && { headers: { cookie } }),
+	});
+const complete = async (id: string, cookie?: string, org?: string) =>
+	app.inject({
+		method: "POST",
+		url: await filesUrl(cookie, `/${id}/complete`, org),
+		...(cookie && { headers: { cookie } }),
+	});
+const download = async (id: string, cookie?: string, org?: string) =>
+	app.inject({
+		method: "GET",
+		url: await filesUrl(cookie, `/${id}/download`, org),
+		...(cookie && { headers: { cookie } }),
+	});
+const remove = async (id: string, cookie?: string, org?: string) =>
+	app.inject({
+		method: "DELETE",
+		url: await filesUrl(cookie, `/${id}`, org),
+		...(cookie && { headers: { cookie } }),
+	});
+const listResponse = async (cookie?: string, org?: string) =>
+	app.inject({
+		method: "GET",
+		url: await filesUrl(cookie, "", org),
+		...(cookie && { headers: { cookie } }),
+	});
+const list = async (cookie: string) =>
+	fileListResponseSchema.parse((await listResponse(cookie)).json()).files;
 
 // Register → the browser's PUT (here: straight into the memory bucket) → complete.
 async function upload(cookie: string, body: CreateFileBody = notes) {
@@ -90,12 +122,10 @@ async function upload(cookie: string, body: CreateFileBody = notes) {
 	return fileSchema.parse(res.json());
 }
 
-const someId = "00000000-0000-4000-8000-000000000000";
-
 describe("without a session", () => {
 	it("401 on every file route", async () => {
 		for (const res of [
-			await app.inject({ method: "GET", url: "/api/files" }),
+			await listResponse(),
 			await register(undefined),
 			await complete(someId),
 			await download(someId),
@@ -115,9 +145,15 @@ describe("POST /api/files (register)", () => {
 		const target = createFileResponseSchema.parse(res.json());
 		expect(target.uploadHeaders).toEqual({ "Content-Type": "text/plain" });
 
-		// The key is the user's prefix and a random id, never the file's own name.
+		// The key is the organization's prefix and a random id, never the file's own name. The row records both
+		// the organization (who owns it) and the user (who uploaded it).
 		const [row] = await app.db.select().from(files);
-		expect(row?.storageKey).toMatch(/^users\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/);
+		const orgId = await orgOf(cookie);
+		expect(row?.storageKey).toMatch(
+			new RegExp(`^organizations/${orgId}/[0-9a-f-]{36}$`),
+		);
+		expect(row?.organizationId).toBe(orgId);
+		expect(row?.userId).toEqual(expect.any(String));
 		expect(row?.uploadedAt).toBeNull();
 		// Pending files aren't listed: there's nothing to download yet.
 		expect(await list(cookie)).toEqual([]);
@@ -186,7 +222,7 @@ describe("storage quota", () => {
 		expect((await register(cookie)).statusCode).toBe(201);
 	});
 
-	it("is per user: A's full quota doesn't block B", async () => {
+	it("is per organization: A's full quota doesn't block B", async () => {
 		const ada = await signIn("ada@example.com");
 		const bob = await signIn("bob@example.com");
 		await fillUpTo(ada, STORAGE_QUOTA_BYTES);
@@ -269,10 +305,35 @@ describe("DELETE /api/files/:id", () => {
 	});
 });
 
-// Authorization: Bob can't see, finish, download or delete Ada's file. Each answer is the same 404 as a file
-// that doesn't exist, so Bob can't even learn that the id is real.
-describe("user A and user B", () => {
-	it("B gets 404 on A's file, and A's file is untouched", async () => {
+// Tenant isolation (decision 011): Bob, a member of org B, can't see, add to, finish, download or delete anything
+// in org A, from either side. Each answer is the same 404 as something that doesn't exist, so Bob can't even
+// learn that an id is real.
+describe("org A and org B", () => {
+	const expectNotFound = (res: { statusCode: number; json: () => unknown }) => {
+		expect(res.statusCode).toBe(404);
+		expect(errorResponseSchema.parse(res.json()).error).toBe("not_found");
+	};
+
+	it("in org A's URLs, B gets 404 on every route: requireMembership", async () => {
+		const ada = await signIn("ada@example.com");
+		const bob = await signIn("bob@example.com");
+		const orgA = await orgOf(ada);
+		const file = await upload(ada);
+
+		for (const res of [
+			await listResponse(bob, orgA),
+			await register(bob, notes, orgA),
+			await complete(file.id, bob, orgA),
+			await download(file.id, bob, orgA),
+			await remove(file.id, bob, orgA),
+		]) {
+			expectNotFound(res);
+		}
+		expect(await list(ada)).toEqual([file]);
+		expect(storage.objects.size).toBe(1);
+	});
+
+	it("in org B's own URLs, A's file ids are 404: every query filters on the org", async () => {
 		const ada = await signIn("ada@example.com");
 		const bob = await signIn("bob@example.com");
 		const file = await upload(ada);
@@ -283,11 +344,9 @@ describe("user A and user B", () => {
 			await download(file.id, bob),
 			await remove(file.id, bob),
 		]) {
-			expect(res.statusCode).toBe(404);
-			expect(errorResponseSchema.parse(res.json()).error).toBe("not_found");
+			expectNotFound(res);
 		}
 		expect(await list(ada)).toEqual([file]);
-		expect(storage.objects.size).toBe(1);
 	});
 
 	it("B can't complete A's pending upload", async () => {
@@ -297,16 +356,72 @@ describe("user A and user B", () => {
 		storage.put(target.uploadUrl, notes.sizeBytes);
 
 		expect((await complete(target.id, bob)).statusCode).toBe(404);
+		expect((await complete(target.id, bob, await orgOf(ada))).statusCode).toBe(
+			404,
+		);
 		expect((await complete(target.id, ada)).statusCode).toBe(200);
+	});
+
+	it("400 on an organization id that isn't a uuid", async () => {
+		const ada = await signIn("ada@example.com");
+		expect((await listResponse(ada, "not-a-uuid")).statusCode).toBe(400);
 	});
 });
 
-// Step 11.4: an account's files go with it. The rows cascade with the user at once; the objects are removed by
-// a job, delayed past the life of any upload URL signed just before.
+// RBAC: what a role may do. Everyone owns their organization today (decision 010); a team's `member` would read
+// and upload, and only admins and owners delete.
+describe("roles", () => {
+	const demote = async (email: string) => {
+		const [user] = await app.db
+			.select()
+			.from(users)
+			.where(eq(users.email, email));
+		await app.db
+			.update(members)
+			.set({ role: "member" })
+			.where(eq(members.userId, user?.id ?? ""));
+	};
+
+	it("a member lists, uploads and downloads, but deleting is 403", async () => {
+		const ada = await signIn("ada@example.com");
+		const file = await upload(ada);
+		await demote("ada@example.com");
+
+		expect(await list(ada)).toHaveLength(1);
+		expect((await download(file.id, ada)).statusCode).toBe(200);
+		await upload(ada, { ...notes, fileName: "second.txt" });
+
+		const res = await remove(file.id, ada);
+		expect(res.statusCode).toBe(403);
+		expect(errorResponseSchema.parse(res.json()).error).toBe("forbidden");
+		expect(await list(ada)).toHaveLength(2);
+	});
+});
+
+// An account's files go with it (11.4), now through its organization (12.2). The rows cascade with the
+// organization at once; the objects are removed by jobs, delayed past the life of any upload URL signed just
+// before: one for the organization's prefix, one for what the user uploaded before 12.2 under theirs.
 describe("deleting the account", () => {
-	it("removes the user's rows now and queues the bucket cleanup; the job deletes only their objects", async () => {
+	const context = {
+		jobId: "",
+		db: app.db,
+		email: { send: async () => ({}) },
+		storage,
+		log: createLogger("silent"),
+		signal: new AbortController().signal,
+	};
+	const queued = async (type: string) => {
+		const [job] = await app.db.select().from(jobs).where(eq(jobs.type, type));
+		expect(job?.runAfter.getTime()).toBeGreaterThan(
+			Date.now() + 15 * 60 * 1000,
+		);
+		return job?.payload;
+	};
+
+	it("removes the organization's rows now and queues the bucket cleanup; the jobs delete only its objects", async () => {
 		const ada = await signIn("ada@example.com");
 		const bob = await signIn("bob@example.com");
+		const orgA = await orgOf(ada);
 		await upload(ada);
 		await upload(ada, { ...notes, fileName: "second.txt" });
 		await upload(bob);
@@ -315,6 +430,8 @@ describe("deleting the account", () => {
 			.from(users)
 			.where(eq(users.email, "ada@example.com"));
 		if (!adaUser) throw new Error("no user");
+		// Uploaded before 12.2, under the old per-user prefix.
+		storage.objects.set(`users/${adaUser.id}/legacy`, 5);
 
 		const res = await app.inject({
 			method: "POST",
@@ -324,32 +441,21 @@ describe("deleting the account", () => {
 		});
 		expect(res.statusCode).toBe(200);
 		expect(
-			await app.db.select().from(files).where(eq(files.userId, adaUser.id)),
+			await app.db.select().from(files).where(eq(files.organizationId, orgA)),
 		).toEqual([]);
+		expect(await queued("delete-organization-files")).toEqual({
+			organizationId: orgA,
+		});
+		expect(await queued("delete-user-files")).toEqual({ userId: adaUser.id });
 
-		const [job] = await app.db
-			.select()
-			.from(jobs)
-			.where(eq(jobs.type, "delete-user-files"));
-		expect(job?.payload).toEqual({ userId: adaUser.id });
-		expect(job?.runAfter.getTime()).toBeGreaterThan(
-			Date.now() + 15 * 60 * 1000,
+		// What the worker does when the jobs come due.
+		await handlers["delete-organization-files"](
+			{ organizationId: orgA },
+			context,
 		);
-
-		// What the worker does when the job comes due.
-		await handlers["delete-user-files"](
-			{ userId: adaUser.id },
-			{
-				jobId: job?.id ?? "",
-				db: app.db,
-				email: { send: async () => ({}) },
-				storage,
-				log: createLogger("silent"),
-				signal: new AbortController().signal,
-			},
-		);
+		await handlers["delete-user-files"]({ userId: adaUser.id }, context);
 		expect([...storage.objects.keys()]).toEqual([
-			expect.not.stringContaining(adaUser.id),
+			expect.stringContaining(`organizations/${await orgOf(bob)}/`),
 		]);
 		expect(await list(bob)).toHaveLength(1);
 	});
@@ -359,7 +465,10 @@ describe("without a bucket (no S3_* settings)", () => {
 	it("has no file routes: 404", async () => {
 		const bare = buildApp(testConfig({ DATABASE_URL: testDatabaseUrl() }));
 		try {
-			const res = await bare.inject({ method: "GET", url: "/api/files" });
+			const res = await bare.inject({
+				method: "GET",
+				url: `/api/organizations/${someId}/files`,
+			});
 			expect(res.statusCode).toBe(404);
 		} finally {
 			await bare.close();

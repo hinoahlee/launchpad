@@ -312,7 +312,15 @@ export const files = pgTable(
 	"files",
 	{
 		id: uuid("id").defaultRandom().primaryKey(),
-		// Cascade: deleting a user deletes their rows. The objects in the bucket go separately (step 11.4).
+		// The organization it belongs to (12.2): every query filters on it, and its members may see it. Deleting the
+		// organization deletes its rows; the objects in the bucket go separately (a job).
+		// Nullable for now (expand/contract, decision 005): the release before this one inserts rows without it
+		// while a deploy runs. Step 12.3 backfills those and makes it NOT NULL.
+		organizationId: uuid("organization_id").references(() => organizations.id, {
+			onDelete: "cascade",
+		}),
+		// Who uploaded it. Cascade: deleting a user deletes their rows (with one person per organization, the same
+		// rows as the organization's; teams will want SET NULL, so a member leaving doesn't take the team's files).
 		userId: uuid("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
@@ -320,12 +328,16 @@ export const files = pgTable(
 		fileName: text("file_name").notNull(),
 		contentType: text("content_type").notNull(),
 		sizeBytes: integer("size_bytes").notNull(),
-		// Where the object is in the bucket: users/<userId>/<random uuid>. Unique per upload.
+		// Where the object is in the bucket: organizations/<organizationId>/<random uuid> (users/<userId>/<random uuid>
+		// before 12.2). Unique per upload.
 		storageKey: text("storage_key").notNull().unique(),
 		uploadedAt: timestamptz("uploaded_at"),
 		createdAt: timestamptz("created_at").defaultNow().notNull(),
 	},
-	(t) => [index("files_user_id_idx").on(t.userId)],
+	(t) => [
+		index("files_organization_id_idx").on(t.organizationId),
+		index("files_user_id_idx").on(t.userId),
+	],
 );
 
 export type FileRow = typeof files.$inferSelect;

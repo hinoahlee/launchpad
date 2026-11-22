@@ -5,7 +5,11 @@ import type { Logger } from "pino";
 import type { EmailDriver } from "#lib/email/driver.ts";
 import { renderEmail } from "#lib/email/render.tsx";
 import { suppressionReason } from "#lib/email/suppression.ts";
-import { type StorageDriver, userPrefix } from "#lib/storage/driver.ts";
+import {
+	organizationPrefix,
+	type StorageDriver,
+	userPrefix,
+} from "#lib/storage/driver.ts";
 import type { JobPayload, JobType } from "./job-types.ts";
 import { pruneDoneJobs } from "./queue.ts";
 
@@ -62,6 +66,17 @@ export const handlers: JobHandlers = {
 	"prune-jobs": async ({ olderThanDays }, { db, log }) => {
 		const deleted = await pruneDoneJobs(db, olderThanDays);
 		log.info({ deleted, olderThanDays }, "pruned done jobs");
+	},
+	// Idempotent: deleting a prefix that's already empty deletes nothing.
+	"delete-organization-files": async ({ organizationId }, { storage, log }) => {
+		if (!storage) throw new Error(missingStorage);
+		const deleted = await storage.deletePrefix(
+			organizationPrefix(organizationId),
+		);
+		log.info(
+			{ organizationId, deleted },
+			"deleted a deleted organization's files",
+		);
 	},
 	// Idempotent: deleting a prefix that's already empty deletes nothing.
 	"delete-user-files": async ({ userId }, { storage, log }) => {

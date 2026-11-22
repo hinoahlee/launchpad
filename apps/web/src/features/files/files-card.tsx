@@ -38,23 +38,31 @@ function uploadErrorMessage(error: Error): string {
 	return "That file couldn't be uploaded. Please try again.";
 }
 
-// Upload, download and delete your own files. The bytes go between the browser and the bucket; the API only
-// hands out short-lived signed URLs (features/files in the API).
-export function FilesCard() {
+// Upload, download and delete your files: your organization's (12.2; each user has exactly one, decision 010).
+// The bytes go between the browser and the bucket; the API only hands out short-lived signed URLs
+// (features/files in the API).
+export function FilesCard({ organizationId }: { organizationId: string }) {
 	const queryClient = useQueryClient();
-	const files = useQuery(filesQuery);
+	const query = filesQuery(organizationId);
+	const files = useQuery(query);
 	const input = useRef<HTMLInputElement>(null);
 	const refresh = () =>
-		queryClient.invalidateQueries({ queryKey: filesQuery.queryKey });
+		queryClient.invalidateQueries({ queryKey: query.queryKey });
 
-	const upload = useMutation({ mutationFn: uploadFile, onSuccess: refresh });
+	const upload = useMutation({
+		mutationFn: (file: File) => uploadFile(organizationId, file),
+		onSuccess: refresh,
+	});
 	const download = useMutation({
-		mutationFn: downloadUrl,
+		mutationFn: (id: string) => downloadUrl(organizationId, id),
 		// A navigation, not a fetch: the bucket answers with Content-Disposition: attachment, so the browser saves
 		// the file and stays on this page.
 		onSuccess: ({ url }) => window.location.assign(url),
 	});
-	const remove = useMutation({ mutationFn: deleteFile, onSuccess: refresh });
+	const remove = useMutation({
+		mutationFn: (id: string) => deleteFile(organizationId, id),
+		onSuccess: refresh,
+	});
 
 	// Uploads are off on this server (no bucket configured): no card at all.
 	if (files.data === null) return null;
