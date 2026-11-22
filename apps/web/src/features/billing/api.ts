@@ -3,26 +3,17 @@ import {
 	billingResponseSchema,
 } from "@launchpad/shared";
 import { queryOptions } from "@tanstack/react-query";
-import { ApiError, api } from "#lib/api.ts";
+import { api } from "#lib/api.ts";
 
 const billingPath = (organizationId: string) =>
 	`/organizations/${organizationId}/billing` as const;
 
-// The organization's plan, or null when billing is off: a server without Stripe settings has no billing routes,
-// so the API answers 404.
+// The organization's plan, and whether this server sells one at all (`enabled`).
 export const billingQuery = (organizationId: string) =>
 	queryOptions({
 		queryKey: ["account", "billing", organizationId],
-		queryFn: async ({ signal }) => {
-			try {
-				return await api(billingPath(organizationId), billingResponseSchema, {
-					signal,
-				});
-			} catch (error) {
-				if (error instanceof ApiError && error.status === 404) return null;
-				throw error;
-			}
-		},
+		queryFn: ({ signal }) =>
+			api(billingPath(organizationId), billingResponseSchema, { signal }),
 	});
 
 // A Stripe page to send the browser to: Checkout (subscribe) or the Customer Portal (card, cancel, invoices).

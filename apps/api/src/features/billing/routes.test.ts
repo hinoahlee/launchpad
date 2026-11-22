@@ -87,7 +87,7 @@ describe("billing", () => {
 		const org = await orgOf(ada);
 		expect(
 			billingResponseSchema.parse((await call("GET", "", org, ada)).json()),
-		).toEqual({ subscribed: false });
+		).toEqual({ enabled: true, subscribed: false });
 
 		const first = await call("POST", "/checkout", org, ada);
 		expect(first.statusCode).toBe(200);
@@ -126,6 +126,7 @@ describe("billing", () => {
 		billing.subscribe(customerId ?? "");
 
 		expect((await call("GET", "", org, ada)).json()).toEqual({
+			enabled: true,
 			subscribed: true,
 		});
 
@@ -187,7 +188,8 @@ describe("billing", () => {
 });
 
 describe("billing off", () => {
-	it("no routes without Stripe settings", async () => {
+	// GET still answers (a 404 would be a console error on /account); there's nothing to buy or manage.
+	it("without Stripe settings: GET says off, checkout and portal don't exist", async () => {
 		const off = buildApp(
 			testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL }),
 		);
@@ -197,12 +199,28 @@ describe("billing off", () => {
 				origin: APP_URL,
 			});
 			const org = await orgOf(ada);
-			const res = await off.inject({
+			const inject = (method: "GET" | "POST", path = "") =>
+				off.inject({
+					method,
+					url: `/api/organizations/${org}/billing${path}`,
+					headers: { cookie: ada },
+				});
+			const res = await inject("GET");
+			expect(res.statusCode).toBe(200);
+			expect(res.json()).toEqual({ enabled: false, subscribed: false });
+			expect((await inject("POST", "/checkout")).statusCode).toBe(404);
+			expect((await inject("POST", "/portal")).statusCode).toBe(404);
+			// Still an org-scoped route: someone else's organization is a 404.
+			const bob = await signInWithCode(off, {
+				email: "bob@example.com",
+				origin: APP_URL,
+			});
+			const other = await off.inject({
 				method: "GET",
-				url: `/api/organizations/${org}/billing`,
+				url: `/api/organizations/${await orgOf(bob)}/billing`,
 				headers: { cookie: ada },
 			});
-			expect(res.statusCode).toBe(404);
+			expect(other.statusCode).toBe(404);
 		} finally {
 			await off.close();
 		}

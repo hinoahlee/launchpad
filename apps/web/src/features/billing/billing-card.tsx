@@ -53,7 +53,7 @@ export function BillingCard({ organizationId }: { organizationId: string }) {
 	}, [queryClient, organizationId, reset]);
 
 	// Billing is off on this server (no Stripe settings): no card at all.
-	if (billing.data === null) return null;
+	if (billing.data?.enabled === false) return null;
 
 	const subscribed = billing.data?.subscribed;
 	const busy = redirect.isPending || redirect.isSuccess;

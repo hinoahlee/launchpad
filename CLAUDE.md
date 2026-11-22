@@ -69,7 +69,7 @@ safety rules and code conventions. During a phase, read only that phase's file i
   + `STRIPE_PRICE_ID`, restricted key; API version pinned in `stripe-driver.ts`) and in-memory (tests:
   `buildApp(config, { billing })`). Routes under `/api/organizations/:organizationId/billing`: GET (any member),
   `checkout` and `portal` (admin+) return a Stripe URL. `billing_customers`: one Stripe customer per organization,
-  created with an idempotency key. No Stripe settings: no billing routes. Web: `features/billing` (card on /account).
+  created with an idempotency key. No Stripe settings: GET says `enabled: false`, no checkout or portal. Web: `features/billing` (card on /account).
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`

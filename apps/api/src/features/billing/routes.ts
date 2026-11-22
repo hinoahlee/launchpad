@@ -28,8 +28,9 @@ async function customerIdOf(
 // /api/organizations/:organizationId/billing: the organization's plan, and the two Stripe pages that change it.
 // Payment details never touch the API: Checkout and the Customer Portal are Stripe's own pages, and the API only
 // creates a session for one and sends the browser there.
+// `billing` undefined (no Stripe settings): only GET, which says billing is off.
 export const billingRoutes =
-	(billing: BillingDriver, appUrl: string): FastifyPluginAsyncZod =>
+	(billing: BillingDriver | undefined, appUrl: string): FastifyPluginAsyncZod =>
 	async (app) => {
 		app.addHook("onRequest", requireSession);
 		// Any member sees the plan; only owners and admins spend the organization's money.
@@ -48,14 +49,18 @@ export const billingRoutes =
 			},
 			async (request) => {
 				const { organizationId } = membershipOf(request);
+				if (!billing) return { enabled: false, subscribed: false };
 				const customerId = await customerIdOf(app.db, organizationId);
 				return {
+					enabled: true,
 					subscribed: customerId
 						? await billing.hasLiveSubscription(customerId)
 						: false,
 				};
 			},
 		);
+
+		if (!billing) return;
 
 		app.post(
 			"/billing/checkout",

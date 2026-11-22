@@ -317,12 +317,10 @@ export function buildApp(
 				});
 			}
 
-			// Off until Stripe is set (STRIPE_*): without it there is nothing to sell.
-			if (billing) {
-				api.register(billingRoutes(billing, appUrl(config)), {
-					prefix: "/organizations/:organizationId",
-				});
-			}
+			// Without Stripe settings (STRIPE_*) there is nothing to sell: only GET /billing, which says so.
+			api.register(billingRoutes(billing, appUrl(config)), {
+				prefix: "/organizations/:organizationId",
+			});
 
 			// Off until the webhook's signing secret is set: without it no request could be verified.
 			if (config.RESEND_WEBHOOK_SECRET) {
