@@ -30,8 +30,13 @@ export const sessionUserSchema = z.object({
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
+// `session.activeOrganizationId`: the organization this device is working in (organization plugin, 12.1). Null
+// when it has none (its organization was deleted, or the session predates phase 12).
 export const sessionResponseSchema = z
-	.object({ user: sessionUserSchema })
+	.object({
+		session: z.object({ activeOrganizationId: z.string().nullish() }),
+		user: sessionUserSchema,
+	})
 	.nullable();
 
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;

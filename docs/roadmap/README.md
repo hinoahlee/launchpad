@@ -61,6 +61,9 @@ Follow-ups noticed along the way:
 - Phase 15 (operations): objects with no row (a failed `storage delete failed; object orphaned`) are never retried.
   A reconcile job (list the bucket, compare with `files`) would catch them; check the log line until then.
 - Before running any decoder on uploads (images, audio): a worker of its own, with only bucket access (11.2 chat).
+- Step 12.2 (invites): once organizations can have other members, the last owner can delete their account or
+  leave and strand the rest with no owner (12.1 deletes only organizations they're alone in). Refuse it in
+  `deleteUser`'s `beforeDelete` and Better Auth's leave hooks until ownership is handed over.
 
 ## What we're building
 

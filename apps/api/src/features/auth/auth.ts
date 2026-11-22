@@ -1,11 +1,32 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import type { Database } from "@launchpad/db";
+import { organizationNameSchema } from "@launchpad/shared";
 import { betterAuth } from "better-auth";
-import { bearer, emailOTP, lastLoginMethod } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
+import {
+	bearer,
+	emailOTP,
+	lastLoginMethod,
+	organization,
+} from "better-auth/plugins";
 import type { FastifyBaseLogger } from "fastify";
 import type { Config } from "#config.ts";
 import { enqueue } from "#lib/jobs/enqueue.ts";
 import { UPLOAD_URL_TTL_MS } from "#lib/storage/driver.ts";
+import {
+	deleteSoleMemberOrganizations,
+	initialOrganizationId,
+} from "./personal-organization.ts";
+
+// Better Auth saves whatever name it's given; ours must pass the same check as the web form's.
+function checkOrganizationName(name: unknown) {
+	if (!organizationNameSchema.safeParse(name).success) {
+		throw new APIError("BAD_REQUEST", {
+			code: "INVALID_ORGANIZATION_NAME",
+			message: "Organization names are 1 to 64 characters.",
+		});
+	}
+}
 
 // An upload URL's lifetime plus a margin, so the sweep runs after the last possible PUT.
 const DELETE_FILES_DELAY_MS = UPLOAD_URL_TTL_MS + 5 * 60 * 1000;
@@ -86,10 +107,17 @@ export function createAuth(
 			// POST /api/auth/delete-user with a fresh session: a hard delete. Better Auth deletes the user's sessions,
 			// their accounts (Google links) and the users row, then clears the cookie. Every table that points at
 			// users must do so with ON DELETE CASCADE, so nothing of theirs outlives the row.
-			// Later phases plug in here: beforeDelete can refuse (an unpaid invoice, the last owner of an org);
+			// Later phases plug in here: beforeDelete can refuse (an unpaid invoice)
+			// or clean up first (organizations, below);
 			// afterDelete queues jobs for what lives outside Postgres (their uploaded files, the billing customer).
 			deleteUser: {
 				enabled: true,
+				// Organizations they're alone in would be left with nobody able to open them. Before the delete, not
+				// after: afterwards their membership rows are gone and nothing says which organizations were theirs.
+				// If the delete then fails, they keep their account and get a new personal organization next sign-in.
+				beforeDelete: async (user) => {
+					await deleteSoleMemberOrganizations(db, user.id);
+				},
 				afterDelete: async (user) => {
 					// The id only: the email is personal data, and logs are kept longer than the account.
 					log.info({ userId: user.id }, "auth: account deleted");
@@ -150,7 +178,39 @@ export function createAuth(
 			// it the bare token would too, and that's what `sessions.token` stores: a database leak would hand out
 			// working sessions.
 			bearer({ requireSignature: true }),
+			// Organizations (multi-tenancy, 12.1): /api/auth/organization/* creates them, lists yours, switches the
+			// session's active one (`sessions.active_organization_id`), and manages members. Tables `organizations`,
+			// `members`, `invitations` in @launchpad/db. Roles: the creator is `owner` (everything), `admin` (everything
+			// but deleting the organization or changing its owner), `member` (reads only). Better Auth checks a role
+			// before each of its own actions; our routes will check it with requireMembership (12.3).
+			organization({
+				organizationHooks: {
+					beforeCreateOrganization: async ({ organization }) =>
+						checkOrganizationName(organization.name),
+					beforeUpdateOrganization: async ({ organization }) => {
+						if (organization.name !== undefined)
+							checkOrganizationName(organization.name);
+					},
+				},
+			}),
 		],
+		databaseHooks: {
+			session: {
+				create: {
+					// Every new session starts in an organization: the user's oldest, or a personal one made now (their
+					// first sign-in). So "which organization am I in?" always has an answer after sign-in.
+					before: async (session) => ({
+						data: {
+							...session,
+							activeOrganizationId: await initialOrganizationId(
+								db,
+								session.userId,
+							),
+						},
+					}),
+				},
+			},
+		},
 		advanced: {
 			// Ids are uuid columns that Postgres fills in (gen_random_uuid()), like every other table.
 			database: { generateId: "uuid" },

@@ -67,6 +67,12 @@ export const sessions = pgTable(
 		// Where it was created, to show "Chrome on macOS, 1.2.3.4" in the account page's session list (10.4).
 		ipAddress: text("ip_address"),
 		userAgent: text("user_agent"),
+		// The organization this device is working in (organization plugin, 12.1). Set when the session starts, changed
+		// by POST /api/auth/organization/set-active. Cleared if that organization is deleted.
+		activeOrganizationId: uuid("active_organization_id").references(
+			() => organizations.id,
+			{ onDelete: "set null" },
+		),
 		createdAt: timestamptz("created_at").defaultNow().notNull(),
 		updatedAt: timestamptz("updated_at")
 			.defaultNow()
@@ -132,6 +138,94 @@ export const verifications = pgTable(
 	},
 	(t) => [index("verifications_identifier_idx").on(t.identifier)],
 );
+
+// Organizations (phase 12): Better Auth's organization plugin reads and writes these three tables, like the auth
+// tables above. An organization is a tenant: the group that owns data. People belong to it through `members`.
+
+export const organizations = pgTable("organizations", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	name: text("name").notNull(),
+	// Unique, URL-safe handle. Better Auth requires one; the web app makes it from the name plus random characters.
+	slug: text("slug").notNull().unique(),
+	logo: text("logo"),
+	// Better Auth stores its JSON as a string.
+	metadata: text("metadata"),
+	createdAt: timestamptz("created_at").defaultNow().notNull(),
+});
+
+export type Organization = typeof organizations.$inferSelect;
+
+export const ROLES = ["owner", "admin", "member"] as const;
+export type Role = (typeof ROLES)[number];
+
+// One row per person per organization they belong to, with their role there.
+export const members = pgTable(
+	"members",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organizations.id, { onDelete: "cascade" }),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		// Better Auth allows several roles as "admin,member"; we use exactly one. Keep in sync with ROLES.
+		role: text("role").$type<Role>().notNull().default("member"),
+		createdAt: timestamptz("created_at").defaultNow().notNull(),
+	},
+	(t) => [
+		// Ours, not Better Auth's: a person is in an organization once, even if two requests race.
+		uniqueIndex("members_organization_user_idx").on(t.organizationId, t.userId),
+		index("members_user_id_idx").on(t.userId),
+		check("members_role_check", sql`${t.role} in ('owner', 'admin', 'member')`),
+	],
+);
+
+export type Member = typeof members.$inferSelect;
+
+export const INVITATION_STATUSES = [
+	"pending",
+	"accepted",
+	"rejected",
+	"canceled",
+] as const;
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
+
+// An invitation to join an organization, by email (used from step 12.2). Required by the plugin's schema now.
+export const invitations = pgTable(
+	"invitations",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organizations.id, { onDelete: "cascade" }),
+		email: citext("email").notNull(),
+		role: text("role").$type<Role>(),
+		status: text("status")
+			.$type<InvitationStatus>()
+			.notNull()
+			.default("pending"),
+		expiresAt: timestamptz("expires_at").notNull(),
+		inviterId: uuid("inviter_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		createdAt: timestamptz("created_at").defaultNow().notNull(),
+	},
+	(t) => [
+		index("invitations_organization_id_idx").on(t.organizationId),
+		index("invitations_email_idx").on(t.email),
+		check(
+			"invitations_role_check",
+			sql`${t.role} in ('owner', 'admin', 'member')`,
+		),
+		check(
+			"invitations_status_check",
+			sql`${t.status} in ('pending', 'accepted', 'rejected', 'canceled')`,
+		),
+	],
+);
+
+export type Invitation = typeof invitations.$inferSelect;
 
 export const JOB_STATUSES = ["queued", "running", "done", "failed"] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];

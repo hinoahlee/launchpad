@@ -5,4 +5,5 @@ export * from "./auth.ts";
 export * from "./errors.ts";
 export * from "./files.ts";
 export * from "./greeting.ts";
+export * from "./organizations.ts";
 export * from "./probes.ts";
