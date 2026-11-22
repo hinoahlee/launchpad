@@ -44,13 +44,13 @@ Deletes are free. Check https://developers.cloudflare.com/r2/pricing/ before rel
 ## Cleanup (what deletes objects)
 | What | When | How |
 |---|---|---|
-| A file the user deletes | at once | `DELETE /api/files/:id` deletes the row, then the object |
-| A deleted account's files | ~20 min after (past any upload URL) | job `delete-user-files`: every object under `users/<id>/` |
+| A file the user deletes | at once | `DELETE /api/organizations/:organizationId/files/:id` deletes the row, then the object |
+| A deleted account's files | ~20 min after (past any upload URL) | jobs `delete-organization-files` (every object under `organizations/<id>/`) and `delete-user-files` (under `users/<id>/`, uploads from before 12.2) |
 | Abandoned uploads (registered, never completed) | hourly, once a day old | job `prune-uploads`: object, then row (frees quota) |
 | Unfinished multipart uploads | 7 days | R2's default lifecycle rule (bucket → **Settings** → **Object lifecycle rules**). Keep it; we don't use multipart yet. |
 
 No lifecycle rule for the rest: rules match only a key prefix and an age, and pending and finished files share
-`users/<id>/`. A failed object delete is logged as `storage delete failed; object orphaned`; a failed job shows
+`organizations/<id>/`. A failed object delete is logged as `storage delete failed; object orphaned`; a failed job shows
 in the `jobs` table (`status = 'failed'`, `last_error`).
 
 ## Rotate a key (leak, or yearly)

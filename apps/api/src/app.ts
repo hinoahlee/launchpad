@@ -183,6 +183,8 @@ export function buildApp(
 	app.decorate("auth", auth);
 	// Filled in by the requireSession hook on routes that need a signed-in user (features/auth/require-session.ts).
 	app.decorateRequest("authSession", null);
+	// Filled in by requireMembership on org-scoped routes (features/auth/require-membership.ts).
+	app.decorateRequest("membership", null);
 
 	// Echo the ID back so a user or another service can quote it when reporting a problem.
 	app.addHook("onRequest", async (request, reply) => {
@@ -304,7 +306,9 @@ export function buildApp(
 
 			// Off until a bucket is set (S3_*): without one there is nowhere to put files.
 			if (storage) {
-				api.register(fileRoutes(storage));
+				api.register(fileRoutes(storage), {
+					prefix: "/organizations/:organizationId",
+				});
 			}
 
 			// Off until the webhook's signing secret is set: without it no request could be verified.

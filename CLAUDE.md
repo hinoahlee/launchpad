@@ -41,6 +41,9 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `RECENT_SIGN_IN_MINUTES` (else 400 `SESSION_EXPIRED`). New tables pointing at `users` need `ON DELETE CASCADE`;
   cleanup outside Postgres (files, billing) goes in `deleteUser`'s `beforeDelete`/`afterDelete` in `auth.ts`.
   E2E: a test that provokes a console error on purpose declares it with `test.use({ expectedErrors: [...] })`.
+  Org-scoped routes (decision 011): URL `/api/organizations/:organizationId/...`, `preHandler: requireMembership(minRole)`
+  (`features/auth/require-membership.ts`: not a member → 404, role too low → 403), then filter every query on
+  `membershipOf(request).organizationId`. Test both sides: another org's URL, and another org's ids in your URL.
   Organizations (phase 12): Better Auth's `organization` plugin at `/api/auth/organization/*` (tables
   `organizations`, `members`, `invitations`; roles `owner`/`admin`/`member`). Decision 010: one person, one
   organization. Each user owns exactly one (unique indexes on `members`), made with its owner when their first
@@ -58,8 +61,10 @@ safety rules and code conventions. During a phase, read only that phase's file i
   bytes go browser ↔ bucket. Flow in `features/files`: register (pending row + presigned PUT, type and size
   signed) → `complete` (asks the bucket for the size) → presigned GET as an attachment. No bucket: no file routes.
   Path-style URLs; the CSP's `connect-src` allows `storage.origin`. Web: `features/files` (card on /account).
-  Cleanup jobs (worker, which needs `S3_*` too): `delete-user-files` (queued by account deletion, delayed past
-  upload URLs), `prune-uploads` (hourly: pending > 1 day). Objects live under `users/<id>/` (`userPrefix`).
+  Files belong to an organization (12.2): routes under `/api/organizations/:organizationId/files`, objects under
+  `organizations/<id>/` (`organizationPrefix`; before 12.2, `users/<id>/`). Cleanup jobs (worker, which needs
+  `S3_*` too): `delete-organization-files` and `delete-user-files` (old prefix), queued by account deletion and
+  delayed past upload URLs; `prune-uploads` (hourly: pending > 1 day).
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`

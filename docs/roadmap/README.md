@@ -23,7 +23,7 @@ like you're shadowing a principal engineer.
 | 9 | [Email](phases/09-email.md) | done |
 | 10 | [Auth](phases/10-auth.md) | done |
 | 11 | [File storage](phases/11-storage.md) | done |
-| 12 | [Organizations](phases/12-organizations.md) | not started |
+| 12 | [Organizations](phases/12-organizations.md) | in progress |
 | 13 | [Billing](phases/13-billing.md) | not started |
 | 14 | [Hardening + scale](phases/14-hardening.md) | not started |
 | 15 | [Operations practice](phases/15-operations.md) | not started |
@@ -54,7 +54,7 @@ Follow-ups noticed along the way:
 - Phase 15 (rotate secrets): the 5.6 drill rotated the database password after a leak. Learned: a new Render
   credential reaches the app only after a Blueprint **Manual Sync** and a redeploy; check `session_user` (the
   login), not `current_user` (Render's new login acts as the original owner role), before deleting the old one.
-- Phase 14 (hardening): an `Origin` check on our own state-changing routes (`/api/files`, `/api/account`), like
+- Phase 14 (hardening): an `Origin` check on our own state-changing routes (`/api/organizations/.../files`, `/api/account`), like
   Better Auth's on `/api/auth/*`. `SameSite=Lax` treats every `*.noahlee.xyz` subdomain as the same site (11.3).
 - Phase 14 (hardening): the per-user quota's row lock (11.2) has no test; ten parallel `app.inject` calls never
   raced. A test with two real connections holding the lock would prove it.

@@ -432,8 +432,8 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   manage or fill; it scales by itself. R2 and S3 are object storage. (11.1)
 - **Bucket** — one named container of objects, with its own access rules and settings (CORS, lifecycle). We use
   one per environment: `launchpad-dev`, `launchpad-prod`. (11.1)
-- **Object key** — an object's full name inside its bucket, e.g. `users/<id>/<uuid>`. Slashes look like folders
-  but are just characters; a prefix (`users/<id>/`) groups objects. (11.1)
+- **Object key** — an object's full name inside its bucket, e.g. `organizations/<id>/<uuid>`. Slashes look like
+  folders but are just characters; a prefix (`organizations/<id>/`) groups objects. (11.1)
 - **CORS (Cross-Origin Resource Sharing)** — rules a server sends so a browser lets a page on one origin call
   another origin. Our page (render.noahlee.xyz) uploads straight to the bucket's origin, so the bucket must allow
   it. (11.1)
@@ -467,3 +467,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   through memberships. (12.1)
 - **Role-based access control (RBAC)** — what you may do depends on your role in the tenant (`owner`, `admin`,
   `member`), not on who you are: changing a role changes every permission at once. (12.1)
+- **Tenant isolation** — one tenant can never read or change another's data, even by guessing ids. Here: every
+  org-scoped route checks membership, and every query filters on the organization. (12.2)
+- **Row-level security (RLS)** — a Postgres policy on a table that hides rows not matching the current tenant,
+  so even a query that forgets its filter can't see them. Not used yet (decision 011). (12.2)

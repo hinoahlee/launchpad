@@ -60,6 +60,8 @@ function Account() {
 		},
 	});
 	const user = session.data?.user;
+	// The organization your files belong to (12.2). Every session gets one at sign-in; none only if it was deleted.
+	const organizationId = session.data?.session.activeOrganizationId;
 
 	// Signed out while here (the header menu, another tab, the session revoked elsewhere): back to sign-in.
 	if (session.data === null && !signOutMutation.isPending && !leaving) {
@@ -86,7 +88,7 @@ function Account() {
 					<LogOut /> Sign out
 				</Button>
 			</div>
-			<FilesCard />
+			{organizationId && <FilesCard organizationId={organizationId} />}
 			<SessionsCard />
 			<DeleteAccountCard
 				onDeleted={onDeleted}

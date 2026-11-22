@@ -15,8 +15,11 @@ export const jobTypes = {
 	"prune-jobs": z.object({
 		olderThanDays: z.number().int().positive().default(7),
 	}),
-	// Deletes every object a deleted account left in the bucket (users/<userId>/). Queued by account deletion
-	// (features/auth/auth.ts); its database rows are already gone (ON DELETE CASCADE).
+	// Deletes every object a deleted organization left in the bucket (organizations/<id>/). Queued in the same
+	// transaction that deletes it (with its owner's account, features/auth); its file rows went with it.
+	"delete-organization-files": z.object({ organizationId: z.uuid() }),
+	// Deletes what a deleted account uploaded before 12.2, under the old prefix (users/<userId>/). Queued by account
+	// deletion (features/auth/auth.ts); its database rows are already gone (ON DELETE CASCADE).
 	"delete-user-files": z.object({ userId: z.uuid() }),
 	// Deletes abandoned uploads: registered, never completed, older than olderThanHours. Their objects (if the
 	// PUT happened) and their rows, which also gives the space back to the user's quota. Queued every hour.
