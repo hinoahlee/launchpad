@@ -1,5 +1,7 @@
-// The one interface the API reaches Stripe through (like lib/storage's StorageDriver): routes depend on this,
-// never on the Stripe SDK. The Stripe adapter calls the real API; tests use the in-memory one.
+// The one interface the API reaches Stripe through: routes depend on this, never on the Stripe SDK, so their tests
+// run against the in-memory driver instead of Stripe. It's a seam for tests, not a promise that Stripe can be
+// swapped: unlike a bucket, a billing provider holds customers, cards and subscriptions, and moving them is a
+// migration. So the ids it returns are Stripe's, stored as such (billing_customers.stripe_customer_id).
 export type BillingDriver = {
 	// A new Stripe customer for the organization, "cus_...". Asking twice for the same organization returns the
 	// same customer (an idempotency key), so two checkouts started at once don't make two.
