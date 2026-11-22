@@ -314,11 +314,10 @@ export const files = pgTable(
 		id: uuid("id").defaultRandom().primaryKey(),
 		// The organization it belongs to (12.2): every query filters on it, and its members may see it. Deleting the
 		// organization deletes its rows; the objects in the bucket go separately (a job).
-		// Nullable for now (expand/contract, decision 005): the release before this one inserts rows without it
-		// while a deploy runs. Step 12.3 backfills those and makes it NOT NULL.
-		organizationId: uuid("organization_id").references(() => organizations.id, {
-			onDelete: "cascade",
-		}),
+		// Added nullable in 12.2, NOT NULL since 12.3 (expand/contract, decision 005).
+		organizationId: uuid("organization_id")
+			.notNull()
+			.references(() => organizations.id, { onDelete: "cascade" }),
 		// Who uploaded it. Cascade: deleting a user deletes their rows (with one person per organization, the same
 		// rows as the organization's; teams will want SET NULL, so a member leaving doesn't take the team's files).
 		userId: uuid("user_id")
