@@ -496,3 +496,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   its change, so a repeat finds it and does nothing. (13.3)
 - **Eventual consistency** — two copies of the same data (Stripe's and ours) agree a moment later, not at every
   instant. Right after paying, our copy may say "Free" for a second, until the webhook or a sync lands. (13.3)
+- **Entitlement** — what a plan lets an organization do: features it can use and limits it gets (Free: 100 MB of
+  storage; Pro: 1 GB). Decided in one table (`ENTITLEMENTS`), not scattered as `if plan === "pro"`. (13.4)
+- **Feature gating** — checking the entitlement in code before allowing an action, and refusing it otherwise (here:
+  an upload past the plan's quota gets 413). Checked by the API; the page only shows it. (13.4)

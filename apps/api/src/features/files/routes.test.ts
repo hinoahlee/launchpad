@@ -1,14 +1,20 @@
-import { files, jobs, members, users } from "@launchpad/db";
+import {
+	billingSubscriptions,
+	files,
+	jobs,
+	members,
+	users,
+} from "@launchpad/db";
 import { testDatabaseUrl } from "@launchpad/db/testing";
 import {
 	type CreateFileBody,
 	createFileResponseSchema,
 	downloadResponseSchema,
+	ENTITLEMENTS,
 	errorResponseSchema,
 	fileListResponseSchema,
 	fileSchema,
 	MAX_FILE_BYTES,
-	STORAGE_QUOTA_BYTES,
 	sessionResponseSchema,
 } from "@launchpad/shared";
 import { eq } from "drizzle-orm";
@@ -177,7 +183,10 @@ describe("POST /api/files (register)", () => {
 	});
 });
 
-// One file can't reach the quota (25 MB of 1 GB), so the tests grow a registered row to fill the rest.
+// Organizations start on the free plan (no subscription); its quota is the one these tests fill.
+const STORAGE_QUOTA_BYTES = ENTITLEMENTS.free.storageQuotaBytes;
+
+// One file can't reach the quota (25 MB of 100 MB), so the tests grow a registered row to fill the rest.
 describe("storage quota", () => {
 	async function fillUpTo(cookie: string, usedBytes: number) {
 		const target = createFileResponseSchema.parse(
@@ -220,6 +229,37 @@ describe("storage quota", () => {
 
 		await remove(file.id, cookie);
 		expect((await register(cookie)).statusCode).toBe(201);
+	});
+
+	// The gate (13.4): the quota comes from the plan. Same usage, two plans, two answers.
+	it("a free organization is blocked at its quota; a paid one isn't", async () => {
+		const cookie = await signIn("ada@example.com");
+		await fillUpTo(cookie, ENTITLEMENTS.free.storageQuotaBytes);
+		expect((await register(cookie)).statusCode).toBe(413);
+
+		// Paid: what a webhook leaves after Checkout (13.3).
+		await app.db.insert(billingSubscriptions).values({
+			organizationId: await orgOf(cookie),
+			stripeSubscriptionId: "sub_test",
+			status: "active",
+			priceId: "price_test",
+			currentPeriodEnd: new Date(Date.now() + 86_400_000),
+			cancelAtPeriodEnd: false,
+		});
+		expect((await register(cookie)).statusCode).toBe(201);
+		// Up to the paid plan's own quota.
+		await fillUpTo(cookie, ENTITLEMENTS.pro.storageQuotaBytes);
+		expect((await register(cookie)).statusCode).toBe(413);
+
+		// Payment fails for good (retries ran out): back to the free quota. At exactly the free quota, Pro would
+		// still have room; unpaid doesn't.
+		await app.db.delete(files);
+		await fillUpTo(cookie, ENTITLEMENTS.free.storageQuotaBytes);
+		expect((await register(cookie)).statusCode).toBe(201);
+		await app.db.delete(files);
+		await fillUpTo(cookie, ENTITLEMENTS.free.storageQuotaBytes);
+		await app.db.update(billingSubscriptions).set({ status: "unpaid" });
+		expect((await register(cookie)).statusCode).toBe(413);
 	});
 
 	it("is per organization: A's full quota doesn't block B", async () => {
