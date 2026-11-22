@@ -29,6 +29,9 @@ import type { Config } from "./config.ts";
 import { accountRoutes } from "./features/account/routes.ts";
 import { type Auth, appUrl, createAuth } from "./features/auth/auth.ts";
 import { authRoutes } from "./features/auth/routes.ts";
+import { createBillingDriver } from "./features/billing/create-driver.ts";
+import type { BillingDriver } from "./features/billing/driver.ts";
+import { billingRoutes } from "./features/billing/routes.ts";
 import { resendWebhookRoutes } from "./features/email-webhooks/routes.ts";
 import { fileRoutes } from "./features/files/routes.ts";
 import { greetingRoutes } from "./features/greeting/routes.ts";
@@ -80,6 +83,8 @@ export type BuildOptions = {
 	rateLimitMax?: number;
 	// The bucket. Default: from config (S3_*), or none (uploads off). Tests pass the in-memory driver.
 	storage?: StorageDriver;
+	// Stripe. Default: from config (STRIPE_*), or none (billing off). Tests pass the in-memory driver.
+	billing?: BillingDriver;
 };
 
 const RATE_LIMIT_MAX = 100;
@@ -103,6 +108,7 @@ export function buildApp(
 		logStream,
 		rateLimitMax = RATE_LIMIT_MAX,
 		storage = createStorageDriver(config),
+		billing = createBillingDriver(config),
 	}: BuildOptions = {},
 ): FastifyInstance {
 	const app = Fastify({
@@ -310,6 +316,11 @@ export function buildApp(
 					prefix: "/organizations/:organizationId",
 				});
 			}
+
+			// Without Stripe settings (STRIPE_*) there is nothing to sell: only GET /billing, which says so.
+			api.register(billingRoutes(billing, appUrl(config)), {
+				prefix: "/organizations/:organizationId",
+			});
 
 			// Off until the webhook's signing secret is set: without it no request could be verified.
 			if (config.RESEND_WEBHOOK_SECRET) {

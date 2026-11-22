@@ -82,6 +82,9 @@ catalog:
   # The shadcn/ui CLI (`pnpm --filter @launchpad/web exec shadcn add <component>`), plus the shared Tailwind
   # utilities its components rely on (`@import "shadcn/tailwind.css"`).
   shadcn: 4.23.0
+  # Billing (phase 13): Stripe's SDK. Each version pins the Stripe API version its types describe. 23.1.0: the
+  # newest release at least two weeks old.
+  stripe: 23.1.0
   tailwindcss: 4.3.4
   tsdown: 0.23.7
   # Runs the worker in dev: Node can't load its JSX email templates; tsx converts .ts/.tsx as it loads them. Dev

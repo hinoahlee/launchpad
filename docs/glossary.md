@@ -471,3 +471,20 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   org-scoped route checks membership, and every query filters on the organization. (12.2)
 - **Row-level security (RLS)** — a Postgres policy on a table that hides rows not matching the current tenant,
   so even a query that forgets its filter can't see them. Not used yet (decision 011). (12.2)
+
+## Phase 13 — Billing
+- **Product** — the thing you sell in Stripe ("Launchpad Pro"). It holds a name; prices hang off it. (13.1)
+- **Price** — how much and how often for a product ($10 every month), with its own id (`price_...`). Our code sells
+  one price, `STRIPE_PRICE_ID`. (13.1)
+- **Customer** — Stripe's record of who pays (`cus_...`): payment methods, invoices, subscriptions. Here: one per
+  organization, in `billing_customers`. (13.1)
+- **Subscription** — a customer signed up to a price, charged every period until it's canceled. (13.1)
+- **Sandbox (test mode)** — a separate test copy of a Stripe account: fake cards, no real money, its own keys and
+  data. Stripe's newer replacement for the single built-in "test mode". (13.1)
+- **Restricted key** — a Stripe API key (`rk_...`) allowed only the resources you pick, unlike the secret key
+  (`sk_...`), which can do anything. A leaked one can do only what it was allowed. (13.1)
+- **Checkout** — Stripe's hosted payment page. The API creates a session and sends the browser there; card
+  details never touch our servers. (13.2)
+- **Customer Portal** — Stripe's hosted page where a customer changes their card, sees invoices or cancels. (13.2)
+- **Idempotency key** — a name sent with a request so that sending it again returns the first answer instead of
+  doing the work twice. Stripe keeps each key's answer for 24 hours. (13.2)

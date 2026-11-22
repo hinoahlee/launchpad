@@ -79,6 +79,12 @@ services:
         sync: false
       - key: S3_SECRET_ACCESS_KEY
         sync: false
+      # Billing: Stripe (phase 13). Both `sync: false` and set together in the dashboard. The key is a restricted key
+      # (rk_...) from the launchpad sandbox until launch; the price is its monthly price. Unset: billing is off.
+      - key: STRIPE_API_KEY
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
 
   # Background jobs: the same image, started as `node dist/worker.js` (deploy contract, row 3). No traffic, no
   # port, no health check: Render counts it healthy while the process runs and restarts it if it exits.

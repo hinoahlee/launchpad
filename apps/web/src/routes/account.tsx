@@ -11,6 +11,7 @@ import { Button } from "#components/ui/button.tsx";
 import { DeleteAccountCard } from "#features/account/delete-account-card.tsx";
 import { SessionsCard } from "#features/account/sessions-card.tsx";
 import { sessionQuery, signOut } from "#features/auth/api.ts";
+import { BillingCard } from "#features/billing/billing-card.tsx";
 import { FilesCard } from "#features/files/files-card.tsx";
 import { pageTitle } from "#lib/site.ts";
 
@@ -88,6 +89,7 @@ function Account() {
 					<LogOut /> Sign out
 				</Button>
 			</div>
+			{organizationId && <BillingCard organizationId={organizationId} />}
 			{organizationId && <FilesCard organizationId={organizationId} />}
 			<SessionsCard />
 			<DeleteAccountCard
