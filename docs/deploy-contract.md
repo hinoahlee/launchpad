@@ -7,7 +7,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 |---|---|---|
 | 1 | One image, non-root, `linux/amd64`, published once per `main` commit as `ghcr.io/<owner>/<repo>:<sha>`; platforms run it by digest. | `Dockerfile` (`USER node`). `.github/workflows/cicd.yml` (`image` job, `platforms: linux/amd64`; `publish` job). |
 | 2 | `node dist/server.js` (the default `CMD`): SPA + `/api` on `$PORT`. | `server.ts`, `app.ts` |
-| 3 | `node dist/worker.js`: background jobs. Run as many as needed: each job goes to one worker. | `worker.ts` → `lib/jobs/worker.ts`: claims from the `jobs` table, wakes on `LISTEN jobs`, polls every 5 s. Also queues recurring jobs (`lib/jobs/schedules.ts`, cron in UTC); each run once, keyed in `jobs.key`. Serves no HTTP: platforms watch the process, not a probe, and deploy it after the server (once migrations ran). Render: `launchpad-worker` in the Blueprint. |
+| 3 | `node dist/worker.js`: background jobs. Run as many as needed: each job goes to one worker. | `worker.ts` → `lib/jobs/worker.ts`: claims from the `jobs` table, wakes on `LISTEN jobs`, polls every 5 s. Also queues recurring jobs (`lib/jobs/schedules.ts`, cron in UTC), and deletes files from the bucket (account deletion, abandoned uploads); each run once, keyed in `jobs.key`. Serves no HTTP: platforms watch the process, not a probe, and deploy it after the server (once migrations ran). Render: `launchpad-worker` in the Blueprint. |
 | 4 | `node dist/migrate.js`: apply migrations, exit 0/1; run once before new code starts. | `migrate.ts` → `runMigrations` (`packages/db`), which reads the SQL shipped inside `@launchpad/db` |
 | 5 | Config from environment variables only; invalid config exits non-zero at boot. | `config.ts` (Zod). The server also refuses to boot in production without the SPA build. |
 | 6 | `/api/health` = process alive. `/api/ready` = can serve traffic (checks the DB). `/api/version` = the build's commit. | `app.ts`. `/ready` runs `select 1` with a 2 s timeout → 503 `database_unavailable`. The image's `HEALTHCHECK` calls `/api/health`, so it fits the server only: a platform that runs it for the worker must turn it off there. |
@@ -39,10 +39,10 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `BETTER_AUTH_SECRET` | dev-only fixed value | Server only; required in production (32+ characters). Signs session cookies. A secret (Render: `generateValue`). Changing it signs everyone out. |
 | `GOOGLE_CLIENT_ID` | unset (Google sign-in off) | Server only. The Google OAuth client's ID. Set with `GOOGLE_CLIENT_SECRET`, or the boot fails. The client must list `<APP_URL>/api/auth/callback/google` as a redirect URI. |
 | `GOOGLE_CLIENT_SECRET` | unset | Server only. The Google OAuth client's secret. A secret (Render: `sync: false`). |
-| `S3_ENDPOINT` | unset (AWS S3) | Server only. The S3 API's address; R2: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`. |
-| `S3_REGION` | `auto` | Server only. `auto` for R2; the bucket's region for AWS S3 (required there: boot fails on `auto` without an endpoint). |
-| `S3_BUCKET` | unset (uploads off) | Server only. The bucket's name (`launchpad-prod` on Render). Set with both keys, or the boot fails. |
-| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | unset | Server only. A key that can only read and write objects in that bucket. The secret is a secret (Render: `sync: false`). |
+| `S3_ENDPOINT` | unset (AWS S3) | Server and worker. The S3 API's address; R2: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`. |
+| `S3_REGION` | `auto` | Server and worker. `auto` for R2; the bucket's region for AWS S3 (required there: boot fails on `auto` without an endpoint). |
+| `S3_BUCKET` | unset (uploads off) | Server and worker. The bucket's name (`launchpad-prod` on Render). Set with both keys, or the boot fails. |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | unset | Server and worker. A key that can only read and write objects in that bucket. The secret is a secret (Render: `sync: false`). |
 
 New variables are added here in the same PR as `config.ts`.
 

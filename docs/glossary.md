@@ -453,4 +453,9 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Path-style vs. virtual-hosted URL** — two ways to address an object: `https://<endpoint>/<bucket>/<key>`
   (path-style) or `https://<bucket>.<endpoint>/<key>` (virtual-hosted). We use path-style: the bucket's origin
   is then the endpoint's, which the CSP allows, and a local fake bucket works on 127.0.0.1. (11.3)
+- **Lifecycle policy** — rules a bucket runs by itself: "delete objects under this prefix after N days", "abort
+  unfinished multipart uploads after 7 days". No code needed, but it only sees prefixes and ages, not our
+  database, so our own cleanup is a job instead (11.4). (11.4)
+- **Orphaned object** — an object in the bucket that no database row points at (a delete that failed halfway, an
+  upload never completed). Nobody can download it, but it still takes space and costs money. (11.4)
 

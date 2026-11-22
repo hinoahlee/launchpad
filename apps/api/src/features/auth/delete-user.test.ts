@@ -1,4 +1,4 @@
-import { accounts, sessions, users } from "@launchpad/db";
+import { accounts, jobs, sessions, users } from "@launchpad/db";
 import { testDatabaseUrl } from "@launchpad/db/testing";
 import {
 	authErrorResponseSchema,
@@ -41,6 +41,18 @@ describe("POST /api/auth/delete-user", () => {
 			select conname as constraint from pg_constraint
 			where contype = 'f' and confrelid = 'users'::regclass and confdeltype <> 'c'`;
 		expect(notCascading).toEqual([]);
+	});
+
+	// This app has no bucket (no S3_BUCKET): no file cleanup job, which a worker without a bucket would fail.
+	it("queues no file cleanup when uploads are off", async () => {
+		const cookie = await signIn("ivy@example.com");
+		expect((await deleteAccount({ cookie })).statusCode).toBe(200);
+		expect(
+			await app.db
+				.select()
+				.from(jobs)
+				.where(eq(jobs.type, "delete-user-files")),
+		).toEqual([]);
 	});
 
 	it("401 without a session", async () => {

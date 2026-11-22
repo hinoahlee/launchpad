@@ -53,6 +53,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   bytes go browser ↔ bucket. Flow in `features/files`: register (pending row + presigned PUT, type and size
   signed) → `complete` (asks the bucket for the size) → presigned GET as an attachment. No bucket: no file routes.
   Path-style URLs; the CSP's `connect-src` allows `storage.origin`. Web: `features/files` (card on /account).
+  Cleanup jobs (worker, which needs `S3_*` too): `delete-user-files` (queued by account deletion, delayed past
+  upload URLs), `prune-uploads` (hourly: pending > 1 day). Objects live under `users/<id>/` (`userPrefix`).
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`

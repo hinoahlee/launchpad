@@ -5,6 +5,10 @@ import { bearer, emailOTP, lastLoginMethod } from "better-auth/plugins";
 import type { FastifyBaseLogger } from "fastify";
 import type { Config } from "#config.ts";
 import { enqueue } from "#lib/jobs/enqueue.ts";
+import { UPLOAD_URL_TTL_MS } from "#lib/storage/driver.ts";
+
+// An upload URL's lifetime plus a margin, so the sweep runs after the last possible PUT.
+const DELETE_FILES_DELAY_MS = UPLOAD_URL_TTL_MS + 5 * 60 * 1000;
 
 // The header our Fastify route fills with the client's IP (`request.ip`, which honours TRUST_PROXY_HOPS) before
 // handing the request to Better Auth. Its rate limits key on it. Left to read X-Forwarded-For itself, Better Auth
@@ -89,6 +93,16 @@ export function createAuth(
 				afterDelete: async (user) => {
 					// The id only: the email is personal data, and logs are kept longer than the account.
 					log.info({ userId: user.id }, "auth: account deleted");
+					// Their files: the rows went with the user (ON DELETE CASCADE); the objects are in the bucket. Delayed
+					// past the life of an upload URL: one signed just before the deletion could still PUT an object.
+					if (config.S3_BUCKET) {
+						await enqueue(
+							db,
+							"delete-user-files",
+							{ userId: user.id },
+							{ runAfter: new Date(Date.now() + DELETE_FILES_DELAY_MS) },
+						);
+					}
 				},
 			},
 		},

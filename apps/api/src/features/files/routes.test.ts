@@ -1,4 +1,4 @@
-import { files } from "@launchpad/db";
+import { files, jobs, users } from "@launchpad/db";
 import { testDatabaseUrl } from "@launchpad/db/testing";
 import {
 	type CreateFileBody,
@@ -13,15 +13,19 @@ import {
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
+import { handlers } from "#lib/jobs/handlers.ts";
+import { createLogger } from "#lib/logger.ts";
 import { createMemoryStorageDriver } from "#lib/storage/memory-driver.ts";
 import { testConfig } from "#testing/config.ts";
 import { signInWithCode } from "#testing/sign-in.ts";
 
 const APP_URL = "https://app.example.test";
 const storage = createMemoryStorageDriver();
-const app = buildApp(testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL }), {
-	storage,
-});
+// S3_BUCKET set (the keys don't matter: the memory driver is passed in) so account deletion queues file cleanup.
+const app = buildApp(
+	testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL, S3_BUCKET: "test" }),
+	{ storage },
+);
 afterAll(async () => {
 	await app.close();
 });
@@ -294,6 +298,60 @@ describe("user A and user B", () => {
 
 		expect((await complete(target.id, bob)).statusCode).toBe(404);
 		expect((await complete(target.id, ada)).statusCode).toBe(200);
+	});
+});
+
+// Step 11.4: an account's files go with it. The rows cascade with the user at once; the objects are removed by
+// a job, delayed past the life of any upload URL signed just before.
+describe("deleting the account", () => {
+	it("removes the user's rows now and queues the bucket cleanup; the job deletes only their objects", async () => {
+		const ada = await signIn("ada@example.com");
+		const bob = await signIn("bob@example.com");
+		await upload(ada);
+		await upload(ada, { ...notes, fileName: "second.txt" });
+		await upload(bob);
+		const [adaUser] = await app.db
+			.select()
+			.from(users)
+			.where(eq(users.email, "ada@example.com"));
+		if (!adaUser) throw new Error("no user");
+
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/auth/delete-user",
+			headers: { cookie: ada, origin: APP_URL },
+			payload: {},
+		});
+		expect(res.statusCode).toBe(200);
+		expect(
+			await app.db.select().from(files).where(eq(files.userId, adaUser.id)),
+		).toEqual([]);
+
+		const [job] = await app.db
+			.select()
+			.from(jobs)
+			.where(eq(jobs.type, "delete-user-files"));
+		expect(job?.payload).toEqual({ userId: adaUser.id });
+		expect(job?.runAfter.getTime()).toBeGreaterThan(
+			Date.now() + 15 * 60 * 1000,
+		);
+
+		// What the worker does when the job comes due.
+		await handlers["delete-user-files"](
+			{ userId: adaUser.id },
+			{
+				jobId: job?.id ?? "",
+				db: app.db,
+				email: { send: async () => ({}) },
+				storage,
+				log: createLogger("silent"),
+				signal: new AbortController().signal,
+			},
+		);
+		expect([...storage.objects.keys()]).toEqual([
+			expect.not.stringContaining(adaUser.id),
+		]);
+		expect(await list(bob)).toHaveLength(1);
 	});
 });
 

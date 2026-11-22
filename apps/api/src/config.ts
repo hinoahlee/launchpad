@@ -92,7 +92,7 @@ const envSchema = z.object({
 	GOOGLE_CLIENT_ID: optionalString,
 	GOOGLE_CLIENT_SECRET: optionalString,
 	// File storage: any S3-compatible bucket (runbook: docs/runbooks/r2-bucket.md). Set the bucket and both keys
-	// together, or none: unset, file uploads are off. Only the server reads them.
+	// together, or none: unset, file uploads are off. The server signs URLs; the worker deletes files (cleanup jobs).
 	// The S3 API's address. R2: https://<ACCOUNT_ID>.r2.cloudflarestorage.com. Unset: AWS S3 (the SDK picks it).
 	S3_ENDPOINT: optionalUrl,
 	// R2: "auto". AWS S3: the bucket's region (us-east-1...).

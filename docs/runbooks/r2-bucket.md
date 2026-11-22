@@ -36,12 +36,25 @@ Deletes are free. Check https://developers.cloudflare.com/r2/pricing/ before rel
 5. The next page shows the **Access Key ID**, **Secret Access Key** and the S3 endpoint
    (`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`). The secret is shown once: put it in place now.
    - Prod: Render → **launchpad** → **Environment**: `S3_ENDPOINT`, `S3_BUCKET` = `launchpad-prod`,
-     `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` → **Save only**. Then GitHub → Actions → **Deploy to Render** →
-     **Run workflow**. All four together: a bucket without keys stops the boot.
+     `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` → **Save only**. The same four on **launchpad-worker** (it deletes
+     files). Then GitHub → Actions → **Deploy to Render** → **Run workflow**. All four together: a bucket without
+     keys stops the boot.
    - Dev: the same four in `apps/api/.env`, with `launchpad-dev` and its own token.
 
+## Cleanup (what deletes objects)
+| What | When | How |
+|---|---|---|
+| A file the user deletes | at once | `DELETE /api/files/:id` deletes the row, then the object |
+| A deleted account's files | ~20 min after (past any upload URL) | job `delete-user-files`: every object under `users/<id>/` |
+| Abandoned uploads (registered, never completed) | hourly, once a day old | job `prune-uploads`: object, then row (frees quota) |
+| Unfinished multipart uploads | 7 days | R2's default lifecycle rule (bucket → **Settings** → **Object lifecycle rules**). Keep it; we don't use multipart yet. |
+
+No lifecycle rule for the rest: rules match only a key prefix and an age, and pending and finished files share
+`users/<id>/`. A failed object delete is logged as `storage delete failed; object orphaned`; a failed job shows
+in the `jobs` table (`status = 'failed'`, `last_error`).
+
 ## Rotate a key (leak, or yearly)
-1. Create a new token for the same bucket (step 4), set it where the old one was (step 5), deploy.
+1. Create a new token for the same bucket (step 4), set it where the old one was (step 5: web and worker), deploy.
 2. Check an upload works, then delete the old token (**API Tokens** → the token → **Delete**).
 
 ## If uploads fail
