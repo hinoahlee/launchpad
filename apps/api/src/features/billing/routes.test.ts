@@ -48,7 +48,7 @@ const orgOf = async (cookie: string) => {
 
 const call = (
 	method: "GET" | "POST",
-	path: "" | "/checkout" | "/portal",
+	path: "" | "/checkout" | "/portal" | "/sync",
 	organizationId: string,
 	cookie?: string,
 ) =>
@@ -69,7 +69,7 @@ const customerOf = async (organizationId: string) => {
 describe("billing", () => {
 	it("401 without a session", async () => {
 		const org = "00000000-0000-4000-8000-000000000000";
-		for (const path of ["", "/checkout", "/portal"] as const) {
+		for (const path of ["", "/checkout", "/portal", "/sync"] as const) {
 			const res = await call(path ? "POST" : "GET", path, org);
 			expect(res.statusCode).toBe(401);
 		}
@@ -118,31 +118,58 @@ describe("billing", () => {
 		expect(rows).toHaveLength(1);
 	});
 
-	it("once subscribed: shows it, refuses a second checkout, opens the portal", async () => {
+	// Paid at Checkout, but the webhook hasn't arrived (or webhooks are off): our copy lags behind Stripe.
+	it("once paid: checkout refuses a second, sync catches up, the portal opens", async () => {
 		const ada = await signIn("ada@example.com");
 		const org = await orgOf(ada);
 		await call("POST", "/checkout", org, ada);
-		const customerId = await customerOf(org);
-		billing.subscribe(customerId ?? "");
+		const customerId = (await customerOf(org)) ?? "";
+		billing.subscribe(customerId);
 
+		// GET reads our copy only: not yet.
 		expect((await call("GET", "", org, ada)).json()).toEqual({
 			enabled: true,
-			subscribed: true,
+			subscribed: false,
 		});
-
+		// Checkout asks Stripe before deciding, so a second subscription is refused even now.
 		const again = await call("POST", "/checkout", org, ada);
 		expect(again.statusCode).toBe(409);
 		expect(errorResponseSchema.parse(again.json()).error).toBe(
 			"already_subscribed",
 		);
+		// That refusal synced our copy; /sync does the same on demand.
+		expect((await call("POST", "/sync", org, ada)).json()).toEqual({
+			enabled: true,
+			subscribed: true,
+		});
+		expect((await call("GET", "", org, ada)).json()).toEqual({
+			enabled: true,
+			subscribed: true,
+		});
 
 		const portal = await call("POST", "/portal", org, ada);
 		expect(portal.statusCode).toBe(200);
 		const { url } = billingRedirectResponseSchema.parse(portal.json());
 		expect(new URL(url).searchParams.get("customer")).toBe(customerId);
 		expect(new URL(url).searchParams.get("return_url")).toBe(
-			`${APP_URL}/account`,
+			`${APP_URL}/account?billing=updated`,
 		);
+	});
+
+	it("sync: a canceled subscription counts as not subscribed", async () => {
+		const ada = await signIn("ada@example.com");
+		const org = await orgOf(ada);
+		await call("POST", "/checkout", org, ada);
+		const customerId = (await customerOf(org)) ?? "";
+		billing.subscribe(customerId);
+		await call("POST", "/sync", org, ada);
+		billing.subscribe(customerId, { status: "canceled" });
+		expect((await call("POST", "/sync", org, ada)).json()).toEqual({
+			enabled: true,
+			subscribed: false,
+		});
+		// A canceled subscription doesn't block subscribing again.
+		expect((await call("POST", "/checkout", org, ada)).statusCode).toBe(200);
 	});
 
 	it("portal: 409 before any checkout", async () => {
@@ -159,7 +186,7 @@ describe("billing", () => {
 		const ada = await signIn("ada@example.com");
 		const bob = await signIn("bob@example.com");
 		const bobOrg = await orgOf(bob);
-		for (const path of ["", "/checkout", "/portal"] as const) {
+		for (const path of ["", "/checkout", "/portal", "/sync"] as const) {
 			const res = await call(path ? "POST" : "GET", path, bobOrg, ada);
 			expect(res.statusCode).toBe(404);
 		}
@@ -181,6 +208,7 @@ describe("billing", () => {
 			.where(eq(members.userId, user?.id ?? ""));
 
 		expect((await call("GET", "", org, ada)).statusCode).toBe(200);
+		expect((await call("POST", "/sync", org, ada)).statusCode).toBe(200);
 		expect((await call("POST", "/checkout", org, ada)).statusCode).toBe(403);
 		expect((await call("POST", "/portal", org, ada)).statusCode).toBe(403);
 		expect(billing.customers.size).toBe(0);
@@ -210,6 +238,7 @@ describe("billing off", () => {
 			expect(res.json()).toEqual({ enabled: false, subscribed: false });
 			expect((await inject("POST", "/checkout")).statusCode).toBe(404);
 			expect((await inject("POST", "/portal")).statusCode).toBe(404);
+			expect((await inject("POST", "/sync")).statusCode).toBe(404);
 			// Still an org-scoped route: someone else's organization is a 404.
 			const bob = await signInWithCode(off, {
 				email: "bob@example.com",

@@ -488,3 +488,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Customer Portal** — Stripe's hosted page where a customer changes their card, sees invoices or cancels. (13.2)
 - **Idempotency key** — a name sent with a request so that sending it again returns the first answer instead of
   doing the work twice. Stripe keeps each key's answer for 24 hours. (13.2)
+- **Webhook** — a request a service sends to *our* URL when something happens on its side (a payment, a
+  cancellation), instead of us asking over and over. Signed, so we can tell it's really from them. (13.3)
+- **At-least-once delivery** — the sender retries until it gets a 2xx back, so an event can arrive twice (our answer
+  was lost, we timed out). Never zero times, sometimes more than once. (13.3)
+- **Idempotency** — doing something twice has the same effect as doing it once. Here: each event id is recorded with
+  its change, so a repeat finds it and does nothing. (13.3)
+- **Eventual consistency** — two copies of the same data (Stripe's and ours) agree a moment later, not at every
+  instant. Right after paying, our copy may say "Free" for a second, until the webhook or a sync lands. (13.3)

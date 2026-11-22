@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { type BillingDriver, ENDED_STATUSES } from "./driver.ts";
+import { type BillingDriver, isLive } from "./driver.ts";
 
 // The Stripe API version our code is written against. Stripe changes response shapes between versions, so it's
 // pinned here, not taken from the account's default. It must be the version this SDK release's types describe
@@ -40,14 +40,26 @@ export function createStripeDriver({
 			return customer.id;
 		},
 
-		async hasLiveSubscription(customerId) {
-			// Newest first. An organization has at most a few, so 10 covers the live one.
-			const subscriptions = await stripe.subscriptions.list({
+		async currentSubscription(customerId) {
+			// Newest first. An organization has at most a few, so 10 covers the live one. A newer abandoned or expired
+			// one must not hide an older live one, hence "live first".
+			const { data } = await stripe.subscriptions.list({
 				customer: customerId,
 				status: "all",
 				limit: 10,
 			});
-			return subscriptions.data.some((s) => !ENDED_STATUSES.has(s.status));
+			const subscription = data.find((s) => isLive(s.status)) ?? data[0];
+			if (!subscription) return null;
+			const [item] = subscription.items.data;
+			if (!item) throw new Error(`subscription ${subscription.id}: no items`);
+			return {
+				id: subscription.id,
+				status: subscription.status,
+				priceId: item.price.id,
+				// The billing period lives on each item since API 2025-03-31; we sell one price, so one item.
+				currentPeriodEnd: new Date(item.current_period_end * 1000),
+				cancelAtPeriodEnd: subscription.cancel_at_period_end,
+			};
 		},
 
 		async createCheckoutSession({

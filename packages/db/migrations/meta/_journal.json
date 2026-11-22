@@ -78,6 +78,13 @@
       "when": 1795368074592,
       "tag": "0010_billing-customers",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795377357981,
+      "tag": "0011_billing-subscriptions",
+      "breakpoints": true
     }
   ]
 }

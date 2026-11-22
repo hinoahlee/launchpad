@@ -116,6 +116,14 @@ const envSchema = z.object({
 		.regex(/^price_\w+$/, "price_...")
 		.optional()
 		.or(z.literal("").transform(() => undefined)),
+	// Signing secret of the Stripe webhook endpoint ("whsec_..."): turns on POST /api/webhooks/stripe, which keeps
+	// subscriptions in sync. Deployed: Stripe → Developers → Webhooks → the endpoint → Signing secret. Local: printed by
+	// `stripe listen`. Needs STRIPE_API_KEY (each event is re-fetched from Stripe). A secret. Only the server reads it.
+	STRIPE_WEBHOOK_SECRET: z
+		.string()
+		.regex(/^whsec_\w+$/, "whsec_...")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
 });
 
 export type Config = z.infer<typeof envSchema>;
@@ -159,6 +167,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 		.refine((c) => !c.STRIPE_API_KEY === !c.STRIPE_PRICE_ID, {
 			message: "set STRIPE_API_KEY and STRIPE_PRICE_ID together, or neither",
 			path: ["STRIPE_PRICE_ID"],
+		})
+		.refine((c) => !c.STRIPE_WEBHOOK_SECRET || c.STRIPE_API_KEY, {
+			message: "STRIPE_WEBHOOK_SECRET needs STRIPE_API_KEY and STRIPE_PRICE_ID",
+			path: ["STRIPE_WEBHOOK_SECRET"],
 		})
 		.safeParse(env);
 	if (!result.success) {

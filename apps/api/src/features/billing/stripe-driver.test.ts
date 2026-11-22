@@ -95,31 +95,55 @@ describe("Stripe driver", () => {
 		expect(sent[0]?.params.get("return_url")).toBe("https://app.test/account");
 	});
 
-	it("a subscription counts as live until it's canceled or expired", async () => {
-		const list = (...statuses: string[]) =>
-			fakeStripe(() => ({
+	it("current subscription: the live one first, with its item's price and period", async () => {
+		const subscription = (id: string, status: string) => ({
+			id,
+			object: "subscription",
+			status,
+			cancel_at_period_end: status === "active",
+			items: {
 				object: "list",
-				has_more: false,
-				data: statuses.map((status, i) => ({
-					id: `sub_${i}`,
-					object: "subscription",
-					status,
-				})),
-			}));
-		expect(await list().driver.hasLiveSubscription("cus_1")).toBe(false);
+				data: [
+					{
+						id: `si_${id}`,
+						object: "subscription_item",
+						price: { id: "price_123", object: "price" },
+						current_period_end: 1_900_000_000,
+					},
+				],
+			},
+		});
+		const list = (...subs: object[]) =>
+			fakeStripe(() => ({ object: "list", has_more: false, data: subs }));
+
+		expect(await list().driver.currentSubscription("cus_1")).toBeNull();
+		// Newest first: an abandoned newer one doesn't hide the older active one.
 		expect(
-			await list("canceled", "incomplete_expired").driver.hasLiveSubscription(
-				"cus_1",
-			),
-		).toBe(false);
-		for (const status of ["active", "trialing", "past_due", "unpaid"]) {
-			expect(
-				await list("canceled", status).driver.hasLiveSubscription("cus_1"),
-			).toBe(true);
-		}
+			await list(
+				subscription("sub_new", "incomplete_expired"),
+				subscription("sub_old", "active"),
+			).driver.currentSubscription("cus_1"),
+		).toEqual({
+			id: "sub_old",
+			status: "active",
+			priceId: "price_123",
+			currentPeriodEnd: new Date(1_900_000_000 * 1000),
+			cancelAtPeriodEnd: true,
+		});
+		// Only ended ones: the newest, so our copy says "canceled".
+		expect(
+			(
+				await list(
+					subscription("sub_2", "canceled"),
+					subscription("sub_1", "canceled"),
+				).driver.currentSubscription("cus_1")
+			)?.id,
+		).toBe("sub_2");
+
 		const { driver, sent } = list();
-		await driver.hasLiveSubscription("cus_1");
+		await driver.currentSubscription("cus_1");
 		expect(sent[0]?.method).toBe("GET");
+		expect(sent[0]?.path).toBe("/v1/subscriptions");
 		expect(sent[0]?.params.get("customer")).toBe("cus_1");
 		expect(sent[0]?.params.get("status")).toBe("all");
 	});

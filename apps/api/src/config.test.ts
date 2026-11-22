@@ -254,6 +254,16 @@ describe("billing settings", () => {
 		);
 	});
 
+	// The webhook re-fetches each event's subscription from Stripe, so it can't run without the key.
+	it("stops the boot on a webhook secret without the key", () => {
+		expect(rejects({ STRIPE_WEBHOOK_SECRET: "whsec_abc123" })).toContain(
+			"STRIPE_WEBHOOK_SECRET needs STRIPE_API_KEY",
+		);
+		expect(
+			loadConfig({ ...base, ...stripe, STRIPE_WEBHOOK_SECRET: "whsec_abc123" }),
+		).toMatchObject({ STRIPE_WEBHOOK_SECRET: "whsec_abc123" });
+	});
+
 	// A publishable key (pk_) or a product id (prod_) in the wrong box is a common paste mistake.
 	it("stops the boot on a value of the wrong kind", () => {
 		expect(rejects({ ...stripe, STRIPE_API_KEY: "pk_test_abc" })).toContain(
