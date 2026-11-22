@@ -67,7 +67,7 @@ const envSchema = z.object({
 		.regex(/^whsec_[A-Za-z0-9+/=]+$/, "whsec_ followed by base64")
 		.optional()
 		.or(z.literal("").transform(() => undefined)),
-	// The public origin people open, e.g. https://render.noahlee.xyz (no path). Auth builds its links from it,
+	// The public origin people open, e.g. https://launchpad.noahlee.xyz (no path). Auth builds its links from it,
 	// and accepts browser requests that change something (sign in, sign out) only from this origin. Required in
 	// production for the server; in dev, Vite's origin (it proxies /api to us).
 	APP_URL: z

@@ -35,7 +35,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 | `RESEND_API_KEY` | unset (emails only logged) | Worker only. Resend API key with "Sending access", limited to the sending domain. A secret (Render: `sync: false`). Set with `EMAIL_FROM`, or the boot fails. |
 | `EMAIL_FROM` | unset | Worker only. The sender, `Name <address>`, on a domain verified in Resend (`Launchpad <hello@mail.noahlee.xyz>`). |
 | `RESEND_WEBHOOK_SECRET` | unset (no webhook route) | Server only. The Resend webhook's signing secret (`whsec_...`). Turns on `POST /api/webhooks/resend`, which records hard bounces and spam complaints so the worker skips those addresses. A secret (Render: `sync: false`). |
-| `APP_URL` | `http://localhost:5173` (dev) | Server only; required in production. The public origin (`https://render.noahlee.xyz`, no path). Better Auth builds its links from it and accepts state-changing requests only from it (CSRF). |
+| `APP_URL` | `http://localhost:5173` (dev) | Server only; required in production. The public origin (`https://launchpad.noahlee.xyz`, no path). Better Auth builds its links from it and accepts state-changing requests only from it (CSRF). |
 | `BETTER_AUTH_SECRET` | dev-only fixed value | Server only; required in production (32+ characters). Signs session cookies. A secret (Render: `generateValue`). Changing it signs everyone out. |
 | `GOOGLE_CLIENT_ID` | unset (Google sign-in off) | Server only. The Google OAuth client's ID. Set with `GOOGLE_CLIENT_SECRET`, or the boot fails. The client must list `<APP_URL>/api/auth/callback/google` as a redirect URI. |
 | `GOOGLE_CLIENT_SECRET` | unset | Server only. The Google OAuth client's secret. A secret (Render: `sync: false`). |
