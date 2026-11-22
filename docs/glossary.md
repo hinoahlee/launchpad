@@ -459,3 +459,11 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Orphaned object** — an object in the bucket that no database row points at (a delete that failed halfway, an
   upload never completed). Nobody can download it, but it still takes space and costs money. (11.4)
 
+
+## Phase 12 — Organizations
+- **Multi-tenancy** — one running app serves many separate groups, each seeing only its own data, instead of one
+  copy of the app per customer. (12.1)
+- **Tenant** — one of those groups; here, an organization. Data belongs to a tenant, and people belong to tenants
+  through memberships. (12.1)
+- **Role-based access control (RBAC)** — what you may do depends on your role in the tenant (`owner`, `admin`,
+  `member`), not on who you are: changing a role changes every permission at once. (12.1)

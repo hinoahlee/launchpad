@@ -41,6 +41,11 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `RECENT_SIGN_IN_MINUTES` (else 400 `SESSION_EXPIRED`). New tables pointing at `users` need `ON DELETE CASCADE`;
   cleanup outside Postgres (files, billing) goes in `deleteUser`'s `beforeDelete`/`afterDelete` in `auth.ts`.
   E2E: a test that provokes a console error on purpose declares it with `test.use({ expectedErrors: [...] })`.
+  Organizations (phase 12): Better Auth's `organization` plugin at `/api/auth/organization/*` (tables
+  `organizations`, `members`, `invitations`; roles `owner`/`admin`/`member`). Decision 010: one person, one
+  organization. Each user owns exactly one (unique indexes on `members`), made with its owner when their first
+  session starts and active on every session (`sessions.active_organization_id`, `personal-organization.ts`);
+  deleted with the account. The plugin refuses creating, deleting, renaming and inviting. No UI.
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
   from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).

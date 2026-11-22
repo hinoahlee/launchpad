@@ -61,6 +61,8 @@ Follow-ups noticed along the way:
 - Phase 15 (operations): objects with no row (a failed `storage delete failed; object orphaned`) are never retried.
   A reconcile job (list the bucket, compare with `files`) would catch them; check the log line until then.
 - Before running any decoder on uploads (images, audio): a worker of its own, with only bucket access (11.2 chat).
+- Phase 14 (hardening): an append-only audit log of security events (sign-ins, account deletion, sessions revoked),
+  readable by the account's owner. Planned as 12.4 for membership changes, which decision 010 removed.
 
 ## What we're building
 

@@ -1,11 +1,21 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import type { Database } from "@launchpad/db";
 import { betterAuth } from "better-auth";
-import { bearer, emailOTP, lastLoginMethod } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
+import {
+	bearer,
+	emailOTP,
+	lastLoginMethod,
+	organization,
+} from "better-auth/plugins";
 import type { FastifyBaseLogger } from "fastify";
 import type { Config } from "#config.ts";
 import { enqueue } from "#lib/jobs/enqueue.ts";
 import { UPLOAD_URL_TTL_MS } from "#lib/storage/driver.ts";
+import {
+	deleteUserOrganization,
+	initialOrganizationId,
+} from "./personal-organization.ts";
 
 // An upload URL's lifetime plus a margin, so the sweep runs after the last possible PUT.
 const DELETE_FILES_DELAY_MS = UPLOAD_URL_TTL_MS + 5 * 60 * 1000;
@@ -86,10 +96,17 @@ export function createAuth(
 			// POST /api/auth/delete-user with a fresh session: a hard delete. Better Auth deletes the user's sessions,
 			// their accounts (Google links) and the users row, then clears the cookie. Every table that points at
 			// users must do so with ON DELETE CASCADE, so nothing of theirs outlives the row.
-			// Later phases plug in here: beforeDelete can refuse (an unpaid invoice, the last owner of an org);
-			// afterDelete queues jobs for what lives outside Postgres (their uploaded files, the billing customer).
+			// Later phases plug in here: beforeDelete can refuse (an unpaid invoice) or clean up first (their
+			// organization, below); afterDelete queues jobs for what lives outside Postgres (their uploaded files, the
+			// billing customer).
 			deleteUser: {
 				enabled: true,
+				// Their organization goes with them (they're its only member, decision 010). Before the delete, not after:
+				// afterwards their membership row is gone and nothing says which organization was theirs. If the delete
+				// then fails, they keep their account and get a new organization at their next sign-in.
+				beforeDelete: async (user) => {
+					await deleteUserOrganization(db, user.id);
+				},
 				afterDelete: async (user) => {
 					// The id only: the email is personal data, and logs are kept longer than the account.
 					log.info({ userId: user.id }, "auth: account deleted");
@@ -150,7 +167,49 @@ export function createAuth(
 			// it the bare token would too, and that's what `sessions.token` stores: a database leak would hand out
 			// working sessions.
 			bearer({ requireSignature: true }),
+			// Organizations (multi-tenancy, 12.1): /api/auth/organization/*. Tables `organizations`, `members`, `invitations`
+			// in @launchpad/db; the session's organization in `sessions.active_organization_id`. Roles (RBAC): `owner`
+			// (everything), `admin` (all but deleting the organization or changing its owner), `member` (reads only).
+			// Better Auth checks them before its own actions; our routes will with requireMembership (12.3).
+			// Locked to one person, one organization (decision 010): the API makes each user's organization itself
+			// (databaseHooks, below), and these refuse everything that would change it. Teams start by lifting them.
+			organization({
+				// 403 YOU_ARE_NOT_ALLOWED_TO_CREATE_A_NEW_ORGANIZATION.
+				allowUserToCreateOrganization: false,
+				// 404 ORGANIZATION_DELETION_DISABLED: it goes only with its owner's account.
+				disableOrganizationDeletion: true,
+				// Invitations: 403 INVITATION_LIMIT_REACHED (none may be pending). Joining: 403
+				// ORGANIZATION_MEMBERSHIP_LIMIT_REACHED. The unique indexes on `members` back both up.
+				invitationLimit: 0,
+				membershipLimit: 1,
+				organizationHooks: {
+					// Nothing shows an organization's name or slug yet, so nothing edits them.
+					beforeUpdateOrganization: async () => {
+						throw new APIError("FORBIDDEN", {
+							code: "ORGANIZATION_UPDATE_DISABLED",
+							message: "Organizations can't be changed.",
+						});
+					},
+				},
+			}),
 		],
+		databaseHooks: {
+			session: {
+				create: {
+					// Every new session starts in the user's organization, made now if they have none (their first sign-in).
+					// So "which organization am I in?" always has an answer after sign-in.
+					before: async (session) => ({
+						data: {
+							...session,
+							activeOrganizationId: await initialOrganizationId(
+								db,
+								session.userId,
+							),
+						},
+					}),
+				},
+			},
+		},
 		advanced: {
 			// Ids are uuid columns that Postgres fills in (gen_random_uuid()), like every other table.
 			database: { generateId: "uuid" },
