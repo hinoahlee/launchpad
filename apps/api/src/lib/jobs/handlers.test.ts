@@ -1,4 +1,4 @@
-import { files, jobs } from "@launchpad/db";
+import { files, jobs, organizations } from "@launchpad/db";
 import { createTestDb, insertUser } from "@launchpad/db/testing";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
@@ -98,8 +98,15 @@ describe("prune-uploads", () => {
 		userId: string,
 		{ createdAt, uploaded }: { createdAt: Date; uploaded: boolean },
 	) {
-		const key = storageKey(userId);
+		// Every file belongs to an organization (12.3); which one doesn't matter to this job.
+		const [organization] = await db
+			.insert(organizations)
+			.values({ name: "Org", slug: crypto.randomUUID() })
+			.returning();
+		if (!organization) throw new Error("no organization");
+		const key = storageKey(organization.id);
 		await db.insert(files).values({
+			organizationId: organization.id,
 			userId,
 			fileName: "f.txt",
 			contentType: "text/plain",

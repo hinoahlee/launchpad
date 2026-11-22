@@ -64,6 +64,13 @@
       "when": 1795326863231,
       "tag": "0008_files-organization",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795328287005,
+      "tag": "0009_files-organization-required",
+      "breakpoints": true
     }
   ]
 }
