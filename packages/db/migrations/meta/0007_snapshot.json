@@ -1,5 +1,5 @@
 {
-  "id": "e0952acb-4562-431e-9c8e-8ac7e48abef5",
+  "id": "75c00110-b8fb-452b-96af-c7cf98042f4b",
   "prevId": "2ec2ddaa-b790-4f51-bece-7a1a934810d8",
   "version": "7",
   "dialect": "postgresql",
@@ -581,15 +581,9 @@
         }
       },
       "indexes": {
-        "members_organization_user_idx": {
-          "name": "members_organization_user_idx",
+        "members_user_id_idx": {
+          "name": "members_user_id_idx",
           "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
             {
               "expression": "user_id",
               "isExpression": false,
@@ -602,17 +596,17 @@
           "method": "btree",
           "with": {}
         },
-        "members_user_id_idx": {
-          "name": "members_user_id_idx",
+        "members_organization_id_idx": {
+          "name": "members_organization_id_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "organization_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}

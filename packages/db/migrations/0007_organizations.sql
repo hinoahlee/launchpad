@@ -37,11 +37,11 @@ ALTER TABLE "members" ADD CONSTRAINT "members_organization_id_organizations_id_f
 ALTER TABLE "members" ADD CONSTRAINT "members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "invitations_organization_id_idx" ON "invitations" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "invitations_email_idx" ON "invitations" USING btree ("email");--> statement-breakpoint
-CREATE UNIQUE INDEX "members_organization_user_idx" ON "members" USING btree ("organization_id","user_id");--> statement-breakpoint
-CREATE INDEX "members_user_id_idx" ON "members" USING btree ("user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "members_user_id_idx" ON "members" USING btree ("user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "members_organization_id_idx" ON "members" USING btree ("organization_id");--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_active_organization_id_organizations_id_fk" FOREIGN KEY ("active_organization_id") REFERENCES "public"."organizations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
--- Hand-written backfill: every existing user gets a personal organization they own, active on their sessions.
--- New users get theirs when their first session starts (apps/api/src/features/auth/personal-organization.ts).
+-- Hand-written backfill: every existing user gets their organization (decision 010), which they own, active on
+-- their sessions. New users get theirs when their first session starts (apps/api/src/features/auth/personal-organization.ts).
 -- The slug carries the user's id only to pair each new org with its owner here; the app uses random slugs.
 WITH personal AS (
 	INSERT INTO "organizations" ("name", "slug")

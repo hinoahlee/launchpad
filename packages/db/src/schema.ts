@@ -141,11 +141,13 @@ export const verifications = pgTable(
 
 // Organizations (phase 12): Better Auth's organization plugin reads and writes these three tables, like the auth
 // tables above. An organization is a tenant: the group that owns data. People belong to it through `members`.
+// Default (decision 010): one person, one organization. Each user has exactly one, made for them, which they own
+// alone. The two unique indexes on `members` make anything else impossible; teams are a later feature.
 
 export const organizations = pgTable("organizations", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	name: text("name").notNull(),
-	// Unique, URL-safe handle. Better Auth requires one; the web app makes it from the name plus random characters.
+	// Unique, URL-safe handle. Better Auth requires one; ours are random (personal-organization.ts).
 	slug: text("slug").notNull().unique(),
 	logo: text("logo"),
 	// Better Auth stores its JSON as a string.
@@ -158,7 +160,7 @@ export type Organization = typeof organizations.$inferSelect;
 export const ROLES = ["owner", "admin", "member"] as const;
 export type Role = (typeof ROLES)[number];
 
-// One row per person per organization they belong to, with their role there.
+// Who belongs to which organization, with their role there. Today exactly one row per user and per organization.
 export const members = pgTable(
 	"members",
 	{
@@ -174,9 +176,11 @@ export const members = pgTable(
 		createdAt: timestamptz("created_at").defaultNow().notNull(),
 	},
 	(t) => [
-		// Ours, not Better Auth's: a person is in an organization once, even if two requests race.
-		uniqueIndex("members_organization_user_idx").on(t.organizationId, t.userId),
-		index("members_user_id_idx").on(t.userId),
+		// Ours, not Better Auth's (decision 010): a user belongs to one organization, and an organization has one
+		// member. Postgres refuses a second row whatever the code does: a race, a script, a forgotten check. Teams
+		// replace these two with one unique index on (organization_id, user_id).
+		uniqueIndex("members_user_id_idx").on(t.userId),
+		uniqueIndex("members_organization_id_idx").on(t.organizationId),
 		check("members_role_check", sql`${t.role} in ('owner', 'admin', 'member')`),
 	],
 );
@@ -191,7 +195,8 @@ export const INVITATION_STATUSES = [
 ] as const;
 export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
 
-// An invitation to join an organization, by email (used from step 12.2). Required by the plugin's schema now.
+// An invitation to join an organization, by email. Unused (invites are off, decision 010): Better Auth's schema
+// check requires the table, and teams will need it.
 export const invitations = pgTable(
 	"invitations",
 	{

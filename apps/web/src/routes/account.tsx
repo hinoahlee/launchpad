@@ -12,8 +12,6 @@ import { DeleteAccountCard } from "#features/account/delete-account-card.tsx";
 import { SessionsCard } from "#features/account/sessions-card.tsx";
 import { sessionQuery, signOut } from "#features/auth/api.ts";
 import { FilesCard } from "#features/files/files-card.tsx";
-import { organizationsKey } from "#features/organizations/api.ts";
-import { OrganizationsCard } from "#features/organizations/organizations-card.tsx";
 import { pageTitle } from "#lib/site.ts";
 
 // /account: signed-in users only. The guard runs before the page loads: no session, off to /sign-in, which
@@ -42,7 +40,6 @@ function Account() {
 			await navigate({ to: "/" });
 			queryClient.setQueryData(sessionQuery.queryKey, null);
 			queryClient.removeQueries({ queryKey: ["account"] });
-			queryClient.removeQueries({ queryKey: organizationsKey });
 		},
 	});
 	// Account deleted: home, signed out. Navigate first, so the "signed out while here" redirect below doesn't
@@ -53,7 +50,6 @@ function Account() {
 		await navigate({ to: "/" });
 		queryClient.setQueryData(sessionQuery.queryKey, null);
 		queryClient.removeQueries({ queryKey: ["account"] });
-		queryClient.removeQueries({ queryKey: organizationsKey });
 	};
 	// Too long since signing in to delete: sign out, and the redirect below takes them to sign-in and back here.
 	const signInAgain = useMutation({
@@ -61,7 +57,6 @@ function Account() {
 		onSuccess: () => {
 			queryClient.setQueryData(sessionQuery.queryKey, null);
 			queryClient.removeQueries({ queryKey: ["account"] });
-			queryClient.removeQueries({ queryKey: organizationsKey });
 		},
 	});
 	const user = session.data?.user;
@@ -91,7 +86,6 @@ function Account() {
 					<LogOut /> Sign out
 				</Button>
 			</div>
-			<OrganizationsCard />
 			<FilesCard />
 			<SessionsCard />
 			<DeleteAccountCard

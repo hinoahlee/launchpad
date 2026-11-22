@@ -1,6 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import type { Database } from "@launchpad/db";
-import { organizationNameSchema } from "@launchpad/shared";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import {
@@ -14,19 +13,9 @@ import type { Config } from "#config.ts";
 import { enqueue } from "#lib/jobs/enqueue.ts";
 import { UPLOAD_URL_TTL_MS } from "#lib/storage/driver.ts";
 import {
-	deleteSoleMemberOrganizations,
+	deleteUserOrganization,
 	initialOrganizationId,
 } from "./personal-organization.ts";
-
-// Better Auth saves whatever name it's given; ours must pass the same check as the web form's.
-function checkOrganizationName(name: unknown) {
-	if (!organizationNameSchema.safeParse(name).success) {
-		throw new APIError("BAD_REQUEST", {
-			code: "INVALID_ORGANIZATION_NAME",
-			message: "Organization names are 1 to 64 characters.",
-		});
-	}
-}
 
 // An upload URL's lifetime plus a margin, so the sweep runs after the last possible PUT.
 const DELETE_FILES_DELAY_MS = UPLOAD_URL_TTL_MS + 5 * 60 * 1000;
@@ -107,16 +96,16 @@ export function createAuth(
 			// POST /api/auth/delete-user with a fresh session: a hard delete. Better Auth deletes the user's sessions,
 			// their accounts (Google links) and the users row, then clears the cookie. Every table that points at
 			// users must do so with ON DELETE CASCADE, so nothing of theirs outlives the row.
-			// Later phases plug in here: beforeDelete can refuse (an unpaid invoice)
-			// or clean up first (organizations, below);
-			// afterDelete queues jobs for what lives outside Postgres (their uploaded files, the billing customer).
+			// Later phases plug in here: beforeDelete can refuse (an unpaid invoice) or clean up first (their
+			// organization, below); afterDelete queues jobs for what lives outside Postgres (their uploaded files, the
+			// billing customer).
 			deleteUser: {
 				enabled: true,
-				// Organizations they're alone in would be left with nobody able to open them. Before the delete, not
-				// after: afterwards their membership rows are gone and nothing says which organizations were theirs.
-				// If the delete then fails, they keep their account and get a new personal organization next sign-in.
+				// Their organization goes with them (they're its only member, decision 010). Before the delete, not after:
+				// afterwards their membership row is gone and nothing says which organization was theirs. If the delete
+				// then fails, they keep their account and get a new organization at their next sign-in.
 				beforeDelete: async (user) => {
-					await deleteSoleMemberOrganizations(db, user.id);
+					await deleteUserOrganization(db, user.id);
 				},
 				afterDelete: async (user) => {
 					// The id only: the email is personal data, and logs are kept longer than the account.
@@ -178,18 +167,28 @@ export function createAuth(
 			// it the bare token would too, and that's what `sessions.token` stores: a database leak would hand out
 			// working sessions.
 			bearer({ requireSignature: true }),
-			// Organizations (multi-tenancy, 12.1): /api/auth/organization/* creates them, lists yours, switches the
-			// session's active one (`sessions.active_organization_id`), and manages members. Tables `organizations`,
-			// `members`, `invitations` in @launchpad/db. Roles: the creator is `owner` (everything), `admin` (everything
-			// but deleting the organization or changing its owner), `member` (reads only). Better Auth checks a role
-			// before each of its own actions; our routes will check it with requireMembership (12.3).
+			// Organizations (multi-tenancy, 12.1): /api/auth/organization/*. Tables `organizations`, `members`, `invitations`
+			// in @launchpad/db; the session's organization in `sessions.active_organization_id`. Roles (RBAC): `owner`
+			// (everything), `admin` (all but deleting the organization or changing its owner), `member` (reads only).
+			// Better Auth checks them before its own actions; our routes will with requireMembership (12.3).
+			// Locked to one person, one organization (decision 010): the API makes each user's organization itself
+			// (databaseHooks, below), and these refuse everything that would change it. Teams start by lifting them.
 			organization({
+				// 403 YOU_ARE_NOT_ALLOWED_TO_CREATE_A_NEW_ORGANIZATION.
+				allowUserToCreateOrganization: false,
+				// 404 ORGANIZATION_DELETION_DISABLED: it goes only with its owner's account.
+				disableOrganizationDeletion: true,
+				// Invitations: 403 INVITATION_LIMIT_REACHED (none may be pending). Joining: 403
+				// ORGANIZATION_MEMBERSHIP_LIMIT_REACHED. The unique indexes on `members` back both up.
+				invitationLimit: 0,
+				membershipLimit: 1,
 				organizationHooks: {
-					beforeCreateOrganization: async ({ organization }) =>
-						checkOrganizationName(organization.name),
-					beforeUpdateOrganization: async ({ organization }) => {
-						if (organization.name !== undefined)
-							checkOrganizationName(organization.name);
+					// Nothing shows an organization's name or slug yet, so nothing edits them.
+					beforeUpdateOrganization: async () => {
+						throw new APIError("FORBIDDEN", {
+							code: "ORGANIZATION_UPDATE_DISABLED",
+							message: "Organizations can't be changed.",
+						});
 					},
 				},
 			}),
@@ -197,8 +196,8 @@ export function createAuth(
 		databaseHooks: {
 			session: {
 				create: {
-					// Every new session starts in an organization: the user's oldest, or a personal one made now (their
-					// first sign-in). So "which organization am I in?" always has an answer after sign-in.
+					// Every new session starts in the user's organization, made now if they have none (their first sign-in).
+					// So "which organization am I in?" always has an answer after sign-in.
 					before: async (session) => ({
 						data: {
 							...session,
