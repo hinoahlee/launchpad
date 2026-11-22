@@ -87,7 +87,7 @@ describe("billing", () => {
 		const org = await orgOf(ada);
 		expect(
 			billingResponseSchema.parse((await call("GET", "", org, ada)).json()),
-		).toEqual({ enabled: true, subscribed: false });
+		).toEqual({ enabled: true, subscribed: false, plan: "free" });
 
 		const first = await call("POST", "/checkout", org, ada);
 		expect(first.statusCode).toBe(200);
@@ -130,6 +130,7 @@ describe("billing", () => {
 		expect((await call("GET", "", org, ada)).json()).toEqual({
 			enabled: true,
 			subscribed: false,
+			plan: "free",
 		});
 		// Checkout asks Stripe before deciding, so a second subscription is refused even now.
 		const again = await call("POST", "/checkout", org, ada);
@@ -141,10 +142,12 @@ describe("billing", () => {
 		expect((await call("POST", "/sync", org, ada)).json()).toEqual({
 			enabled: true,
 			subscribed: true,
+			plan: "pro",
 		});
 		expect((await call("GET", "", org, ada)).json()).toEqual({
 			enabled: true,
 			subscribed: true,
+			plan: "pro",
 		});
 
 		const portal = await call("POST", "/portal", org, ada);
@@ -167,9 +170,26 @@ describe("billing", () => {
 		expect((await call("POST", "/sync", org, ada)).json()).toEqual({
 			enabled: true,
 			subscribed: false,
+			plan: "free",
 		});
 		// A canceled subscription doesn't block subscribing again.
 		expect((await call("POST", "/checkout", org, ada)).statusCode).toBe(200);
+	});
+
+	// Subscribed (manage it, don't start another) but not paid: the plan follows payment, not the subscription.
+	it("a subscription that isn't paid keeps the free plan", async () => {
+		const ada = await signIn("ada@example.com");
+		const org = await orgOf(ada);
+		await call("POST", "/checkout", org, ada);
+		const customerId = (await customerOf(org)) ?? "";
+		for (const status of ["incomplete", "unpaid"]) {
+			billing.subscribe(customerId, { status });
+			expect((await call("POST", "/sync", org, ada)).json()).toEqual({
+				enabled: true,
+				subscribed: true,
+				plan: "free",
+			});
+		}
 	});
 
 	it("portal: 409 before any checkout", async () => {
@@ -235,7 +255,11 @@ describe("billing off", () => {
 				});
 			const res = await inject("GET");
 			expect(res.statusCode).toBe(200);
-			expect(res.json()).toEqual({ enabled: false, subscribed: false });
+			expect(res.json()).toEqual({
+				enabled: false,
+				subscribed: false,
+				plan: "free",
+			});
 			expect((await inject("POST", "/checkout")).statusCode).toBe(404);
 			expect((await inject("POST", "/portal")).statusCode).toBe(404);
 			expect((await inject("POST", "/sync")).statusCode).toBe(404);

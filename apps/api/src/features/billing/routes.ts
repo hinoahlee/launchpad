@@ -16,6 +16,7 @@ import {
 	requireMembership,
 } from "#features/auth/require-membership.ts";
 import { requireSession } from "#features/auth/require-session.ts";
+import { planOf } from "#lib/entitlements.ts";
 import { type BillingDriver, isLive } from "./driver.ts";
 import { syncSubscription } from "./sync.ts";
 
@@ -71,6 +72,7 @@ export const billingRoutes =
 				return {
 					enabled: billing !== undefined,
 					subscribed: await subscribedOf(app.db, organizationId),
+					plan: await planOf(app.db, organizationId),
 				};
 			},
 		);
@@ -99,6 +101,7 @@ export const billingRoutes =
 				return {
 					enabled: true,
 					subscribed: await subscribedOf(app.db, organizationId),
+					plan: await planOf(app.db, organizationId),
 				};
 			},
 		);

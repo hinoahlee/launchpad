@@ -74,6 +74,9 @@ safety rules and code conventions. During a phase, read only that phase's file i
   payload: `syncSubscription` (`sync.ts`) locks the customer row, re-fetches from Stripe, saves `billing_subscriptions`.
   The event id goes in `stripe_events` in the same transaction (duplicates: no-op; a failure: 500, Stripe retries).
   GET reads `billing_subscriptions`; `POST .../billing/sync` refreshes on return from Stripe (`?billing=`).
+  Entitlements (13.4): plans and their limits in `@launchpad/shared` (`plans.ts`: `ENTITLEMENTS`). Gate a feature on
+  `entitlementsOf(db, organizationId)` (`lib/entitlements.ts`), never on the plan's name. Pro = subscription
+  `active`/`trialing`/`past_due`; anything else (or billing off) = free. Gated today: the storage quota (files).
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`

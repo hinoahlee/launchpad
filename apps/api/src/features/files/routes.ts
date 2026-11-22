@@ -9,7 +9,6 @@ import {
 	fileParamsSchema,
 	fileSchema,
 	organizationParamsSchema,
-	STORAGE_QUOTA_BYTES,
 } from "@launchpad/shared";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
@@ -19,6 +18,7 @@ import {
 	requireMembership,
 } from "#features/auth/require-membership.ts";
 import { requireSession, sessionOf } from "#features/auth/require-session.ts";
+import { entitlementsOf } from "#lib/entitlements.ts";
 import { type StorageDriver, storageKey } from "#lib/storage/driver.ts";
 
 function toFileItem(row: FileRow, uploadedAt: Date): FileItem {
@@ -104,7 +104,12 @@ export const fileRoutes =
 						})
 						.from(files)
 						.where(eq(files.organizationId, organizationId));
-					if (Number(usage?.used ?? 0) + sizeBytes > STORAGE_QUOTA_BYTES) {
+					// The gate (13.4): the plan decides the quota. Read in this transaction, after the lock.
+					const { storageQuotaBytes } = await entitlementsOf(
+						tx,
+						organizationId,
+					);
+					if (Number(usage?.used ?? 0) + sizeBytes > storageQuotaBytes) {
 						return null;
 					}
 					const [inserted] = await tx
