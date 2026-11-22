@@ -340,3 +340,17 @@ export const files = pgTable(
 );
 
 export type FileRow = typeof files.$inferSelect;
+
+// Billing (phase 13): which Stripe customer pays for each organization. Made the first time an admin starts a
+// checkout, and kept: the customer holds invoices and payment methods even when no subscription is running.
+// Deleting the organization deletes the row; the customer at Stripe stays (cleanup: a follow-up).
+export const billingCustomers = pgTable("billing_customers", {
+	organizationId: uuid("organization_id")
+		.primaryKey()
+		.references(() => organizations.id, { onDelete: "cascade" }),
+	// Stripe's id, "cus_...". Unique: one customer never pays for two organizations.
+	stripeCustomerId: text("stripe_customer_id").notNull().unique(),
+	createdAt: timestamptz("created_at").defaultNow().notNull(),
+});
+
+export type BillingCustomer = typeof billingCustomers.$inferSelect;

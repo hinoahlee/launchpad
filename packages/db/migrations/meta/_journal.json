@@ -71,6 +71,13 @@
       "when": 1795328287005,
       "tag": "0009_files-organization-required",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795368074592,
+      "tag": "0010_billing-customers",
+      "breakpoints": true
     }
   ]
 }

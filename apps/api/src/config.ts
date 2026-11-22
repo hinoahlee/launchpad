@@ -102,6 +102,20 @@ const envSchema = z.object({
 	// limited to that bucket). The secret is a secret.
 	S3_ACCESS_KEY_ID: optionalString,
 	S3_SECRET_ACCESS_KEY: optionalString,
+	// Billing (Stripe). Set both, or neither: unset, the billing routes are off. Only the server reads them.
+	// A restricted key ("rk_..."; Stripe → Developers → API keys) allowed only what the API calls: Customers,
+	// Checkout Sessions and Customer portal (write), Subscriptions and Prices (read). A secret.
+	STRIPE_API_KEY: z
+		.string()
+		.regex(/^(rk|sk)_(test|live)_\w+$/, "rk_test_..., rk_live_... (or sk_...)")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
+	// The monthly price Checkout sells (Stripe → Product catalog → the product → the price: "price_..."). Not a secret.
+	STRIPE_PRICE_ID: z
+		.string()
+		.regex(/^price_\w+$/, "price_...")
+		.optional()
+		.or(z.literal("").transform(() => undefined)),
 });
 
 export type Config = z.infer<typeof envSchema>;
@@ -140,6 +154,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 		.refine((c) => !c.S3_BUCKET || c.S3_ENDPOINT || c.S3_REGION !== "auto", {
 			message: "AWS S3 (no S3_ENDPOINT) needs S3_REGION, e.g. us-east-1",
 			path: ["S3_REGION"],
+		})
+		// Billing: a key without a price (or the reverse) can't sell anything.
+		.refine((c) => !c.STRIPE_API_KEY === !c.STRIPE_PRICE_ID, {
+			message: "set STRIPE_API_KEY and STRIPE_PRICE_ID together, or neither",
+			path: ["STRIPE_PRICE_ID"],
 		})
 		.safeParse(env);
 	if (!result.success) {

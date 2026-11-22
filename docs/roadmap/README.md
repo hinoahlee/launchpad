@@ -24,7 +24,7 @@ like you're shadowing a principal engineer.
 | 10 | [Auth](phases/10-auth.md) | done |
 | 11 | [File storage](phases/11-storage.md) | done |
 | 12 | [Organizations](phases/12-organizations.md) | done |
-| 13 | [Billing](phases/13-billing.md) | not started |
+| 13 | [Billing](phases/13-billing.md) | in progress |
 | 14 | [Hardening + scale](phases/14-hardening.md) | not started |
 | 15 | [Operations practice](phases/15-operations.md) | not started |
 | 16 | [VPS target](phases/16-vps.md) | not started |
@@ -61,6 +61,11 @@ Follow-ups noticed along the way:
 - Phase 15 (operations): objects with no row (a failed `storage delete failed; object orphaned`) are never retried.
   A reconcile job (list the bucket, compare with `files`) would catch them; check the log line until then.
 - Before running any decoder on uploads (images, audio): a worker of its own, with only bucket access (11.2 chat).
+- Before live Stripe keys: deleting an account deletes its `billing_customers` row, but the Stripe customer and its
+  subscription stay, and keep charging. Delete the customer at Stripe (that cancels its subscriptions) in
+  `deleteUser`'s `beforeDelete`; the key then needs Customers write, which it has (13.2).
+- Phase 14 (hardening): a request the client aborts early crashes `@fastify/rate-limit`'s key generator
+  (`request.ip` undefined → `normalizeIP`), logged as `unhandled error` (and sent to Sentry). Seen in dev, 13.2.
 - Phase 14 (hardening): an append-only audit log of security events (sign-ins, account deletion, sessions revoked),
   readable by the account's owner. Planned as 12.4 for membership changes, which decision 010 removed.
 

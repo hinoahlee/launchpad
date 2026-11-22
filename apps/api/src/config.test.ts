@@ -219,3 +219,48 @@ describe("storage settings", () => {
 		expect(rejects(aws)).toContain("needs S3_REGION");
 	});
 });
+
+describe("billing settings", () => {
+	const base = { DATABASE_URL: direct };
+	const stripe = {
+		STRIPE_API_KEY: "rk_test_abc123",
+		STRIPE_PRICE_ID: "price_abc123",
+	};
+
+	function rejects(env: Record<string, string>): string {
+		const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+			throw new Error("exit");
+		});
+		const error = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			expect(() => loadConfig({ ...base, ...env })).toThrow("exit");
+			return String(error.mock.calls[0]?.[0]);
+		} finally {
+			exit.mockRestore();
+			error.mockRestore();
+		}
+	}
+
+	it("accepts neither (billing off) or both", () => {
+		expect(
+			loadConfig({ ...base, STRIPE_API_KEY: "", STRIPE_PRICE_ID: "" }),
+		).toMatchObject({ STRIPE_API_KEY: undefined, STRIPE_PRICE_ID: undefined });
+		expect(loadConfig({ ...base, ...stripe })).toMatchObject(stripe);
+	});
+
+	it("stops the boot when only one of the two is set", () => {
+		expect(rejects({ STRIPE_API_KEY: stripe.STRIPE_API_KEY })).toContain(
+			"set STRIPE_API_KEY and STRIPE_PRICE_ID together",
+		);
+	});
+
+	// A publishable key (pk_) or a product id (prod_) in the wrong box is a common paste mistake.
+	it("stops the boot on a value of the wrong kind", () => {
+		expect(rejects({ ...stripe, STRIPE_API_KEY: "pk_test_abc" })).toContain(
+			"rk_test_",
+		);
+		expect(rejects({ ...stripe, STRIPE_PRICE_ID: "prod_abc" })).toContain(
+			"price_",
+		);
+	});
+});

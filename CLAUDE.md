@@ -65,6 +65,11 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `organizations/<id>/` (`organizationPrefix`; before 12.2, `users/<id>/`). Cleanup jobs (worker, which needs
   `S3_*` too): `delete-organization-files` and `delete-user-files` (old prefix), queued by account deletion and
   delayed past upload URLs; `prune-uploads` (hourly: pending > 1 day).
+- `apps/api/src/features/billing`: Stripe (phase 13). `BillingDriver` (`driver.ts`): Stripe adapter (`STRIPE_API_KEY`
+  + `STRIPE_PRICE_ID`, restricted key; API version pinned in `stripe-driver.ts`) and in-memory (tests:
+  `buildApp(config, { billing })`). Routes under `/api/organizations/:organizationId/billing`: GET (any member),
+  `checkout` and `portal` (admin+) return a Stripe URL. `billing_customers`: one Stripe customer per organization,
+  created with an idempotency key. No Stripe settings: no billing routes. Web: `features/billing` (card on /account).
 - `packages/shared`: the API contract (Zod schemas for every request/response both apps exchange).
 - `packages/db`: Drizzle schema (`src/schema.ts`), client, `runMigrations`; SQL migrations in `migrations/`
   (generated, reviewed, committed; shipped inside the package). The API bundles its code; `apps/api/src/migrate.ts`

@@ -39,6 +39,7 @@
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"react-email": "catalog:",
+		"stripe": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

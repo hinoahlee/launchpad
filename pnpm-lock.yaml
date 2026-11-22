@@ -284,6 +284,9 @@ catalogs:
     shadcn:
       specifier: 4.23.0
       version: 4.23.0
+    stripe:
+      specifier: 23.1.0
+      version: 23.1.0
     tailwindcss:
       specifier: 4.3.4
       version: 4.3.4
@@ -393,6 +396,9 @@ importers:
       react-email:
         specifier: 'catalog:'
         version: 6.11.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(supports-color@8.1.1)
+      stripe:
+        specifier: 'catalog:'
+        version: 23.1.0(@types/node@24.19.2)
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -3786,6 +3792,15 @@ packages:
     resolution: {integrity: sha512-aulFJcD6YK8V1G7iRB5tigAP4TsHBZZrOV8pjV++zdUwmeV8uzbY7yn6h9MswN62adStNZFuCIx4haBnRuMDaw==}
     engines: {node: '>=18'}
 
+  stripe@23.1.0:
+    resolution: {integrity: sha512-fVUfMSfTPoukfoV//MUKAx2+YxyKmYaYtnAL9VkfnHfaPNQylFdWZMD+zgUFerI8rjbaiER8Vzj2XEUQ2AhAsQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@types/node': '>=20'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+
   stubborn-fs@2.0.0:
     resolution: {integrity: sha512-Y0AvSwDw8y+nlSNFXMm2g6L51rBGdAQT20J3YSOqxC53Lo3bjWRtr2BKcfYoAf352WYpsZSTURrA0tqhfgudPA==}
 
@@ -6989,6 +7004,10 @@ snapshots:
   strip-final-newline@2.0.0: {}
 
   strip-final-newline@4.0.0: {}
+
+  stripe@23.1.0(@types/node@24.19.2):
+    optionalDependencies:
+      '@types/node': 24.19.2
 
   stubborn-fs@2.0.0:
     dependencies:
