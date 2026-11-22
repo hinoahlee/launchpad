@@ -14,14 +14,15 @@ test("a new account starts in a personal organization, then creates and switches
 	const row = (name: string) =>
 		card.getByRole("listitem").filter({ hasText: name });
 
-	// Made at sign-up, owned by the new user, and active.
-	await expect(row("Personal")).toContainText("Active");
-	await expect(row("Personal")).toContainText("Owner");
+	// Alone in the personal organization: no list, no roles, just the way to create a team.
+	await expect(card.getByText("Create an organization")).toBeVisible();
+	await expect(card.getByRole("listitem")).toHaveCount(0);
 
-	// Creating one makes it active.
+	// Creating one makes it active, and the list appears: both organizations, owner of the new one.
 	await card.getByLabel("New organization").fill("Acme");
 	await card.getByRole("button", { name: "Create" }).click();
 	await expect(row("Acme")).toContainText("Active");
+	await expect(row("Acme")).toContainText("Owner");
 	await expect(row("Personal")).not.toContainText("Active");
 
 	// Switching back, and it sticks across a reload (it's stored on the session, in the database).

@@ -45,7 +45,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   `organizations`, `members`, `invitations`; roles `owner`/`admin`/`member`). Each new session gets an active
   organization (`sessions.active_organization_id`): the user's oldest, or a "Personal" one made then
   (`personal-organization.ts`). Account deletion deletes organizations the user was alone in. Web:
-  `features/organizations` (card on /account: list, switch, create); schemas in `@launchpad/shared`.
+  `features/organizations` (card on /account: create; the list and switching appear from a second org);
+  schemas in `@launchpad/shared`.
 - `apps/api/src/lib/email`: send email by queuing `send_email` (payload: `messages.ts`), never by calling a driver
   from a request. `EmailDriver` (`driver.ts`) with adapters: memory (tests), log (no provider set),
   Resend (`RESEND_API_KEY` + `EMAIL_FROM`; `create-driver.ts` picks one).

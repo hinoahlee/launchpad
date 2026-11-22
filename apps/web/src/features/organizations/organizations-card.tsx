@@ -28,6 +28,8 @@ const roleLabel: Record<Role, string> = {
 
 // The organizations you belong to. One is active on this device: it's where your work goes (from step 12.3).
 // Switching or creating one changes the active organization for this session only.
+// With only the personal organization, the card shows just the way to create a team: someone who works alone
+// never sees "Personal", roles or switching. The list appears once there's a second organization to switch to.
 export function OrganizationsCard() {
 	const queryClient = useQueryClient();
 	const organizations = useQuery(organizationsQuery);
@@ -57,6 +59,7 @@ export function OrganizationsCard() {
 
 	const activeId = activeMember.data?.organizationId;
 	const busy = switchTo.isPending || create.isPending;
+	const several = (organizations.data?.length ?? 0) > 1;
 
 	return (
 		<Card>
@@ -65,7 +68,9 @@ export function OrganizationsCard() {
 					<h2>Organizations</h2>
 				</CardTitle>
 				<CardDescription>
-					The teams you belong to. Your work goes to the active one.
+					{several
+						? "The teams you belong to. Your work goes to the active one."
+						: "Create an organization to work with others."}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
@@ -77,7 +82,7 @@ export function OrganizationsCard() {
 						We couldn't load your organizations. Refresh to try again.
 					</p>
 				)}
-				{organizations.data && (
+				{organizations.data && several && (
 					<ul className="flex flex-col divide-y">
 						{organizations.data.map((organization) => (
 							<OrganizationRow
@@ -106,7 +111,14 @@ export function OrganizationsCard() {
 						We couldn't switch organizations. Please try again.
 					</p>
 				)}
-				<form onSubmit={onCreate} className="flex flex-col gap-2 border-t pt-4">
+				<form
+					onSubmit={onCreate}
+					className={
+						several
+							? "flex flex-col gap-2 border-t pt-4"
+							: "flex flex-col gap-2"
+					}
+				>
 					<Label htmlFor="new-organization">New organization</Label>
 					<div className="flex gap-2">
 						<Input
