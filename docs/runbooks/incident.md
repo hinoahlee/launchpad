@@ -8,7 +8,7 @@ Something is broken for users. Goal: users OK again as fast as possible. Underst
 Write down when the alert arrived (or when you noticed). You'll need it for the postmortem.
 
 ## 2. How bad is it?
-- Open the site: <https://render.noahlee.xyz>. What does a user see?
+- Open the site: <https://launchpad.noahlee.xyz>. What does a user see?
 - Sentry → **Monitors → Uptime**: is `/api/ready` red? If yes, the whole site is down.
 - Green uptime doesn't mean all is fine: it only checks one URL.
 

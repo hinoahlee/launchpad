@@ -5,7 +5,7 @@ URLs; browsers upload and download straight to and from the bucket (phase 11).
 
 | Bucket | Used by | CORS origin |
 |---|---|---|
-| `launchpad-prod` | Render (`launchpad` service) | `https://render.noahlee.xyz` |
+| `launchpad-prod` | Render (`launchpad` service) | `https://launchpad.noahlee.xyz` |
 | `launchpad-dev` | your `apps/api/.env` | `http://localhost:5173` |
 
 Tests and E2E need no bucket (in-memory driver; E2E intercepts bucket requests).
@@ -21,7 +21,7 @@ Deletes are free. Check https://developers.cloudflare.com/r2/pricing/ before rel
 3. The bucket → **Settings** → **CORS Policy** → **Add CORS policy** → **JSON** tab, paste its policy, **Save**.
    `launchpad-prod`:
    ```json
-   [{ "AllowedOrigins": ["https://render.noahlee.xyz"], "AllowedMethods": ["PUT", "GET"],
+   [{ "AllowedOrigins": ["https://launchpad.noahlee.xyz"], "AllowedMethods": ["PUT", "GET"],
       "AllowedHeaders": ["Content-Type"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3600 }]
    ```
    `launchpad-dev` (the page you open in dev is Vite's, so that's the origin the browser sends):

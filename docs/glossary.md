@@ -135,7 +135,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Zero-downtime deploy** — start the new version next to the old one, switch traffic only once it passes
   its health check, then stop the old one. (3.2)
 - **DNS record** — one entry in a zone. An **A** record maps a name to an IPv4 address; a **CNAME** says a name
-  is an alias for another name (`render.noahlee.xyz` → `launchpad-mn7r.onrender.com`). (3.3)
+  is an alias for another name (`launchpad.noahlee.xyz` → `launchpad-mn7r.onrender.com`). (3.3)
 - **TTL (time to live)** — how many seconds resolvers may cache a DNS answer before asking again; it bounds
   how long a change takes to reach everyone. (3.3)
 - **TLS certificate** — a file binding a domain name to a public key, signed by a CA; the browser checks it
@@ -435,7 +435,7 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
 - **Object key** — an object's full name inside its bucket, e.g. `organizations/<id>/<uuid>`. Slashes look like
   folders but are just characters; a prefix (`organizations/<id>/`) groups objects. (11.1)
 - **CORS (Cross-Origin Resource Sharing)** — rules a server sends so a browser lets a page on one origin call
-  another origin. Our page (render.noahlee.xyz) uploads straight to the bucket's origin, so the bucket must allow
+  another origin. Our page (launchpad.noahlee.xyz) uploads straight to the bucket's origin, so the bucket must allow
   it. (11.1)
 - **S3-compatible API** — the HTTP API Amazon S3 defined, which other stores (R2, MinIO) also speak. One SDK and
   one driver then work with all of them; only the endpoint changes. (11.1)

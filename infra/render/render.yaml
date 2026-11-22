@@ -26,10 +26,10 @@ services:
     # Render sends traffic to a new deploy only once this returns 2xx; until then the old one keeps serving.
     healthCheckPath: /api/ready
     # Tells Render which service answers for this name, and to issue its TLS certificate. DNS side: a CNAME in
-    # Cloudflare, `render` -> this service's onrender.com host, DNS only (grey cloud). Keep in sync with the
+    # Cloudflare, `launchpad` -> this service's onrender.com host, DNS only (grey cloud). Keep in sync with the
     # GitHub repository variable RENDER_URL, which the deploy job polls.
     domains:
-      - render.noahlee.xyz
+      - launchpad.noahlee.xyz
     # NODE_ENV comes from the image; Render sets PORT. Only non-defaults go here.
     envVars:
       - key: LOG_LEVEL
@@ -49,20 +49,20 @@ services:
       # never in this file. Unset: error tracking is off. (The web app's DSN is a GitHub variable, baked in by CI.)
       - key: SENTRY_DSN
         sync: false
-      # Resend → Webhooks → the endpoint for https://render.noahlee.xyz/api/webhooks/resend → Signing secret.
+      # Resend → Webhooks → the endpoint for https://launchpad.noahlee.xyz/api/webhooks/resend → Signing secret.
       # Unset: no webhook route, so bounces and complaints aren't recorded.
       - key: RESEND_WEBHOOK_SECRET
         sync: false
       # Auth: the public origin (sign-in links and the CSRF check use it). Keep in sync with `domains` above.
       - key: APP_URL
-        value: https://render.noahlee.xyz
+        value: https://launchpad.noahlee.xyz
       # Signs session cookies. Render makes a random 256-bit value once, when the Blueprint first adds the key; it
       # never appears in this repo or in GitHub. Regenerating it (dashboard) signs everyone out.
       - key: BETTER_AUTH_SECRET
         generateValue: true
       # Google sign-in: Google Cloud → Google Auth Platform → Clients → launchpad-web. Set both, or neither (Google
       # sign-in off); one alone stops the boot. The client's redirect URIs must include
-      # https://render.noahlee.xyz/api/auth/callback/google.
+      # https://launchpad.noahlee.xyz/api/auth/callback/google.
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
