@@ -21,7 +21,8 @@ export default defineConfig({
 	forbidOnly: CI,
 	// A test that passes on retry is "flaky": fix it, don't ignore it.
 	retries: CI ? 2 : 0,
-	globalTimeout: 10 * 60 * 1000, // template: 1 hour; this suite takes about a minute
+	// The suite takes about a minute: a run past 10 is stuck, not slow.
+	globalTimeout: 10 * 60 * 1000,
 	reporter: CI ? [["list", { printOnlyFailures: true }], ["html"]] : "html",
 	use: {
 		baseURL: BASE_URL,
