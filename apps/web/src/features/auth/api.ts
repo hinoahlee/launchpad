@@ -8,7 +8,7 @@ import {
 	signOutResponseSchema,
 	socialSignInResponseSchema,
 } from "@launchpad/shared";
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { api } from "#lib/api/client.ts";
 
 export const sessionQuery = queryOptions({
@@ -16,6 +16,14 @@ export const sessionQuery = queryOptions({
 	queryFn: ({ signal }) =>
 		api("/auth/get-session", sessionResponseSchema, { signal }),
 });
+
+// On every sign-in and sign-out: drops everything cached except the session (re-read separately), so the next
+// person on this tab never sees the last one's data: queries keyed without a user id would still be fresh.
+export function forgetCachedUserData(queryClient: QueryClient): void {
+	queryClient.removeQueries({
+		predicate: (query) => query.queryKey[0] !== sessionQuery.queryKey[0],
+	});
+}
 
 // Better Auth answers with Google's sign-in page; Google returns to /api/auth/callback/google, which sets the
 // cookie and redirects to `callbackURL` (or `errorCallbackURL?error=<code>`).

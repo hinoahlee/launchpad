@@ -50,6 +50,42 @@ test("signing out another device from /account", async ({ page, browser }) => {
 	}
 });
 
+// A shared computer: the next person on the same tab must never see the last one's devices.
+test("after signing out from the menu, the next user sees only their own devices", async ({
+	page,
+	browser,
+}) => {
+	const first = newEmail();
+	await page.goto("/sign-in?redirect=/account");
+	await signInWithCode(page, first);
+	await expect(page).toHaveURL("/account");
+	// Their second device, so their device list differs from the next user's.
+	const phone = await browser.newContext({
+		extraHTTPHeaders: { "x-forwarded-for": clientIp() },
+		userAgent:
+			"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/130.0",
+	});
+	try {
+		const phonePage = await phone.newPage();
+		await phonePage.goto("/sign-in");
+		await signInWithCode(phonePage, first);
+		await expect(phonePage).toHaveURL("/");
+	} finally {
+		await phone.close();
+	}
+	await page.reload();
+	await expect(page.getByText("Firefox on Android")).toBeVisible();
+
+	await page.getByRole("button", { name: "Account", exact: true }).click();
+	await page.getByRole("menuitem", { name: "Sign out" }).click();
+	await expect(page).toHaveURL("/sign-in?redirect=%2Faccount");
+	await signInWithCode(page, newEmail());
+
+	await expect(page).toHaveURL("/account");
+	await expect(page.getByText("This device")).toBeVisible();
+	await expect(page.getByText("Firefox on Android")).toBeHidden();
+});
+
 test("Sign out on /account signs this device out", async ({ page }) => {
 	await page.goto("/sign-in?redirect=/account");
 	await signInWithCode(page, newEmail());
