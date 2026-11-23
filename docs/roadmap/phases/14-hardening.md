@@ -16,7 +16,14 @@ Scaling, load tests, edge protection and SEO moved to [phase 21](21-later.md): n
   ranked by severity, with no code changes. 🧑 Pick which to fix.
 - **Terms:** threat model, attack surface, OWASP Top 10.
 
-### 14.3+ Fixes
-- **Build:** one PR per group of findings picked in 14.2. Known already: an `Origin` check on our own
-  state-changing routes (`SameSite=Lax` trusts every `*.noahlee.xyz` subdomain, 11.3); the crash in
-  `@fastify/rate-limit`'s key generator when a client aborts early (13.2); a test for the quota's row lock (11.2).
+### 14.3 Request hardening (M3, L1)
+- **Build:** the rate limiter survives aborted requests; an `Origin` check on our own state-changing routes.
+- **Terms:** CSRF (again), defence in depth.
+
+### 14.4 Sign-in code limit per address (M1)
+- **Build:** at most a few sign-in codes per email address per hour, on top of Better Auth's per-IP limit.
+- **Terms:** email bombing.
+
+### 14.5 File cleanup + quota test (L2, L4)
+- **Build:** a deleted file's key is deleted again after its upload URL expires; a test that holds the quota lock
+  from a second connection.
