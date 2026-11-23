@@ -24,7 +24,7 @@ touches environment variables, deployment or third-party accounts.
     `catalog:` (packages use `"catalog:"`); pick releases at least two weeks old.
 
 Checks enforce the rest; their failure messages say how to fix (if a check is wrong, change it in its own PR): Biome,
-`scripts/check-*.ts` (file sizes, import boundaries, weakened tests, edited migrations), `tsc`, `db:check`, e2e.
+`scripts/check-*.ts` (file sizes, import boundaries, edited applied migrations), `tsc`, `db:check`, e2e.
 Workflow: `/feature` plans a spec, `/deliver <slug>` runs it to a PR ([docs/agentic-workflow.md](docs/agentic-workflow.md)).
 
 ## Commands

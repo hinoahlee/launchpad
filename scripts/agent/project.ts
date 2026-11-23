@@ -16,6 +16,13 @@ export const E2E_PATHS = [
 	/^packages\/shared\/src\/schemas\/(auth|files)/,
 ];
 
+// Test-only folders besides *.test.* / *.spec.* files: the test writer's side of the boundary.
+export const TEST_PATHS = [
+	/^e2e\//,
+	/^apps\/[^/]+\/src\/testing\//,
+	/^packages\/[^/]+\/src\/testing\//,
+];
+
 // Applied migrations must never change. Empty: no migration check.
 export const MIGRATIONS_DIR = "packages/db/migrations/";
 // A file in MIGRATIONS_DIR that may grow by appending entries (drizzle-kit's journal).
