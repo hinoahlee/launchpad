@@ -4,9 +4,9 @@
 Scaling, load tests, edge protection and SEO moved to [phase 21](21-later.md): no traffic yet to justify them.
 
 ### 14.1 Scanning + supply chain
-- **Build:** CodeQL on every PR, Trivy on the image (and the Dockerfile) in CI, `pnpm audit` in CI. Dependabot replaces
-  Renovate (decision 012). 🧑 Turn on secret scanning, push protection and Dependabot security updates; uninstall
-  the Renovate app.
+- **Build:** CodeQL on every PR (GitHub default setup), Trivy on the image (and the Dockerfile) in CI, `pnpm audit` in CI, a 7-day
+  `minimumReleaseAge` in pnpm, CodeQL required to merge. Renovate removed (decision 012). 🧑 Turn on CodeQL default
+  setup, secret scanning, push protection, Dependabot security updates; uninstall the Renovate app.
 - **Terms:** SAST, image scanning, secret scanning, push protection.
 - **Done when:** a PR runs all three scanners green, and each fails on a planted problem.
 

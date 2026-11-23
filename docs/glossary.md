@@ -510,3 +510,5 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   alerting. **Push protection** goes further: it refuses the push before the secret is public. (14.1)
 - **Attack surface** — everything an attacker could reach or abuse. Removing what nothing uses (npm in the
   runtime image) shrinks it for free. (14.1)
+- **Minimum release age** — a waiting period before a new package version may be installed (ours: 7 days, in
+  `pnpm-workspace.yaml`). Most hijacked releases are found and removed within hours, before anyone waited it out. (14.1)
