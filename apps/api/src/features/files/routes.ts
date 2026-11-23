@@ -19,7 +19,12 @@ import {
 } from "#features/auth/require-membership.ts";
 import { requireSession, sessionOf } from "#features/auth/require-session.ts";
 import { entitlementsOf } from "#lib/entitlements.ts";
-import { type StorageDriver, storageKey } from "#lib/storage/driver.ts";
+import { enqueue } from "#lib/jobs/enqueue.ts";
+import {
+	AFTER_UPLOAD_URLS_EXPIRE_MS,
+	type StorageDriver,
+	storageKey,
+} from "#lib/storage/driver.ts";
 
 function toFileItem(row: FileRow, uploadedAt: Date): FileItem {
 	return {
@@ -255,15 +260,28 @@ export const fileRoutes =
 			},
 			async (request, reply) => {
 				const { organizationId } = membershipOf(request);
-				const [removed] = await app.db
-					.delete(files)
-					.where(
-						and(
-							eq(files.id, request.params.id),
-							eq(files.organizationId, organizationId),
-						),
-					)
-					.returning({ key: files.storageKey });
+				const removed = await app.db.transaction(async (tx) => {
+					const [row] = await tx
+						.delete(files)
+						.where(
+							and(
+								eq(files.id, request.params.id),
+								eq(files.organizationId, organizationId),
+							),
+						)
+						.returning({ key: files.storageKey });
+					// A second delete once its upload URL has expired (security review L2): a PUT through it would bring
+					// the object back with no row. Queued with the row's delete: both happen, or neither.
+					if (row) {
+						await enqueue(
+							tx,
+							"delete-file-object",
+							{ key: row.key },
+							{ runAfter: new Date(Date.now() + AFTER_UPLOAD_URLS_EXPIRE_MS) },
+						);
+					}
+					return row;
+				});
 				if (!removed) {
 					reply.code(404);
 					return { error: "not_found" };

@@ -11,15 +11,15 @@ import {
 import type { FastifyBaseLogger } from "fastify";
 import type { Config } from "#config.ts";
 import { enqueue } from "#lib/jobs/enqueue.ts";
-import { UPLOAD_URL_TTL_MS } from "#lib/storage/driver.ts";
+import { AFTER_UPLOAD_URLS_EXPIRE_MS } from "#lib/storage/driver.ts";
 import {
 	deleteUserOrganization,
 	initialOrganizationId,
 } from "./personal-organization.ts";
 import { signInCodeLimit } from "./sign-in-code-limit.ts";
 
-// An upload URL's lifetime plus a margin, so the sweep runs after the last possible PUT.
-const DELETE_FILES_DELAY_MS = UPLOAD_URL_TTL_MS + 5 * 60 * 1000;
+// So the sweep runs after the last possible PUT.
+const DELETE_FILES_DELAY_MS = AFTER_UPLOAD_URLS_EXPIRE_MS;
 
 // The header our Fastify route fills with the client's IP (`request.ip`, which honours TRUST_PROXY_HOPS) before
 // handing the request to Better Auth. Its rate limits key on it. Left to read X-Forwarded-For itself, Better Auth

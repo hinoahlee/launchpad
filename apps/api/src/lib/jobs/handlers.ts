@@ -84,6 +84,12 @@ export const handlers: JobHandlers = {
 		const deleted = await storage.deletePrefix(userPrefix(userId));
 		log.info({ userId, deleted }, "deleted a deleted account's files");
 	},
+	// Idempotent: deleting an object that's already gone is not an error.
+	"delete-file-object": async ({ key }, { storage, log }) => {
+		if (!storage) throw new Error(missingStorage);
+		await storage.delete(key);
+		log.info({ key }, "deleted a deleted file's object again");
+	},
 	// Objects first, then rows: if it stops halfway, the rows are still there and the next run finishes. Deleting
 	// an object that's already gone is not an error.
 	"prune-uploads": async ({ olderThanHours }, { db, storage, log }) => {

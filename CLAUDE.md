@@ -68,7 +68,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   Files belong to an organization (12.2): routes under `/api/organizations/:organizationId/files`, objects under
   `organizations/<id>/` (`organizationPrefix`; before 12.2, `users/<id>/`). Cleanup jobs (worker, which needs
   `S3_*` too): `delete-organization-files` and `delete-user-files` (old prefix), queued by account deletion and
-  delayed past upload URLs; `prune-uploads` (hourly: pending > 1 day).
+  delayed past upload URLs; `delete-file-object` (one deleted file's key, again once its upload URL expired);
+  `prune-uploads` (hourly: pending > 1 day).
 - `apps/api/src/features/billing`: Stripe (phase 13). `BillingDriver` (`driver.ts`): Stripe adapter (`STRIPE_API_KEY`
   + `STRIPE_PRICE_ID`, restricted key; API version pinned in `stripe-driver.ts`) and in-memory (tests:
   `buildApp(config, { billing })`). Routes under `/api/organizations/:organizationId/billing`: GET (any member),

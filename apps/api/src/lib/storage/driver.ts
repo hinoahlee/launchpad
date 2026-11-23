@@ -3,6 +3,9 @@
 
 // Long enough to upload 25 MB on a slow connection; short enough that a leaked URL soon stops working.
 export const UPLOAD_URL_TTL_MS = 15 * 60 * 1000;
+// Cleanup that must run after every upload URL already handed out has expired (a PUT through one would bring an
+// object back): the TTL plus a margin for clock drift and a slow last PUT.
+export const AFTER_UPLOAD_URLS_EXPIRE_MS = UPLOAD_URL_TTL_MS + 5 * 60 * 1000;
 // A download URL is used right away (the browser follows it), so it can be short.
 export const DOWNLOAD_URL_TTL_MS = 5 * 60 * 1000;
 
