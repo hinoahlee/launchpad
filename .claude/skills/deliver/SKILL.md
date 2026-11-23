@@ -15,7 +15,9 @@ Slug: `$ARGUMENTS`. Spec: `.workflow/specs/$ARGUMENTS.md` (missing: stop and say
   when the change can affect a browser) and prints only the failing tail. The Stop hook runs the same gate and blocks
   you from finishing until it passes; don't try to get around it, and never skip, weaken or delete a test or check.
 - Keep context small: read only the files you need; for long command output use the tail.
-- Use the Bash tool for commands (the permission allowlist is written for it).
+- Use the Bash tool for commands (the permission allowlist is written for it), one plain command per call: no
+  `node -e`, heredocs or scripts in other languages (they aren't allowed, and a permission prompt stalls the run).
+  `run.ts` output is already short: don't pipe or redirect it. Edit files, `.workflow/pr.md` included, with Edit.
 - Use cheaper means for mechanical steps: run commands yourself rather than spawning helpers.
 
 ## 0. Start or resume

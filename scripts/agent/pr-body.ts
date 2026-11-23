@@ -97,7 +97,7 @@ TODO(agent): the problem from the spec, in the user's words.
 
 ## Try it
 
-Spec and acceptance criteria are below; each names the test that proves it. \`pnpm verify\`${state.gate.lastE2e ? " and `pnpm e2e`" : ""} reproduce the checks.
+Spec and acceptance criteria are below; each names the test that proves it. To reproduce the checks: \`pnpm verify\`${state.gate.lastE2e ? " and `pnpm e2e`" : ""}.
 
 ## Tests changed or removed (and why)
 
