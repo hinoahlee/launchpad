@@ -6,24 +6,22 @@ import {
 } from "@tanstack/react-router";
 import { PageLayout } from "#components/layout/page-layout.tsx";
 import { buttonVariants } from "#components/ui/button.tsx";
-import { pageTitle } from "#lib/site.ts";
+import { UserMenu } from "#features/auth/components/user-menu.tsx";
+import { pageTitle } from "#lib/site/utils.ts";
 
-// What every route can reach through `context` (e.g. a `loader` prefetching with the query client).
 export type RouterContext = { queryClient: QueryClient };
 
-// The root route wraps every page: the layout, with the matched child route rendered at <Outlet />.
 export const Route = createRootRouteWithContext<RouterContext>()({
 	component: () => (
-		<PageLayout>
+		<PageLayout headerActions={<UserMenu />}>
 			<Outlet />
 		</PageLayout>
 	),
-	// Any URL no route matches. The server already answers unknown page URLs with index.html (app.ts), so the
-	// router decides here. The status is 200, as for every SPA route, so "noindex" keeps it out of search.
+	// The server answers unknown page URLs with index.html (status 200), hence "noindex".
 	notFoundComponent: NotFound,
 });
 
-// Each page renders its own <title> (and <meta>); React 19 moves them into <head>.
+// Pages render their own <title>; React 19 hoists it into <head>.
 function NotFound() {
 	return (
 		<div className="flex flex-col items-start gap-4 pt-4 sm:pt-10">
@@ -36,7 +34,6 @@ function NotFound() {
 			<p className="text-muted-foreground">
 				The page you're looking for doesn't exist or has moved.
 			</p>
-			{/* A link styled as a button (see routes/index.tsx). */}
 			<Link
 				to="/"
 				data-slot="button"

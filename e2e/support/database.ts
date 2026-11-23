@@ -1,14 +1,10 @@
 import { createDb } from "@launchpad/db";
 
-// The e2e server's database: its own, on the Postgres from `pnpm db:up` (CI runs the same server). Not
-// `launchpad` (your dev data) and not `launchpad_test` (Vitest wipes it at the start of `pnpm test`, which may run
-// at the same time).
+// Its own database: not your dev data, and not launchpad_test (which `pnpm test` wipes, maybe concurrently).
 export const E2E_DATABASE_URL =
 	"postgres://launchpad:launchpad@localhost:5433/launchpad_e2e";
 
-// The sign-in code emailed to `email`, read from the `send_email` job the API queued. No worker runs during e2e,
-// so the job waits in the table (the outbox) and nothing is sent. Polls: the job is queued inside the request
-// that the page's click started.
+// Read from the queued send_email job (no worker runs in e2e). Polls: the click queues it asynchronously.
 export async function sentSignInCode(email: string): Promise<string> {
 	const db = createDb(E2E_DATABASE_URL);
 	try {

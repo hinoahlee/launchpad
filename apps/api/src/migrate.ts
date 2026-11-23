@@ -1,25 +1,22 @@
 import { runMigrations } from "@launchpad/db";
-import { directDatabaseUrl, loadConfig } from "./config.ts";
-import { createLogger } from "./lib/logger.ts";
+import { loadConfig } from "#config/load.ts";
+import { directDatabaseUrl } from "#config/utils.ts";
+import { createLogger } from "#lib/logger.ts";
 
-// Migration process. Deploys run `node dist/migrate.js` (the platform's pre-deploy step) once, before the
-// new release starts; `pnpm db:migrate` runs this same file from source against your local database.
-// Exit 0 lets the deploy continue; non-zero stops it and the old release keeps serving.
+// Run once before a new release starts. Non-zero exit stops the deploy; the old release keeps serving.
 const config = loadConfig();
 const log = createLogger(config.LOG_LEVEL);
 
 try {
 	log.info("applying migrations");
 	const { applied, total } = await runMigrations(directDatabaseUrl(config));
-	// The deploy log's proof of what this release changed: "applied 1" before the new code starts.
 	log.info(
 		applied > 0
 			? `migrations applied: ${applied} new (${total} total)`
 			: `database up to date: no new migrations (${total} total)`,
 	);
 } catch (error) {
-	// Messages only, not the error objects (which can carry connection details). Drizzle wraps the
-	// driver's error ("Failed query: ...") and keeps the real reason in `cause`.
+	// Messages only: error objects can carry connection details. Drizzle keeps the real reason in `cause`.
 	const reasons: string[] = [];
 	for (let e: unknown = error; e instanceof Error; e = e.cause) {
 		reasons.push(e.message);

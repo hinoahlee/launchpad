@@ -160,7 +160,7 @@ jobs:
           docker run --rm -v "$PWD:/src:ro" "$TRIVY" config --severity HIGH,CRITICAL --exit-code 1 /src
 
   # On main only, once both checks pass: push the image to GitHub's registry (GHCR) as `:<commit sha>` and `:main`.
-  # Every deploy uses the digest printed here (decision 004). The build reuses `image`'s cached layers.
+  # Every deploy uses the digest printed here. The build reuses `image`'s cached layers.
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [verify, e2e, image]
@@ -230,7 +230,7 @@ jobs:
             echo "Digest: \`${IMAGE}@${DIGEST}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Deploy the image just published (decision 004). Skipped unless the repo variable RENDER_URL is set.
+  # Deploy the image just published. Skipped unless the repo variable RENDER_URL is set.
   deploy:
     needs: publish
     if: vars.RENDER_URL != ''

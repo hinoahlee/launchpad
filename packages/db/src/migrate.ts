@@ -4,11 +4,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
-// The SQL files ship inside this package (`files` in package.json). Node finds the package wherever it's
-// installed: packages/db in dev and tests (workspace link), node_modules/@launchpad/db in the image
-// (`pnpm deploy`). Asked at call time, not from this file's location: the API bundles this code into its
-// own dist/, so a path relative to this file would point there instead.
-// require.resolve, not import.meta.resolve: same lookup, but Vitest's module runner doesn't support the latter.
+// Resolved at call time, not from this file: the API bundles this code into its own dist/. require.resolve,
+// because Vitest doesn't support import.meta.resolve.
 function migrationsFolder(): string {
 	const require = createRequire(import.meta.url);
 	return path.join(
@@ -17,8 +14,7 @@ function migrationsFolder(): string {
 	);
 }
 
-// Migrations recorded as applied. 0 on a fresh database, where Drizzle hasn't created its table yet. Two
-// queries: Postgres resolves every table a query names before running it, so one query can't skip a missing one.
+// Two queries: Postgres resolves every table a query names, so one query can't skip a missing one.
 async function appliedCount(client: postgres.Sql): Promise<number> {
 	const [table] = await client<{ exists: boolean }[]>`
 		select to_regclass('drizzle.__drizzle_migrations') is not null as exists`;
@@ -28,19 +24,15 @@ async function appliedCount(client: postgres.Sql): Promise<number> {
 	return row?.n ?? 0;
 }
 
-export type MigrationResult = {
-	// Migrations this run applied (0: the database was already up to date).
+type MigrationResult = {
 	applied: number;
-	// Migrations recorded in the database after this run.
 	total: number;
 };
 
-// Applies every migration not yet recorded in drizzle.__drizzle_migrations, in order, in one transaction:
-// either all of them apply or none do. Safe to run again: applied ones are skipped.
+// All pending migrations in one transaction: all apply or none do.
 export async function runMigrations(
 	databaseUrl: string,
 ): Promise<MigrationResult> {
-	// One connection is enough. onnotice: silence Postgres NOTICEs ("schema already exists, skipping").
 	const client = postgres(databaseUrl, { max: 1, onnotice: () => {} });
 	try {
 		const before = await appliedCount(client);

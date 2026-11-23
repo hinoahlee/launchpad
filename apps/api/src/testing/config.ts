@@ -1,10 +1,8 @@
-import type { Config } from "#config.ts";
+import type { Config } from "#config/schema.ts";
 
-// Port 1 on this machine: nothing listens there, so every connection is refused at once. For tests that
-// don't need the database; the ones that do pass `testDatabaseUrl()`.
+// Nothing listens on port 1: connections are refused at once. Tests that need a database pass testDatabaseUrl().
 export const UNREACHABLE_DB = "postgres://test:test@127.0.0.1:1/test";
 
-// A full, valid config for buildApp in tests. Override only what the test is about.
 export function testConfig(overrides: Partial<Config> = {}): Config {
 	return {
 		NODE_ENV: "test",

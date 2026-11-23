@@ -1,16 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ModeToggle } from "#components/layout/mode-toggle.tsx";
-import { UserMenu } from "#features/auth/user-menu.tsx";
-import { site } from "#lib/site.ts";
+import { ModeToggle } from "#components/theme/mode-toggle.tsx";
+import { site } from "#lib/site/constants.ts";
 
-// Footer links: 44px tall on touch screens (`pointer-coarse:`), so a thumb can't miss them.
+// 44px tall on touch screens.
 const footerLink =
 	"inline-flex items-center rounded-md underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-11";
 
-// The frame around every page: header, content, footer. Phone first: full width with a 1rem gutter, wider
-// and centered from the `sm` breakpoint up. `env(safe-area-inset-*)` keeps content clear of a phone's notch.
-export function PageLayout({ children }: { children: ReactNode }) {
+// `headerActions` render before the theme toggle. Components never import features: the route passes them.
+export function PageLayout({
+	headerActions,
+	children,
+}: {
+	headerActions?: ReactNode;
+	children: ReactNode;
+}) {
 	return (
 		<div className="flex min-h-svh flex-col">
 			<header className="sticky top-0 z-40 border-b bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -22,7 +26,7 @@ export function PageLayout({ children }: { children: ReactNode }) {
 						{site.name}
 					</Link>
 					<div className="flex items-center gap-2">
-						<UserMenu />
+						{headerActions}
 						<ModeToggle />
 					</div>
 				</div>

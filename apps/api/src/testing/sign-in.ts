@@ -2,8 +2,7 @@ import { jobs } from "@launchpad/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 
-// Runs the real email-code flow (step 10.3) for `email` with these request headers and returns the sign-in
-// response. The code is read from the queued send_email job.
+// The real email-code flow; the code is read from the queued send_email job.
 export async function signInResponse(
 	app: FastifyInstance,
 	email: string,
@@ -38,8 +37,7 @@ export async function signInResponse(
 	});
 }
 
-// Signs `email` in as a browser would and returns the Cookie header that carries the session. `origin` must be
-// the app's APP_URL (Better Auth's CSRF check).
+// As a browser: returns the Cookie header. `origin` must be the app's APP_URL.
 export async function signInWithCode(
 	app: FastifyInstance,
 	{
@@ -59,8 +57,7 @@ export async function signInWithCode(
 	return `${cookie.name}=${cookie.value}`;
 }
 
-// Signs `email` in as a client without cookies would (a mobile app, curl: no Origin, no Sec-Fetch-* headers) and
-// returns the bearer token from the `set-auth-token` header (step 10.5).
+// As a non-browser client (no Origin, no Sec-Fetch-*): returns the bearer token.
 export async function signInForToken(
 	app: FastifyInstance,
 	{ email }: { email: string },

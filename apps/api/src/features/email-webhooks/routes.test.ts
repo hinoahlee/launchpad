@@ -18,7 +18,7 @@ afterAll(async () => {
 	await db.$client.end();
 });
 
-// Signs like Resend (the algorithm itself is pinned against Svix's example in webhook-signature.test.ts).
+// Signs like Resend (the algorithm itself is pinned against Svix's example in verify-signature.test.ts).
 function post(event: unknown, { sign = secret } = {}) {
 	const body = JSON.stringify(event);
 	const id = "msg_test";

@@ -3,10 +3,10 @@ import {
 	ContactLink,
 	LegalPage,
 	LegalSection,
-} from "#features/legal/legal-page.tsx";
-import { site } from "#lib/site.ts";
+} from "#features/legal/components/legal-page.tsx";
+import { site } from "#lib/site/constants.ts";
 
-// Starting terms for a free app with accounts. Billing (phase 13) adds payment terms. Not legal advice.
+// Starting terms. Not legal advice.
 export const Route = createFileRoute("/terms")({
 	component: Terms,
 });

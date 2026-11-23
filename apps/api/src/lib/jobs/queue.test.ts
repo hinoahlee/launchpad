@@ -2,17 +2,17 @@ import { jobs } from "@launchpad/db";
 import { createTestDb } from "@launchpad/db/testing";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
+import { MAX_ATTEMPTS } from "./constants.ts";
 import { enqueue } from "./enqueue.ts";
 import {
 	backoffMs,
-	type ClaimedJob,
 	claimJob,
 	completeJob,
 	failJob,
-	MAX_ATTEMPTS,
 	pruneDoneJobs,
 	releaseJob,
 } from "./queue.ts";
+import type { ClaimedJob } from "./types.ts";
 
 const db = createTestDb();
 afterAll(() => db.$client.end());

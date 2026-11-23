@@ -7,14 +7,14 @@ import {
 } from "@launchpad/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { ApiError, api } from "#lib/api.ts";
+import { api } from "#lib/api/client.ts";
+import { ApiError } from "#lib/api/errors.ts";
+import { UploadError } from "./errors.ts";
 
-// Files belong to an organization (12.2): every path starts with it.
 const filesPath = (organizationId: string) =>
 	`/organizations/${organizationId}/files` as const;
 
-// The organization's uploaded files, or null when uploads are off: a server without a bucket has no file routes,
-// so the API answers 404.
+// null when uploads are off (no bucket: the file routes 404).
 export const filesQuery = (organizationId: string) =>
 	queryOptions({
 		queryKey: ["account", "files", organizationId],
@@ -30,21 +30,8 @@ export const filesQuery = (organizationId: string) =>
 		},
 	});
 
-// Why an upload didn't happen, for the page to show. API refusals arrive as ApiError instead.
-export class UploadError extends Error {
-	readonly reason: "too_large" | "bucket_refused";
-
-	constructor(reason: "too_large" | "bucket_refused") {
-		super(`upload failed: ${reason}`);
-		this.reason = reason;
-		this.name = "UploadError";
-	}
-}
-
-// The whole upload, in three requests: register with the API, PUT the bytes straight to the bucket, then ask
-// the API to check the bucket and mark the file uploaded.
+// Register with the API, PUT the bytes straight to the bucket, then have the API check the bucket.
 export async function uploadFile(organizationId: string, file: File) {
-	// The API refuses it too; checking here saves the round trip and gives a clearer message.
 	if (file.size > MAX_FILE_BYTES) throw new UploadError("too_large");
 
 	const target = await api(
@@ -61,8 +48,7 @@ export async function uploadFile(organizationId: string, file: File) {
 		},
 	);
 
-	// Not through `api()`: this goes to the bucket, not /api. The body is the File itself, which the browser
-	// streams from disk; it sets Content-Length from the file. A signed URL needs no cookie, so none is sent.
+	// To the bucket, not /api: no `api()`, and no cookie (the URL is signed).
 	const put = await fetch(target.uploadUrl, {
 		method: "PUT",
 		headers: target.uploadHeaders,
@@ -76,7 +62,6 @@ export async function uploadFile(organizationId: string, file: File) {
 	});
 }
 
-// A short-lived URL; the caller navigates to it and the bucket answers with the file as an attachment.
 export const downloadUrl = (organizationId: string, id: string) =>
 	api(`${filesPath(organizationId)}/${id}/download`, downloadResponseSchema);
 

@@ -11,7 +11,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
 import { testConfig } from "#testing/config.ts";
 import { signInWithCode } from "#testing/sign-in.ts";
-import { createMemoryBillingDriver } from "./memory-driver.ts";
+import { createMemoryBillingDriver } from "./driver/memory/driver.ts";
 
 const APP_URL = "https://app.example.test";
 const billing = createMemoryBillingDriver();
@@ -30,7 +30,7 @@ beforeEach(() => {
 const signIn = (email: string) =>
 	signInWithCode(app, { email, origin: APP_URL });
 
-// The signed-in user's organization, as the web app reads it (decision 010: exactly one).
+// The signed-in user's organization, as the web app reads it.
 const orgOf = async (cookie: string) => {
 	const session = sessionResponseSchema.parse(
 		(
@@ -201,7 +201,7 @@ describe("billing", () => {
 		);
 	});
 
-	// Tenant isolation (decision 011): another organization's billing doesn't exist for you.
+	// Tenant isolation: another organization's billing doesn't exist for you.
 	it("404 on another organization, and nothing is made there", async () => {
 		const ada = await signIn("ada@example.com");
 		const bob = await signIn("bob@example.com");
@@ -214,7 +214,7 @@ describe("billing", () => {
 		expect(billing.customers.size).toBe(0);
 	});
 
-	// Everyone owns their organization today (decision 010); a team's `member` sees the plan but can't spend.
+	// Everyone owns their organization today; a team's `member` sees the plan but can't spend.
 	it("a member sees the plan, but checkout and portal are 403", async () => {
 		const ada = await signIn("ada@example.com");
 		const org = await orgOf(ada);

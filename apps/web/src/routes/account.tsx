@@ -9,18 +9,16 @@ import { LogOut } from "lucide-react";
 import { useCallback, useState } from "react";
 import { z } from "zod";
 import { Button } from "#components/ui/button.tsx";
-import { DeleteAccountCard } from "#features/account/delete-account-card.tsx";
-import { SessionsCard } from "#features/account/sessions-card.tsx";
+import { DeleteAccountCard } from "#features/account/components/delete-account-card.tsx";
+import { SessionsCard } from "#features/account/components/sessions-card.tsx";
 import { sessionQuery, signOut } from "#features/auth/api.ts";
-import { BillingCard } from "#features/billing/billing-card.tsx";
-import { FilesCard } from "#features/files/files-card.tsx";
-import { pageTitle } from "#lib/site.ts";
+import { BillingCard } from "#features/billing/components/billing-card.tsx";
+import { FilesCard } from "#features/files/components/files-card.tsx";
+import { pageTitle } from "#lib/site/utils.ts";
 
-// /account: signed-in users only. The guard runs before the page loads: no session, off to /sign-in, which
-// sends you back here once you're in. It's for the person, not for security: the API checks the session on
-// every request (requireSession), whatever the browser shows.
+// The guard is for the person, not security: the API checks the session on every request.
 export const Route = createFileRoute("/account")({
-	// Set by Stripe's redirect back here: after Checkout (success) or the Customer Portal (updated).
+	// Set by Stripe redirecting back here.
 	validateSearch: z.object({
 		billing: z.enum(["success", "updated"]).optional().catch(undefined),
 	}),
@@ -41,7 +39,6 @@ function Account() {
 	const navigate = useNavigate();
 	const session = useQuery(sessionQuery);
 	const search = Route.useSearch();
-	// Back from Stripe: once the card has synced, drop `?billing=` so a reload doesn't sync again.
 	const dropBillingMarker = useCallback(() => {
 		void navigate({ to: "/account", search: {}, replace: true });
 	}, [navigate]);
@@ -53,8 +50,7 @@ function Account() {
 			queryClient.removeQueries({ queryKey: ["account"] });
 		},
 	});
-	// Account deleted: home, signed out. Navigate first, so the "signed out while here" redirect below doesn't
-	// send them to sign-in.
+	// Navigate first, so the "signed out while here" redirect below doesn't fire.
 	const [leaving, setLeaving] = useState(false);
 	const onDeleted = async () => {
 		setLeaving(true);
@@ -62,7 +58,7 @@ function Account() {
 		queryClient.setQueryData(sessionQuery.queryKey, null);
 		queryClient.removeQueries({ queryKey: ["account"] });
 	};
-	// Too long since signing in to delete: sign out, and the redirect below takes them to sign-in and back here.
+	// Sign out; the redirect below takes them to sign-in and back here.
 	const signInAgain = useMutation({
 		mutationFn: signOut,
 		onSuccess: () => {
@@ -71,10 +67,9 @@ function Account() {
 		},
 	});
 	const user = session.data?.user;
-	// The organization your files belong to (12.2). Every session gets one at sign-in; none only if it was deleted.
 	const organizationId = session.data?.session.activeOrganizationId;
 
-	// Signed out while here (the header menu, another tab, the session revoked elsewhere): back to sign-in.
+	// Signed out while here (header menu, another tab, revoked elsewhere).
 	if (session.data === null && !signOutMutation.isPending && !leaving) {
 		return <Navigate to="/sign-in" search={{ redirect: "/account" }} replace />;
 	}

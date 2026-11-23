@@ -2,14 +2,15 @@ import { files, jobs, organizations } from "@launchpad/db";
 import { createTestDb, insertUser } from "@launchpad/db/testing";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import type { EmailDriver } from "#lib/email/driver.ts";
-import { createMemoryDriver } from "#lib/email/memory-driver.ts";
+import { createMemoryDriver } from "#lib/email/driver/memory/driver.ts";
+import type { EmailDriver } from "#lib/email/driver/types.ts";
 import { suppress } from "#lib/email/suppression.ts";
 import { createLogger } from "#lib/logger.ts";
-import { storageKey } from "#lib/storage/driver.ts";
-import { createMemoryStorageDriver } from "#lib/storage/memory-driver.ts";
+import { createMemoryStorageDriver } from "#lib/storage/driver/memory/driver.ts";
+import { storageKey } from "#lib/storage/keys.ts";
 import { enqueue } from "./enqueue.ts";
-import { startWorker, type Worker } from "./worker.ts";
+import type { Worker } from "./types.ts";
+import { startWorker } from "./worker.ts";
 
 const db = createTestDb();
 const log = createLogger("silent");
@@ -98,7 +99,7 @@ describe("prune-uploads", () => {
 		userId: string,
 		{ createdAt, uploaded }: { createdAt: Date; uploaded: boolean },
 	) {
-		// Every file belongs to an organization (12.3); which one doesn't matter to this job.
+		// Every file belongs to an organization; which one doesn't matter to this job.
 		const [organization] = await db
 			.insert(organizations)
 			.values({ name: "Org", slug: crypto.randomUUID() })
@@ -163,12 +164,12 @@ describe("prune-uploads", () => {
 	});
 });
 
-describe("delete-user-files", () => {
+describe("delete-organization-files", () => {
 	// A worker without S3_* can't delete the objects: the job must fail visibly, not finish as if it had.
 	it("fails, saying why, when the worker has no bucket", async () => {
 		worker = await startWorker({ db, log, email: createMemoryDriver() });
-		const id = await enqueue(db, "delete-user-files", {
-			userId: "00000000-0000-4000-8000-000000000000",
+		const id = await enqueue(db, "delete-organization-files", {
+			organizationId: "00000000-0000-4000-8000-000000000000",
 		});
 		await vi.waitFor(async () => {
 			const [job] = await db.select().from(jobs).where(eq(jobs.id, id));

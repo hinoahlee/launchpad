@@ -1,11 +1,11 @@
-// The API contract: every request and response body the web app and the API exchange. Both import these
-// schemas, so a change here is checked by the compiler on both sides. Depends only on zod.
-export * from "./account.ts";
-export * from "./auth.ts";
-export * from "./billing.ts";
-export * from "./errors.ts";
-export * from "./files.ts";
-export * from "./greeting.ts";
-export * from "./organizations.ts";
-export * from "./plans.ts";
-export * from "./probes.ts";
+// The API contract (request/response schemas), plus the constants and types both apps share. Depends only on zod.
+export * from "./constants.ts";
+export * from "./schemas/account.ts";
+export * from "./schemas/auth.ts";
+export * from "./schemas/billing.ts";
+export * from "./schemas/errors.ts";
+export * from "./schemas/files.ts";
+export * from "./schemas/greeting.ts";
+export * from "./schemas/organizations.ts";
+export * from "./schemas/probes.ts";
+export * from "./types.ts";

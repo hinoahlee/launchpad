@@ -1,6 +1,5 @@
-// Sets the light/dark class before the first paint, so a dark-mode visitor never sees a white flash.
-// A file, not an inline <script>: the CSP (script-src 'self') blocks inline scripts. Keep the "theme" key
-// and values in sync with src/components/theme-provider.tsx, which takes over once React loads.
+// Sets the theme class before first paint (no white flash). A file, because the CSP blocks inline scripts.
+// Keep the key and values in sync with src/components/theme/provider.tsx.
 try {
 	const theme = localStorage.getItem("theme");
 	const dark =

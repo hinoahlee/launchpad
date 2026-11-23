@@ -3,7 +3,7 @@ import path from "node:path";
 import postgres from "postgres";
 import { afterAll, describe, expect, it } from "vitest";
 import { runMigrations } from "./migrate.ts";
-import { testDatabaseUrl } from "./testing/index.ts";
+import { testDatabaseUrl } from "./testing/database.ts";
 
 // Every migration file the package ships, from Drizzle's own index of them.
 const journal = JSON.parse(

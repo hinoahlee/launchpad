@@ -3,12 +3,11 @@ import {
 	ContactLink,
 	LegalPage,
 	LegalSection,
-} from "#features/legal/legal-page.tsx";
-import { site } from "#lib/site.ts";
+} from "#features/legal/components/legal-page.tsx";
+import { site } from "#lib/site/constants.ts";
 
-// A starting policy that matches what the app collects today: accounts (phase 10), sign-in emails, a session
-// cookie. Each phase that stores something new (files, billing) updates this page and bumps site.legalUpdated.
-// Not legal advice.
+// A starting policy matching what the app collects: accounts, sign-in emails, a session cookie, uploaded files,
+// billing. Update it (and site.legalUpdated) when the app stores something new. Not legal advice.
 export const Route = createFileRoute("/privacy")({
 	component: Privacy,
 });

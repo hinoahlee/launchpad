@@ -2,11 +2,12 @@ import { jobs } from "@launchpad/db";
 import { createTestDb } from "@launchpad/db/testing";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { createMemoryDriver } from "#lib/email/memory-driver.ts";
+import { createMemoryDriver } from "#lib/email/driver/memory/driver.ts";
 import { createLogger } from "#lib/logger.ts";
 import { enqueue } from "./enqueue.ts";
-import { handlers, type JobHandlers } from "./handlers.ts";
-import { startWorker, type Worker, type WorkerOptions } from "./worker.ts";
+import { handlers } from "./handlers.ts";
+import type { JobHandlers, Worker, WorkerOptions } from "./types.ts";
+import { startWorker } from "./worker.ts";
 
 const db = createTestDb();
 const log = createLogger("silent");

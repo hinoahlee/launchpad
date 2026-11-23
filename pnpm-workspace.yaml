@@ -8,8 +8,7 @@ engineStrict: true
 # Never install a version published less than 7 days ago (in minutes), deep dependencies included. A hijacked
 # release is usually caught and pulled within hours. pnpm also re-checks the lockfile on every install, CI included.
 # A fresh security fix (a Dependabot PR) fails that check: add its exact version to `minimumReleaseAgeExclude`
-# (e.g. `- glob@14.0.7`) in that PR, and remove it once it's 7 days old. (14 days would have rolled back ~100 locked
-# packages in 14.1; 7 moved nine back one patch.)
+# (e.g. `- glob@14.0.7`) in that PR, and remove it once it is 7 days old.
 minimumReleaseAge: 10080
 
 # Dependency install scripts run only if listed here as true (pnpm fails the install on unlisted ones).
@@ -68,7 +67,7 @@ catalog:
   cn: 0.5.2
   # Cron expressions → run times, for recurring jobs. 11.0.0, not 11.0.1: two-week rule.
   croner: 11.0.0
-  # Auth (decision 009). Same version for both: the adapter is released with the core. 1.7.18: the newest release
+  # Auth. Same version for both: the adapter is released with the core. 1.7.18: the newest release
   # at least two weeks old; includes the 1.7.16 security fixes.
   "@better-auth/drizzle-adapter": 1.7.18
   better-auth: 1.7.18
@@ -89,7 +88,7 @@ catalog:
   # The shadcn/ui CLI (`pnpm --filter @launchpad/web exec shadcn add <component>`), plus the shared Tailwind
   # utilities its components rely on (`@import "shadcn/tailwind.css"`).
   shadcn: 4.23.0
-  # Billing (phase 13): Stripe's SDK. Each version pins the Stripe API version its types describe. 23.1.0: the
+  # Stripe SDK. Each version pins the Stripe API version its types describe. 23.1.0: the
   # newest release at least two weeks old.
   stripe: 23.1.0
   tailwindcss: 4.3.4

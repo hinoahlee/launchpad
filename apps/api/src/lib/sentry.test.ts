@@ -1,8 +1,8 @@
 import type * as Sentry from "@sentry/node";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
+import { flushSentry, initSentry } from "#lib/sentry.ts";
 import { testConfig } from "#testing/config.ts";
-import { flushSentry, initSentry } from "./sentry.ts";
 
 type Transport = ReturnType<NonNullable<Sentry.NodeOptions["transport"]>>;
 type Envelope = Parameters<Transport["send"]>[0];

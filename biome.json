@@ -30,22 +30,36 @@
 					"options": {
 						"filenameCases": ["kebab-case"]
 					}
-				},
-				"noRestrictedImports": {
-					"level": "error",
-					"options": {
-						"patterns": [
-							{
-								"group": ["../*", "../**"],
-								"message": "No '../' imports: use the package alias (#lib/...) or the other package's name."
-							}
-						]
-					}
 				}
 			}
 		}
 	},
 	"overrides": [
+		{
+			"includes": [
+				"apps/*/src/features/**",
+				"apps/*/src/lib/**",
+				"apps/*/src/components/**",
+				"apps/api/src/http/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["#features/*", "#features/**"],
+										"message": "Only app.ts (API) and routes/ (web) import features; inside a feature, import its own files by relative path. Move shared code to lib/, or pass it in from the route."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
 		{
 			"includes": ["**/*.config.ts"],
 			"linter": {
@@ -68,11 +82,11 @@
 		},
 		{
 			"includes": [
-				"apps/api/src/config.ts",
+				"apps/api/src/config/load.ts",
 				"apps/web/vite.config.ts",
 				"e2e/playwright.config.ts",
 				"packages/db/drizzle.config.ts",
-				"packages/db/src/testing/index.ts"
+				"packages/db/src/testing/database.ts"
 			],
 			"linter": {
 				"rules": {

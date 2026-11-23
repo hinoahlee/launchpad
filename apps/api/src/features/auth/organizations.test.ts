@@ -8,11 +8,11 @@ import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { buildApp } from "#app.ts";
+import { PERSONAL_ORGANIZATION_NAME } from "#lib/auth/constants.ts";
 import { testConfig } from "#testing/config.ts";
 import { signInWithCode } from "#testing/sign-in.ts";
-import { PERSONAL_ORGANIZATION_NAME } from "./personal-organization.ts";
 
-// Decision 010: one person, one organization. These prove every way to change that is refused, by Better Auth's
+// One person, one organization. These prove every way to change that is refused, by Better Auth's
 // settings and, under them, by the database.
 
 const APP_URL = "https://app.example.test";

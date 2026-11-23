@@ -1,4 +1,4 @@
-{
+﻿{
 	"$schema": "https://turborepo.com/schema.json",
 	"tasks": {
 		"build": {
@@ -9,13 +9,11 @@
 			"dependsOn": ["^typecheck"]
 		},
 		"test": {
-			// ^test: a package's tests wait for its dependencies' tests (api waits for db). Both use the one test
-			// database and wipe it, so they must not run at the same time.
+			// ^test: packages share one test database, so their tests must not run at the same time.
 			"dependsOn": ["^build", "^test"],
 			"passThroughEnv": ["TEST_DATABASE_URL"]
 		},
-		// Builds the API and the web app first (e2e lists both as dependencies), then drives them in a browser.
-		// Never cached: it also depends on the database and the browser, which turbo can't see.
+		// Never cached: it depends on the database and the browser, which turbo can't see.
 		"e2e": {
 			"dependsOn": ["^build"],
 			"cache": false
@@ -24,15 +22,13 @@
 			"cache": false,
 			"persistent": true
 		},
-		// The API's background worker (apps/api), started next to the server by `pnpm dev`.
 		"dev:worker": {
 			"cache": false,
 			"persistent": true
 		},
-		// Offline: schema.ts vs. the committed migrations. Reruns only when these inputs change.
 		"db:check": {
 			"inputs": [
-				"src/schema.ts",
+				"src/schema/**",
 				"migrations/**",
 				"scripts/check-migrations.ts"
 			],

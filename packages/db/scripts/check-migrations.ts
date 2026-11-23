@@ -1,5 +1,5 @@
-// `pnpm db:check`: fails if src/schema.ts has changes that no committed migration covers. It runs
-// drizzle-kit generate into a scratch copy of migrations/ and checks that nothing new was written.
+// `pnpm db:check`: fails if src/schema/ has changes no committed migration covers, by running drizzle-kit
+// generate into a scratch copy of migrations/ and checking nothing new was written.
 import { spawnSync } from "node:child_process";
 import { cpSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -25,7 +25,7 @@ try {
 			path.join(pkgRoot, "node_modules/drizzle-kit/bin.cjs"),
 			"generate",
 			"--dialect=postgresql",
-			"--schema=./src/schema.ts",
+			"--schema=./src/schema/index.ts",
 			`--out=./${scratch}`,
 		],
 		{
@@ -44,7 +44,7 @@ try {
 		journalEntries(scratchAbs) === before &&
 		output.includes("No schema changes")
 	) {
-		console.log("migrations match packages/db/src/schema.ts");
+		console.log("migrations match packages/db/src/schema");
 	} else {
 		console.error(output.trim());
 		console.error(

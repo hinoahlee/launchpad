@@ -1,51 +1,32 @@
-import { type FileRow, files, organizations } from "@launchpad/db";
+import { files } from "@launchpad/db";
 import {
 	createFileBodySchema,
 	createFileResponseSchema,
 	downloadResponseSchema,
 	errorResponseSchema,
-	type FileItem,
 	fileListResponseSchema,
 	fileParamsSchema,
 	fileSchema,
 	organizationParamsSchema,
 } from "@launchpad/shared";
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
 	membershipOf,
 	requireMembership,
-} from "#features/auth/require-membership.ts";
-import { requireSession, sessionOf } from "#features/auth/require-session.ts";
-import { entitlementsOf } from "#lib/entitlements.ts";
-import { enqueue } from "#lib/jobs/enqueue.ts";
-import {
-	AFTER_UPLOAD_URLS_EXPIRE_MS,
-	type StorageDriver,
-	storageKey,
-} from "#lib/storage/driver.ts";
+} from "#lib/auth/guards/require-membership.ts";
+import { requireSession, sessionOf } from "#lib/auth/guards/require-session.ts";
+import type { StorageDriver } from "#lib/storage/driver/types.ts";
+import { storageKey } from "#lib/storage/keys.ts";
+import { deleteFileRow, insertPendingFile, toFileItem } from "./service.ts";
 
-function toFileItem(row: FileRow, uploadedAt: Date): FileItem {
-	return {
-		id: row.id,
-		fileName: row.fileName,
-		contentType: row.contentType,
-		sizeBytes: row.sizeBytes,
-		uploadedAt: uploadedAt.toISOString(),
-	};
-}
-
-// /api/organizations/:organizationId/files: an organization's files. The bytes never pass through the API: it signs a URL, the browser
-// uploads straight to the bucket, then `complete` checks the bucket before the file counts as uploaded.
-// Tenant isolation (decision 011): every route runs requireMembership (not a member: 404), and every query filters
-// on that membership's organization: another organization's file is a 404, as if it didn't exist.
+// Bytes never pass through the API: it signs URLs, the browser talks to the bucket, and `complete` asks the
+// bucket before a file counts as uploaded.
 export const fileRoutes =
 	(storage: StorageDriver): FastifyPluginAsyncZod =>
 	async (app) => {
 		app.addHook("onRequest", requireSession);
-		// Per route, not for the whole plugin, because the role differs: any member reads and uploads, deleting
-		// needs an admin. A route that forgets it fails with a 500 at membershipOf(), never runs open.
 		const member = requireMembership("member");
 		const admin = requireMembership("admin");
 
@@ -78,7 +59,6 @@ export const fileRoutes =
 			},
 		);
 
-		// Register: a pending row, and a signed URL to PUT the bytes to.
 		app.post(
 			"/files",
 			{
@@ -92,44 +72,12 @@ export const fileRoutes =
 			async (request, reply) => {
 				const { user } = sessionOf(request);
 				const { organizationId } = membershipOf(request);
-				const { fileName, contentType, sizeBytes } = request.body;
 				const key = storageKey(organizationId);
-				const row = await app.db.transaction(async (tx) => {
-					// Lock the organization's row until the insert commits, so two uploads at once (by anyone in it)
-					// can't both see room for one.
-					await tx
-						.select({ id: organizations.id })
-						.from(organizations)
-						.where(eq(organizations.id, organizationId))
-						.for("update");
-					// Pending rows count: their bytes may already be in the bucket, completed or not.
-					const [usage] = await tx
-						.select({
-							used: sql<string>`coalesce(sum(${files.sizeBytes}), 0)::bigint`,
-						})
-						.from(files)
-						.where(eq(files.organizationId, organizationId));
-					// The gate (13.4): the plan decides the quota. Read in this transaction, after the lock.
-					const { storageQuotaBytes } = await entitlementsOf(
-						tx,
-						organizationId,
-					);
-					if (Number(usage?.used ?? 0) + sizeBytes > storageQuotaBytes) {
-						return null;
-					}
-					const [inserted] = await tx
-						.insert(files)
-						.values({
-							organizationId,
-							userId: user.id,
-							fileName,
-							contentType,
-							sizeBytes,
-							storageKey: key,
-						})
-						.returning({ id: files.id });
-					if (!inserted) throw new Error("files insert returned no row");
-					return inserted;
+				const row = await insertPendingFile(app.db, {
+					organizationId,
+					userId: user.id,
+					storageKey: key,
+					file: request.body,
 				});
 				if (!row) {
 					reply.code(413);
@@ -137,8 +85,8 @@ export const fileRoutes =
 				}
 				const upload = await storage.presignUpload({
 					key,
-					contentType,
-					sizeBytes,
+					contentType: request.body.contentType,
+					sizeBytes: request.body.sizeBytes,
 				});
 				reply.code(201);
 				return {
@@ -150,8 +98,7 @@ export const fileRoutes =
 			},
 		);
 
-		// The browser says "uploaded"; the bucket has the final word. Asking it (not trusting the browser) keeps the
-		// table true to what's stored: no row marked uploaded without its object.
+		// Idempotent: a second call returns the same file.
 		app.post(
 			"/files/:id/complete",
 			{
@@ -177,16 +124,15 @@ export const fileRoutes =
 					reply.code(404);
 					return { error: "not_found" };
 				}
-				// Calling it twice is fine: the second call returns the same file.
 				if (file.uploadedAt) return toFileItem(file, file.uploadedAt);
 
 				const size = await storage.sizeOf(file.storageKey);
-				// Nothing there yet: keep the row, so the browser can finish (or retry) the PUT and call again.
+				// Kept, so the browser can retry the PUT and call again.
 				if (size === null) {
 					reply.code(409);
 					return { error: "upload_incomplete" };
 				}
-				// The signed URL pins the size, so this means a bug or a bucket that ignores it: drop both.
+				// The signed URL pins the size, so this is a bug or a bucket that ignores it.
 				if (size !== file.sizeBytes) {
 					await app.db.delete(files).where(owned);
 					await storage.delete(file.storageKey);
@@ -199,7 +145,7 @@ export const fileRoutes =
 					.set({ uploadedAt: new Date() })
 					.where(owned)
 					.returning();
-				// Deleted between the select and here (a delete request racing this one).
+				// A concurrent delete won.
 				if (!uploaded?.uploadedAt) {
 					reply.code(404);
 					return { error: "not_found" };
@@ -208,7 +154,6 @@ export const fileRoutes =
 			},
 		);
 
-		// A short-lived URL to the object; the browser follows it and the bucket serves the bytes.
 		app.get(
 			"/files/:id/download",
 			{
@@ -260,39 +205,20 @@ export const fileRoutes =
 			},
 			async (request, reply) => {
 				const { organizationId } = membershipOf(request);
-				const removed = await app.db.transaction(async (tx) => {
-					const [row] = await tx
-						.delete(files)
-						.where(
-							and(
-								eq(files.id, request.params.id),
-								eq(files.organizationId, organizationId),
-							),
-						)
-						.returning({ key: files.storageKey });
-					// A second delete once its upload URL has expired (security review L2): a PUT through it would bring
-					// the object back with no row. Queued with the row's delete: both happen, or neither.
-					if (row) {
-						await enqueue(
-							tx,
-							"delete-file-object",
-							{ key: row.key },
-							{ runAfter: new Date(Date.now() + AFTER_UPLOAD_URLS_EXPIRE_MS) },
-						);
-					}
-					return row;
+				const key = await deleteFileRow(app.db, {
+					organizationId,
+					fileId: request.params.id,
 				});
-				if (!removed) {
+				if (!key) {
 					reply.code(404);
 					return { error: "not_found" };
 				}
-				// The row is gone, so the file is gone for the user. If the bucket call fails, the object is
-				// orphaned (stored, but nothing points at it): log it rather than fail a delete that already happened.
+				// The row is gone, so the file is gone for the user: a failed object delete is logged, not returned.
 				try {
-					await storage.delete(removed.key);
+					await storage.delete(key);
 				} catch (err) {
 					request.log.error(
-						{ err, key: removed.key },
+						{ err, key },
 						"storage delete failed; object orphaned",
 					);
 				}
