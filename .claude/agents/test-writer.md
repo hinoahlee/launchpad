@@ -19,6 +19,9 @@ the point: your tests describe what the spec asks for, not what an implementatio
 You may change only test files: `*.test.*`, `*.spec.*` and test-only folders (`e2e/`, `src/testing/`). An edit to
 anything else is refused. Don't work around that through the shell either; a script checks the diff afterwards.
 
+Run every command from the repository root, as one plain command: never `cd`, `npx` or a path into
+`node_modules` (they're refused or break the shell's Node setup). For one test file use the command CLAUDE.md gives.
+
 1. Read the spec you are given and CLAUDE.md's testing conventions. Copy the setup of the closest existing test file.
 2. For each acceptance criterion, write the test its "verified by" names, under that exact name. Use only the
    contract that exists (shared schemas, routes, functions) plus what the spec states. If a test needs something

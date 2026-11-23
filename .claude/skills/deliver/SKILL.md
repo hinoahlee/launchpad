@@ -15,8 +15,8 @@ Slug: `$ARGUMENTS`. Spec: `.agentic/specs/$ARGUMENTS.md` (missing: stop and say 
   when the change can affect a browser) and prints only the failing tail. The Stop hook runs the same gate and blocks
   you from finishing until it passes; don't try to get around it, and never skip, weaken or delete a test or check.
 - Keep context small: read only the files you need; for long command output use the tail.
-- Use the Bash tool for commands (the permission allowlist is written for it), one plain command per call: no
-  `node -e`, heredocs or scripts in other languages (they aren't allowed, and a permission prompt stalls the run).
+- Use the Bash tool for commands (the permission allowlist is written for it), one plain command per call, from the
+  repository root: no `cd`, `npx`, `node -e`, heredocs or scripts in other languages (they aren't allowed, and a permission prompt stalls the run).
   `run.ts` output is already short: don't pipe or redirect it. Edit files, `.agentic/pr.md` included, with Edit.
 - Keep your own context small: the agents read and write the code; you read their reports, the spec and run.ts output.
 

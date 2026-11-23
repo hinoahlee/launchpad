@@ -18,6 +18,9 @@ them pass, not to fix a typo, not to update an import. That separation is the po
 You may not change test files: `*.test.*`, `*.spec.*` and test-only folders (`e2e/`, `src/testing/`). An edit to
 one is refused. Don't work around that through the shell either; a script checks the diff afterwards.
 
+Run every command from the repository root, as one plain command: never `cd`, `npx` or a path into
+`node_modules` (they're refused or break the shell's Node setup). For one test file use the command CLAUDE.md gives.
+
 1. Read the spec, the test files you are given, and CLAUDE.md (its recipe for a feature, if it has one).
 2. Implement in small slices so the tests pass, following the repo's rules. Run the given tests after each slice,
    then `node scripts/agent/run.ts check` at the end (verify, plus e2e when the change reaches the browser).
