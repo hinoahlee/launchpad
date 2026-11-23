@@ -4,35 +4,34 @@ How to work in this codebase. Setup (local and production) is in [README.md](REA
 touches environment variables, deployment or third-party accounts.
 
 ## Rules
-1. **Finish with proof.** `pnpm verify` must pass (a Stop hook runs it). Changed a page, a route the web app calls,
-   auth, files or the CSP? Also run `pnpm e2e`: `verify` doesn't run the browser tests.
+1. **Finish with proof.** `pnpm verify` must pass; also `pnpm e2e` when a page, a route the web app calls, auth,
+   files or the CSP changed. The Stop hook runs verify, and e2e during `/deliver` (`scripts/agent/stop-gate.ts`).
 2. **Contract first.** Every request/response body the web app and the API exchange is a Zod schema in
    `packages/shared`, imported by both. No local copies. Zod at every other boundary too: env, webhooks, external APIs.
 3. **Tenant isolation.** Every query in a protected route filters on the session's user id or the membership's
    organization id. Another user's or organization's row is a 404, never a 403. Test both sides.
-4. **Migrations are generated, reviewed, committed, never edited** once merged. Each one must work with the
-   previous release still running (expand/contract, [docs/deploy-contract.md](docs/deploy-contract.md) row 10).
-5. **Never weaken or delete a test to make it pass.** A changed or removed test is explained in the PR.
+4. **Migrations are generated and reviewed**, and must work with the previous release still running
+   (expand/contract, [docs/deploy-contract.md](docs/deploy-contract.md) row 10).
+5. **Never weaken or delete a test to make it pass.**
 6. **Never read `.env` files or print secrets.** New env vars: `apps/api/src/config/schema.ts` (Zod), `apps/api/.env.example`
    (documented there) and the table in `docs/deploy-contract.md`, in the same PR.
 7. **Comments only for what the code can't say**: a non-obvious reason, a trap, or a deliberate choice that looks
    like a bug. No history ("added in…", "used to…"), no restating the code.
-8. **Keep files small and in their place** (below). Lint fails past 250 lines (600 for tests): split by responsibility.
+8. **Keep files small and in their place** (below): split by responsibility.
 9. **UI components come from the shadcn CLI**, never by hand: `pnpm --filter @launchpad/web exec shadcn add <name>`.
    The CSP allows no inline scripts or styles.
 10. Ask before adding a dependency, a service or a new pattern. Pin exact versions in `pnpm-workspace.yaml`'s
     `catalog:` (packages use `"catalog:"`); pick releases at least two weeks old.
 
-Mechanically enforced (don't fight them; change the check in its own PR if it's wrong): Biome (formatting,
-kebab-case file names, named exports only, `process.env` only in config files, no imports of
-`#features/*` outside `app.ts` and `routes/`), file sizes and import boundaries (`scripts/`), `tsc` strict, `db:check`
-(schema vs migrations), a test that Better Auth's tables match its schema, and e2e failing on any console error.
+Checks enforce the rest; their failure messages say how to fix (if a check is wrong, change it in its own PR): Biome,
+`scripts/check-*.ts` (file sizes, import boundaries, weakened tests, edited migrations), `tsc`, `db:check`, e2e.
+Workflow: `/feature` plans a spec, `/deliver <slug>` runs it to a PR ([docs/agentic-workflow.md](docs/agentic-workflow.md)).
 
 ## Commands
 Run from the repo root. Needs Postgres: `pnpm db:up` first.
 ```bash
 pnpm dev          # web (5173, proxies /api) + API server (3000) + worker, in watch mode
-pnpm verify       # lint (+ file sizes, imports), then typecheck, test, build, db:check: "is this safe to merge?"
+pnpm verify       # lint (+ scripts/check-*), script tests, typecheck, test, build, db:check: "safe to merge?"
 pnpm e2e          # build, then Playwright (phone + desktop) against the production server
 pnpm test         # Vitest, every package (one test file: pnpm --filter @launchpad/api exec vitest run <path>)
 pnpm format       # fix formatting and safe lint issues
@@ -93,10 +92,8 @@ A file's path should tell you what's in it. Names are kebab-case; these names al
 - **Placement**: a type or constant imported by another file goes in its folder's `types.ts` / `constants.ts`; one
   used by a single file stays in that file. Types inferred from a value (`z.infer`, `$inferSelect`, `ReturnType`)
   stay beside it. Anything else gets a descriptive name for the one thing it does (`verify-event.ts`, `keys.ts`).
-- **Imports** (checked by `scripts/check-imports.ts`): a module is one feature, one lib, one other folder of `src/`,
-  or one package. Inside a module, relative paths (`./x.ts`, `../types.ts`); across modules, the `#` alias
-  (`#lib/jobs/enqueue.ts`). Only `app.ts` and web `routes/` import features; code two features need moves to `lib/`
-  (or `packages/` if both apps need it).
+- **Imports**: relative inside a module, `#` alias across modules; only `app.ts` and web `routes/` import features
+  (`scripts/check-imports.ts` defines modules and says how to fix a violation).
 - **Tests** sit next to the file: `foo.ts` → `foo.test.ts`; a feature's HTTP tests may be split by topic
   (`features/auth/bearer.test.ts`). Most are integration tests through `app.inject()` against a real database; unit
   tests for pure logic; e2e only for journeys only a browser proves.
@@ -163,7 +160,7 @@ Smaller recipes:
   making many requests from one IP passes `rateLimitMax` to `buildApp`. Drivers are injected:
   `buildApp(config, { storage, billing })` with the memory drivers.
 - An e2e test that provokes a console error on purpose declares it: `test.use({ expectedErrors: [/.../] })`.
-- Dev runs the API's `.ts` directly with Node (type stripping): no enums, namespaces or parameter properties
-  (`erasableSyntaxOnly` fails them), and imports keep their `.ts` extension.
+- Dev runs the API's `.ts` with plain Node (type stripping): `tsc` rejects enums and other syntax needing a compile
+  step, and imports keep their `.ts` extension.
 - Better Auth's endpoints answer `{ code, message }`, not our `{ error }`; `lib/api/client.ts` handles both.
 - Rate limits are per process (in memory). Running several API instances needs a shared store (`http/rate-limit.ts`).
