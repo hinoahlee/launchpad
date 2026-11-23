@@ -1,15 +1,12 @@
 {
 	"permissions": {
-		"deny": ["Read(./**/.env)", "Read(./**/*.secret.tfvars)"],
+		"deny": ["Read(./**/.env)"],
 		"ask": [
-			"Bash(terraform apply:*)",
-			"Bash(terraform destroy:*)",
-			"Bash(terraform import:*)",
-			"Bash(terraform state:*)",
-			"Bash(aws:*)",
 			"Bash(gh pr merge:*)",
 			"Bash(gh repo create:*)",
-			"Bash(pnpm dlx:*)"
+			"Bash(pnpm dlx:*)",
+			"Bash(pnpm add:*)",
+			"Bash(pnpm --filter * add *)"
 		],
 		"allow": [
 			"Bash(pnpm:*)",
@@ -17,11 +14,7 @@
 			"Bash(gh pr create:*)",
 			"Bash(gh pr view:*)",
 			"Bash(gh run:*)",
-			"Bash(docker:*)",
-			"Bash(terraform fmt:*)",
-			"Bash(terraform validate:*)",
-			"Bash(terraform plan:*)",
-			"Bash(terraform init:*)"
+			"Bash(docker:*)"
 		]
 	},
 	"hooks": {
@@ -31,7 +24,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "pnpm exec biome check --write . >&2 || exit 2",
+						"command": "pnpm -C \"$CLAUDE_PROJECT_DIR\" exec biome check --write . >&2 || exit 2",
 						"timeout": 60
 					}
 				]
@@ -42,7 +35,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "grep -q '\"stop_hook_active\": *true' && exit 0; pnpm verify >&2 || exit 2",
+						"command": "grep -q '\"stop_hook_active\": *true' && exit 0; pnpm -C \"$CLAUDE_PROJECT_DIR\" verify >&2 || exit 2",
 						"timeout": 300
 					}
 				]
