@@ -41,7 +41,7 @@ This README covers setting up and running the project.
      optional, but do it before your first deploy if you want to.
    - `infra/render/render.yaml`: service names, the image URL `ghcr.io/<owner>/<repo>:main`, your domain, `EMAIL_FROM`.
 3. Protect `main`: `gh api -X POST repos/<owner>/<repo>/rulesets --input .github/rulesets/main.json` (squash merges
-   only, `verify` and `image` checks required; notes in [.github/rulesets/README.md](.github/rulesets/README.md)). In
+   only, `verify`, `e2e` and `image` checks required; notes in [.github/rulesets/README.md](.github/rulesets/README.md)). In
    **Settings → Advanced Security**, turn on Dependabot alerts and security updates, and CodeQL default setup.
 
 ## 2. Local development
