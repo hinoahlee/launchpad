@@ -11,7 +11,12 @@ export type GateDeps = {
 	now(): string;
 };
 
-export type GateResult = { exitCode: 0 | 2; message: string; state: RunState };
+export type GateResult = {
+	exitCode: 0 | 2;
+	message: string;
+	state: RunState;
+	gaveUp?: boolean;
+};
 
 export function gate(input: RunState, deps: GateDeps): GateResult {
 	const state: RunState = structuredClone(input);
@@ -20,6 +25,7 @@ export function gate(input: RunState, deps: GateDeps): GateResult {
 	if (g.stops >= MAX_STOPS) {
 		return {
 			exitCode: 0,
+			gaveUp: true,
 			state,
 			message: `stop gate: gave up after ${MAX_STOPS} failed checks in a row. The last failure is in .workflow/state.json (gate.lastFailure). A person needs to look; the counter resets on their next message.`,
 		};

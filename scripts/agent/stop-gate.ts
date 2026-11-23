@@ -12,7 +12,7 @@ import {
 	runPnpm,
 } from "./checks.ts";
 import { gate } from "./gate.ts";
-import { readState, repoRoot, writeState } from "./state.ts";
+import { isRunActive, readState, repoRoot, writeState } from "./state.ts";
 
 const root = repoRoot;
 const state = readState(root);
@@ -31,7 +31,12 @@ if (process.argv.includes("--reset")) {
 		sha: () => headSha(root),
 		now: () => new Date().toISOString(),
 	});
+	if (result.gaveUp && isRunActive(result.state))
+		result.state.note = result.message;
 	writeState(root, result.state);
-	console.error(result.message);
+	// Exit-0 stderr reaches nobody; systemMessage shows the give-up to the person instead of ending silently.
+	if (result.gaveUp)
+		console.log(JSON.stringify({ systemMessage: result.message }));
+	else console.error(result.message);
 	process.exitCode = result.exitCode;
 }
