@@ -7,14 +7,15 @@ live site's headers. Read by hand; the scanners from 14.1 (CodeQL, Trivy, `pnpm 
 change your data, impersonate you, run up our bills, or knock the service over. We don't defend against someone who
 already controls Render, GitHub, Stripe or the database.
 
-**Result:** nothing critical or high. 3 medium, 4 low, 1 informational. Pick which to fix (14.3+).
+**Result:** nothing critical or high. 3 medium, 4 low, 1 informational. M2 checked out fine. Fixing M1, M3, L1, L2,
+L4 in 14.3–14.5; L3 and I1 accepted as they are.
 
 ## Findings
 
 | # | Severity | Finding | Fix (estimate) |
 |---|---|---|---|
 | M1 | Medium | Sign-in code emails have no per-address limit | Cap sends per address (small) |
-| M2 | Medium | The real-client-IP setting was never checked in production | A 5-minute check by you; config if wrong |
+| M2 | ~~Medium~~ | The real-client-IP setting was never checked in production | **Checked: correct.** No fix |
 | M3 | Medium | An aborted request crashes the rate limiter (500 + Sentry event) | Guard the key generator (small) |
 | L1 | Low | Our own POST routes have no `Origin` check (same-site CSRF) | One `onRequest` hook (small) |
 | L2 | Low | An upload URL outlives a deleted file | Delete the object again after the URL expires (small) |
@@ -41,6 +42,8 @@ already controls Render, GitHub, Stripe or the database.
   https://launchpad.noahlee.xyz/api/account/sessions in the same browser. The `"current": true` session's
   `ipAddress` is the IP the app saw: it must equal your public IP (search "what is my IP"). Then do the same on your
   phone on mobile data: a different IP must show.
+- **Result (2026-11-23):** the session showed the human's own public IP. And 106 requests to `/api/version`, each
+  with a different fake `X-Forwarded-For`, got 100 × 200 then 6 × 429: the fake header is ignored, the real IP counts.
 
 ### M3: an aborted request crashes the rate limiter
 - **Where:** `@fastify/rate-limit`'s key generator (`app.ts`). A client that disconnects early leaves `request.ip`
