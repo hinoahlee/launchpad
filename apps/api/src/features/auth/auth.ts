@@ -16,6 +16,7 @@ import {
 	deleteUserOrganization,
 	initialOrganizationId,
 } from "./personal-organization.ts";
+import { signInCodeLimit } from "./sign-in-code-limit.ts";
 
 // An upload URL's lifetime plus a margin, so the sweep runs after the last possible PUT.
 const DELETE_FILES_DELAY_MS = UPLOAD_URL_TTL_MS + 5 * 60 * 1000;
@@ -85,6 +86,9 @@ export function createAuth(
 		// stricter rules from plugins (email codes: 3 a minute per endpoint). Better Auth turns it on when it reads
 		// NODE_ENV=production itself; set from our config instead, so a test can build a production app to check it.
 		rateLimit: { enabled: config.NODE_ENV === "production" },
+		// Runs before every Better Auth endpoint. Today: at most SIGN_IN_CODES_PER_HOUR code emails per address, in
+		// every environment (it counts rows in Postgres, so tests don't trip each other the way in-memory limits would).
+		hooks: { before: signInCodeLimit(db) },
 		// When a sign-in fails at the callback (cancelled at Google, expired, a link refused), Better Auth redirects
 		// here with `?error=<code>`. Our sign-in page explains it. Its own fallback is an HTML page whose inline
 		// styles our CSP blocks.

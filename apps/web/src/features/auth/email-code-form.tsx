@@ -12,10 +12,14 @@ import { sendSignInCode, sessionQuery, signInWithCode } from "./api.ts";
 const CODE_MINUTES = 5;
 
 // What went wrong, for the person. Better Auth's codes: INVALID_OTP (wrong, or already used), OTP_EXPIRED,
-// TOO_MANY_ATTEMPTS (3 wrong guesses: the code is dead).
+// TOO_MANY_ATTEMPTS (3 wrong guesses: the code is dead). Ours: TOO_MANY_CODES.
 function errorMessage(error: Error): string {
 	if (!(error instanceof ApiError)) {
 		return "We couldn't reach the server. Check your connection and try again.";
+	}
+	// Our per-address limit (API: features/auth/sign-in-code-limit.ts), before Better Auth's per-IP one below.
+	if (error.code === "TOO_MANY_CODES") {
+		return "Too many codes were sent to this address. Try again in an hour.";
 	}
 	if (error.status === 429) {
 		return "Too many attempts. Wait a minute, then try again.";
