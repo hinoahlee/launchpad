@@ -46,3 +46,6 @@ Thumbs.db
 
 # Database dumps. Real data: never commit.
 .drill/
+
+# Agent run state, specs, reviews and run records (/feature, /deliver): local to this machine
+.workflow/
