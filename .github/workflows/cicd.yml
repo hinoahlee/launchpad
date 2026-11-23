@@ -53,6 +53,11 @@ jobs:
 
       - run: pnpm verify
 
+      # Known vulnerabilities (CVEs) in our npm dependencies, from GitHub's advisory database. Fails on high or
+      # critical only: moderate ones are reviewed case by case (Dependabot alerts list them all). A new advisory can
+      # turn this red on a PR that changed nothing; that's the point: fix it (bump, or an `overrides` entry) first.
+      - run: pnpm audit --audit-level high
+
   # End-to-end tests: the production build in a real browser, as a phone and a desktop (e2e/). A job of its own so
   # it runs at the same time as `verify` on another machine, and a red check names which kind of test failed. Not
   # optional: both must pass before an image is published.
@@ -118,6 +123,9 @@ jobs:
           # Render, AWS and most VPSs run x86-64; say so instead of relying on the runner's default.
           platforms: linux/amd64
           push: false
+          # Also into the runner's Docker, for Trivy below.
+          load: true
+          tags: launchpad:ci
           # GIT_SHA and the web bundle's Sentry settings (public values; empty until the repository variables
           # are set, which keeps Sentry off). Keep in sync with `publish`, so it reuses these layers.
           build-args: |
@@ -132,6 +140,24 @@ jobs:
           # `pnpm fetch`), which aren't part of the final image.
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Trivy scans what actually ships: Alpine's packages and the node_modules inside the image, against known CVEs.
+      # Run from its image pinned by digest, not via aquasecurity/trivy-action: in March 2026 an attacker moved
+      # that action's tags to malware that stole CI secrets (GHSA-69fq-xp46-6x23). A digest can't be moved.
+      # `--ignore-unfixed`: fail only when a fixed version exists, i.e. when there's something we can do.
+      - name: Scan the image (Trivy)
+        env:
+          TRIVY: ghcr.io/aquasecurity/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY" image \
+            --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 launchpad:ci
+
+      # Misconfigurations in the Dockerfile and compose files (running as root, secrets in ENV, ...).
+      - name: Scan the Dockerfile (Trivy)
+        env:
+          TRIVY: ghcr.io/aquasecurity/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
+        run: |
+          docker run --rm -v "$PWD:/src:ro" "$TRIVY" config --severity HIGH,CRITICAL --exit-code 1 /src
 
   # On main only, once both checks pass: push the image to GitHub's registry (GHCR) as `:<commit sha>` and `:main`.
   # Every deploy uses the digest printed here (decision 004). The build reuses `image`'s cached layers.
@@ -180,7 +206,7 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
           # A plain single-image manifest, so the digest is the image itself (provenance attestations would
-          # wrap it in an index). Supply-chain attestations come with scanning in step 14.5.
+          # wrap it in an index). No attestations yet (an SBOM or provenance would need an index too).
           provenance: false
           # Same values as in `image`, so every layer comes from its cache. The token is passed too, in case the
           # cache missed and the web bundle is rebuilt here (the upload is idempotent per release).

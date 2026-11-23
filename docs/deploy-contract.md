@@ -5,7 +5,7 @@ change this page first (with a decision note). Why one image: [decision 002](dec
 
 | # | Promise | Where it's met |
 |---|---|---|
-| 1 | One image, non-root, `linux/amd64`, published once per `main` commit as `ghcr.io/<owner>/<repo>:<sha>`; platforms run it by digest. | `Dockerfile` (`USER node`). `.github/workflows/cicd.yml` (`image` job, `platforms: linux/amd64`; `publish` job). |
+| 1 | One image, non-root, `linux/amd64`, with `node` but no npm, corepack or Yarn (removed: unused, and their CVEs), scanned by Trivy in CI, published once per `main` commit as `ghcr.io/<owner>/<repo>:<sha>`; platforms run it by digest. | `Dockerfile` (`USER node`). `.github/workflows/cicd.yml` (`image` job, `platforms: linux/amd64`; `publish` job). |
 | 2 | `node dist/server.js` (the default `CMD`): SPA + `/api` on `$PORT`. | `server.ts`, `app.ts` |
 | 3 | `node dist/worker.js`: background jobs. Run as many as needed: each job goes to one worker. | `worker.ts` → `lib/jobs/worker.ts`: claims from the `jobs` table, wakes on `LISTEN jobs`, polls every 5 s. Also queues recurring jobs (`lib/jobs/schedules.ts`, cron in UTC), and deletes files from the bucket (account deletion, abandoned uploads); each run once, keyed in `jobs.key`. Serves no HTTP: platforms watch the process, not a probe, and deploy it after the server (once migrations ran). Render: `launchpad-worker` in the Blueprint. |
 | 4 | `node dist/migrate.js`: apply migrations, exit 0/1; run once before new code starts. | `migrate.ts` → `runMigrations` (`packages/db`), which reads the SQL shipped inside `@launchpad/db` |
