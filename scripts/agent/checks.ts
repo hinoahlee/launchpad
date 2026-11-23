@@ -1,22 +1,23 @@
-// Running the gates (pnpm verify, pnpm e2e) and deciding when e2e is needed. Shared by the stop gate and run.ts.
+// Running the gates (verify, e2e) and deciding when e2e is needed. Shared by the stop gate and run.ts.
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { E2E_COMMAND, E2E_PATHS, VERIFY_COMMAND } from "./project.ts";
 
 export const TAIL_LINES = 40;
 
-// Changes here can break something only a browser sees: pages, auth, files, the CSP and other HTTP headers.
-const E2E_PATHS = [
-	/^apps\/web\//,
-	/^apps\/api\/src\/http\//,
-	/^apps\/api\/src\/(features|lib)\/(auth|files|storage)\//,
-	/^e2e\//,
-	/^packages\/shared\/src\/schemas\/(auth|files)/,
-];
+export type Check = "verify" | "e2e";
+export type CommandResult = { ok: boolean; tail: string };
+
+export const commandFor = (check: Check) =>
+	check === "verify" ? VERIFY_COMMAND : E2E_COMMAND;
 
 export function needsE2e(files: string[]): boolean {
-	return files.some((file) => E2E_PATHS.some((pattern) => pattern.test(file)));
+	return (
+		E2E_COMMAND !== "" &&
+		files.some((file) => E2E_PATHS.some((pattern) => pattern.test(file)))
+	);
 }
 
 const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
@@ -38,32 +39,25 @@ function git(root: string, args: string[]): string {
 	});
 }
 
+const lines = (text: string) => text.split("\n").filter(Boolean);
+
 export function headSha(root: string): string {
 	return git(root, ["rev-parse", "HEAD"]).trim();
 }
 
 function untracked(root: string): string[] {
-	return git(root, ["ls-files", "--others", "--exclude-standard"])
-		.split("\n")
-		.filter(Boolean);
+	return lines(git(root, ["ls-files", "--others", "--exclude-standard"]));
 }
 
 // Files this branch changes compared with main, committed or not.
 export function changedFiles(root: string): string[] {
-	let committed: string[] = [];
+	let committed: string[];
 	try {
-		committed = git(root, [
-			"diff",
-			"--name-only",
-			"--merge-base",
-			"origin/main",
-		])
-			.split("\n")
-			.filter(Boolean);
+		committed = lines(
+			git(root, ["diff", "--name-only", "--merge-base", "origin/main"]),
+		);
 	} catch {
-		committed = git(root, ["diff", "--name-only", "HEAD"])
-			.split("\n")
-			.filter(Boolean);
+		committed = lines(git(root, ["diff", "--name-only", "HEAD"]));
 	}
 	return [...new Set([...committed, ...untracked(root)])];
 }
@@ -84,11 +78,9 @@ export function fingerprint(root: string): string {
 	return hash.digest("hex");
 }
 
-export type CommandResult = { ok: boolean; tail: string };
-
-export function runPnpm(root: string, script: "verify" | "e2e"): CommandResult {
-	// shell: pnpm is a .cmd shim on Windows; 2>&1 keeps errors in order with the output in cmd and sh alike.
-	const result = spawnSync(`pnpm ${script} 2>&1`, {
+export function runCheck(root: string, check: Check): CommandResult {
+	// shell: package managers are .cmd shims on Windows; 2>&1 keeps errors in order with the output in cmd and sh.
+	const result = spawnSync(`${commandFor(check)} 2>&1`, {
 		cwd: root,
 		shell: true,
 		encoding: "utf8",

@@ -1,4 +1,6 @@
 // The rules behind check-test-integrity.ts, as pure functions over a branch's changes (tested on their own).
+import { MIGRATION_JOURNAL, MIGRATIONS_DIR } from "./agent/project.ts";
+
 export type FileChange = {
 	path: string;
 	status: "A" | "M" | "D";
@@ -7,10 +9,16 @@ export type FileChange = {
 	addedLines: string[];
 };
 
-export const isTestFile = (file: string) => /\.(test|spec)\.tsx?$/.test(file);
-export const isMigration = (file: string) =>
-	file.startsWith("packages/db/migrations/");
-const JOURNAL = "packages/db/migrations/meta/_journal.json";
+export type Migrations = { dir: string; journal: string };
+const PROJECT_MIGRATIONS: Migrations = {
+	dir: MIGRATIONS_DIR,
+	journal: MIGRATION_JOURNAL,
+};
+
+export const isTestFile = (file: string) =>
+	/\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+export const isMigration = (file: string, migrations = PROJECT_MIGRATIONS) =>
+	migrations.dir !== "" && file.startsWith(migrations.dir);
 
 // Every test()/it() call, including it.each(...)(...) and test.describe-less forms; good enough to see a drop.
 export function countTests(source: string): number {
@@ -48,6 +56,7 @@ function journalOnlyAppends(before: string, after: string): boolean {
 export function findProblems(
 	changes: FileChange[],
 	allowlist: Set<string>,
+	migrations = PROJECT_MIGRATIONS,
 ): string[] {
 	const problems: string[] = [];
 	for (const change of changes) {
@@ -80,15 +89,15 @@ export function findProblems(
 			}
 		}
 
-		if (isMigration(path) && status !== "A") {
+		if (isMigration(path, migrations) && status !== "A") {
 			if (
-				path === JOURNAL &&
+				path === migrations.journal &&
 				status === "M" &&
 				journalOnlyAppends(change.before ?? "", change.after ?? "")
 			)
 				continue;
 			problems.push(
-				`${path}: edits a migration that is already on main (${status === "D" ? "deleted" : "modified"}). Applied migrations never change (CLAUDE.md rule 4): restore it with \`git checkout origin/main -- ${path}\` and put the change in a new migration (\`pnpm db:generate\`).`,
+				`${path}: edits a migration that is already on main (${status === "D" ? "deleted" : "modified"}). Applied migrations never change: restore it with \`git checkout origin/main -- ${path}\` and put the change in a new migration.`,
 			);
 		}
 	}

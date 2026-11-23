@@ -15,9 +15,8 @@ Read the diff and the spec first, then open only the files you need to confirm a
 Check, in this order:
 1. **Each acceptance criterion** in the spec has a test that would FAIL without this change. Name the test. A test
    that passes on main too, or asserts nothing about the criterion, does not count.
-2. **CLAUDE.md rules**: request/response bodies are Zod schemas in `packages/shared` (no local copies); every query in
-   a protected route filters on the session's user id or the membership's organization id, and another tenant's row
-   is a 404 with a test for both sides; migrations are new files, never edits; env vars follow rule 6.
+2. **CLAUDE.md's rules**, above all those about API contracts, data isolation between users or tenants (another
+   tenant's data needs a test proving it can't be reached), migrations and env vars.
 3. **Weakened tests**: assertions loosened, cases removed, mocks that make a test pass without exercising the code.
 4. **Needless complexity**: code the spec doesn't need, duplication of an existing helper.
 

@@ -1,12 +1,12 @@
 // The stop gate's decision, separate from I/O so it can be tested: may the agent finish its turn?
-import type { CommandResult } from "./checks.ts";
+import { type Check, type CommandResult, commandFor } from "./checks.ts";
 import { isRunActive, MAX_STOPS, type RunState } from "./state.ts";
 
 export type GateDeps = {
 	fingerprint(): string;
 	changedFiles(): string[];
 	needsE2e(files: string[]): boolean;
-	run(script: "verify" | "e2e"): CommandResult;
+	run(check: Check): CommandResult;
 	sha(): string;
 	now(): string;
 };
@@ -32,7 +32,7 @@ export function gate(input: RunState, deps: GateDeps): GateResult {
 	}
 
 	const print = deps.fingerprint();
-	const checks: ("verify" | "e2e")[] = [];
+	const checks: Check[] = [];
 	if (g.greenFingerprint !== print) checks.push("verify");
 	// e2e takes minutes, so it gates only /deliver runs, and only when the change can affect a browser.
 	if (
@@ -51,11 +51,11 @@ export function gate(input: RunState, deps: GateDeps): GateResult {
 		if (!result.ok) {
 			g.stops += 1;
 			g.verifyFailures += 1;
-			g.lastFailure = `pnpm ${script}:\n${result.tail}`;
+			g.lastFailure = `${commandFor(script)}:\n${result.tail}`;
 			return {
 				exitCode: 2,
 				state,
-				message: `stop gate: \`pnpm ${script}\` failed (${g.stops}/${MAX_STOPS}). Fix the cause; never skip, weaken or delete a check or test to get past it.\n${result.tail}`,
+				message: `stop gate: \`${commandFor(script)}\` failed (${g.stops}/${MAX_STOPS}). Fix the cause; never skip, weaken or delete a check or test to get past it.\n${result.tail}`,
 			};
 		}
 		if (script === "verify") g.greenFingerprint = print;

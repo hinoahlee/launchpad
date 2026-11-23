@@ -29,13 +29,13 @@ jump to that phase's step below. Never redo a finished phase.
 `git switch <type>/<slug>` if it exists, else `git switch -c <type>/<slug>` from an up-to-date main.
 
 ## 2. tests (`phase tests`)
-Bug fix: write the failing test from the first criterion, run it (scoped: `pnpm --filter <pkg> exec vitest run <file>`),
+Bug fix: write the failing test from the first criterion, run it (just that file; CLAUDE.md says how),
 and confirm it fails *for the reported reason*. Feature: write the tests each criterion names, where it helps to
 have them first. Commit: `wip: <slug> tests`.
 
 ## 3. implement (`phase implement <n>` before each slice)
-Follow CLAUDE.md's recipe in small slices (contract → data → API → API tests → web). After each slice run its scoped
-tests, then commit `wip: <slug> slice <n>` (checkpoint; the PR is squash-merged). On resume, the last `wip:` commit
+Follow CLAUDE.md's recipe, if it has one, in small slices (e.g. contract → data → API → API tests → web). After each
+slice run its scoped tests, then commit `wip: <slug> slice <n>` (checkpoint; the PR is squash-merged). On resume, the last `wip:` commit
 tells you which slice is next.
 
 ## 4. verify (`phase verify`)

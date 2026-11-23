@@ -2,19 +2,21 @@
 //   start <slug> <type>        create the run, or print where an existing one stopped
 //   status                     print the state
 //   phase <name> [slice]       record the phase BEFORE starting it
-//   check                      pnpm verify (+ e2e when the change can affect a browser); prints only the tail
+//   check                      verify (+ e2e when the change can affect a browser); prints only the tail
 //   diff                       write the branch's diff for the reviewer: .workflow/review/<slug>.diff
 //   review <round> <file|--interrupted>   record a reviewer round; prints the CONFIRMED findings
 //   finish <pr-opened|gave-up> [note]     close the run: state.json → .workflow/runs/<slug>.json
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import type { Check } from "./checks.ts";
 import {
 	changedFiles,
+	commandFor,
 	fingerprint,
 	headSha,
 	needsE2e,
-	runPnpm,
+	runCheck,
 } from "./checks.ts";
 import { parseReview } from "./review.ts";
 import {
@@ -107,18 +109,18 @@ switch (command) {
 	}
 	case "check": {
 		const print = fingerprint(root);
-		const scripts: ("verify" | "e2e")[] = ["verify"];
+		const scripts: Check[] = ["verify"];
 		if (needsE2e(changedFiles(root))) scripts.push("e2e");
 		for (const script of scripts) {
-			const result = runPnpm(root, script);
+			const result = runCheck(root, script);
 			const record = { ok: result.ok, at: now(), sha: headSha(root) };
 			if (script === "verify") state.gate.lastVerify = record;
 			else state.gate.lastE2e = record;
 			if (result.ok && script === "verify") state.gate.greenFingerprint = print;
 			if (result.ok && script === "e2e") state.gate.e2eGreenFingerprint = print;
 			writeState(root, state);
-			if (!result.ok) fail(`FAIL pnpm ${script}\n${result.tail}`);
-			console.log(`ok pnpm ${script}`);
+			if (!result.ok) fail(`FAIL ${commandFor(script)}\n${result.tail}`);
+			console.log(`ok ${commandFor(script)}`);
 		}
 		break;
 	}

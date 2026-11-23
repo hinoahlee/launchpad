@@ -7,8 +7,8 @@ disable-model-invocation: true
 
 Plan a change with the user, interactively. Nothing is built in this skill.
 
-1. Read CLAUDE.md's "Recipe: add a feature" and the closest existing feature (`features/account` for user-scoped,
-   `features/files` for org-scoped). Skim, don't summarize it back.
+1. Read CLAUDE.md's recipe for adding a feature, if it has one, and the closest existing feature. Skim, don't
+   summarize it back.
 2. Interview the user, a few questions at a time: the problem (in their words), non-goals, who owns each new row
    (user or organization), and risk areas: auth, migrations, files, billing, the CSP. Is it a feature or a bug fix?
 3. Draft acceptance criteria. For EACH one ask: "what command, test or e2e journey proves this?" A criterion without

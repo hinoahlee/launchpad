@@ -9,7 +9,7 @@ import {
 	fingerprint,
 	headSha,
 	needsE2e,
-	runPnpm,
+	runCheck,
 } from "./checks.ts";
 import { gate } from "./gate.ts";
 import { isRunActive, readState, repoRoot, writeState } from "./state.ts";
@@ -27,7 +27,7 @@ if (process.argv.includes("--reset")) {
 		fingerprint: () => fingerprint(root),
 		changedFiles: () => changedFiles(root),
 		needsE2e,
-		run: (script) => runPnpm(root, script),
+		run: (script) => runCheck(root, script),
 		sha: () => headSha(root),
 		now: () => new Date().toISOString(),
 	});

@@ -7,6 +7,12 @@ import {
 	parseAllowlist,
 } from "./test-integrity.ts";
 
+// Explicit, so these tests pass in any repo whatever its scripts/agent/project.ts says.
+const MIGRATIONS = {
+	dir: "packages/db/migrations/",
+	journal: "packages/db/migrations/meta/_journal.json",
+};
+
 // Built from parts so this file's own added lines don't trip the check it tests.
 const ONLY = ["it", "only"].join(".");
 const SKIP = ["test", "skip"].join(".");
@@ -103,8 +109,11 @@ describe("findProblems", () => {
 			path: "packages/db/migrations/0002_notes.sql",
 			status: "A",
 		});
-		assert.match(findProblems([edited], new Set())[0] ?? "", /db:generate/);
-		assert.deepEqual(findProblems([added], new Set()), []);
+		assert.match(
+			findProblems([edited], new Set(), MIGRATIONS)[0] ?? "",
+			/new migration/,
+		);
+		assert.deepEqual(findProblems([added], new Set(), MIGRATIONS), []);
 	});
 
 	test("allows appending to the migration journal, not rewriting it", () => {
@@ -120,8 +129,8 @@ describe("findProblems", () => {
 			before,
 			after: JSON.stringify({ entries: [{ idx: 9 }] }),
 		});
-		assert.deepEqual(findProblems([appended], new Set()), []);
-		assert.equal(findProblems([rewritten], new Set()).length, 1);
+		assert.deepEqual(findProblems([appended], new Set(), MIGRATIONS), []);
+		assert.equal(findProblems([rewritten], new Set(), MIGRATIONS).length, 1);
 	});
 });
 

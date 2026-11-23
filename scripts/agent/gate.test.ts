@@ -101,7 +101,7 @@ describe("gate", () => {
 		const { value } = deps({ results: { e2e: false } });
 		const result = gate(activeRun(), value);
 		assert.equal(result.exitCode, 2);
-		assert.match(result.message, /pnpm e2e/);
+		assert.match(result.message, /failed \(1\/5\)[\s\S]*e2e output/);
 		assert.equal(result.state.gate.greenFingerprint, "tree-1");
 	});
 });
