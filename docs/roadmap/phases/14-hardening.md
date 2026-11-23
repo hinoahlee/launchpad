@@ -4,8 +4,9 @@
 Scaling, load tests, edge protection and SEO moved to [phase 21](21-later.md): no traffic yet to justify them.
 
 ### 14.1 Scanning + supply chain
-- **Build:** CodeQL on every PR, Trivy on the image (and the Dockerfile) in CI, `pnpm audit` in CI (Renovate,
-  from 2.4, already keeps pinned actions and base images current). 🧑 Turn on secret scanning and push protection.
+- **Build:** CodeQL on every PR, Trivy on the image (and the Dockerfile) in CI, `pnpm audit` in CI. Dependabot replaces
+  Renovate (decision 012). 🧑 Turn on secret scanning, push protection and Dependabot security updates; uninstall
+  the Renovate app.
 - **Terms:** SAST, image scanning, secret scanning, push protection.
 - **Done when:** a PR runs all three scanners green, and each fails on a planted problem.
 

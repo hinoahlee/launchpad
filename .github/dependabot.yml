@@ -1,0 +1,64 @@
+# Dependabot version updates (decision 012): GitHub's own, no third-party app. Security updates and alerts are repo
+# settings (Settings → Advanced Security), not this file.
+# `cooldown`: only propose releases at least 14 days old (rules.md), so a hijacked release is usually caught and pulled
+# before we'd adopt it (the March 2026 Trivy compromise lasted 12 hours). Security updates skip the cooldown.
+version: 2
+updates:
+  # npm packages, including the `catalog:` in pnpm-workspace.yaml. Minor and patch bumps in one PR; each major alone.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # A Node major changes a convention (rules.md): .nvmrc, Dockerfile, engines and @types/node move together,
+      # by hand, in a step of their own.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+    commit-message:
+      prefix: chore
+
+  # The SHA-pinned actions in .github/workflows (Dependabot updates the `# vX.Y.Z` comment on the same line too).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: chore
+
+  # Base images: Node in the Dockerfile, Postgres in compose.dev.yml. The Postgres image in cicd.yml's `services`
+  # isn't covered: keep it equal to compose.dev.yml's by hand.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 14
+    ignore:
+      # Node major: see @types/node above.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 14
+    ignore:
+      # Postgres major: must match production's version (Render's database), upgraded on purpose.
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+    commit-message:
+      prefix: chore
