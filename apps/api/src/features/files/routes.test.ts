@@ -1,8 +1,10 @@
 import {
 	billingSubscriptions,
+	createDb,
 	files,
 	jobs,
 	members,
+	organizations,
 	users,
 } from "@launchpad/db";
 import { testDatabaseUrl } from "@launchpad/db/testing";
@@ -21,6 +23,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
 import { handlers } from "#lib/jobs/handlers.ts";
+import { jobTypes } from "#lib/jobs/job-types.ts";
 import { createLogger } from "#lib/logger.ts";
 import { createMemoryStorageDriver } from "#lib/storage/memory-driver.ts";
 import { testConfig } from "#testing/config.ts";
@@ -262,6 +265,65 @@ describe("storage quota", () => {
 		expect((await register(cookie)).statusCode).toBe(413);
 	});
 
+	// Security review L4. Two uploads at once must not both see room for one: the route locks the organization's row
+	// before summing. Here a second, real connection plays the other upload: it takes the lock and adds a pending
+	// file, then holds its transaction open. Without the lock, the request would sum without that uncommitted row,
+	// see room, and pass the quota.
+	it("waits for an upload in progress, then counts its bytes", async () => {
+		const cookie = await signIn("ada@example.com");
+		const organizationId = await orgOf(cookie);
+		const [ada] = await app.db
+			.select({ id: users.id })
+			.from(users)
+			.where(eq(users.email, "ada@example.com"));
+		if (!ada) throw new Error("no user");
+
+		const other = createDb(testDatabaseUrl());
+		try {
+			let release = () => {};
+			const held = new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			let locked = () => {};
+			const isLocked = new Promise<void>((resolve) => {
+				locked = resolve;
+			});
+			const otherUpload = other.transaction(async (tx) => {
+				await tx
+					.select({ id: organizations.id })
+					.from(organizations)
+					.where(eq(organizations.id, organizationId))
+					.for("update");
+				await tx.insert(files).values({
+					organizationId,
+					userId: ada.id,
+					fileName: "big.bin",
+					contentType: "application/octet-stream",
+					sizeBytes: STORAGE_QUOTA_BYTES - 5,
+					storageKey: `organizations/${organizationId}/${crypto.randomUUID()}`,
+				});
+				locked();
+				await held;
+			});
+			await isLocked;
+
+			// 11 bytes: fits only if big.bin isn't counted.
+			const request = register(cookie);
+			let answered = false;
+			void request.then(() => {
+				answered = true;
+			});
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			expect(answered).toBe(false); // waiting for the lock
+
+			release();
+			await otherUpload;
+			expect((await request).statusCode).toBe(413);
+		} finally {
+			await other.$client.end();
+		}
+	});
+
 	it("is per organization: A's full quota doesn't block B", async () => {
 		const ada = await signIn("ada@example.com");
 		const bob = await signIn("bob@example.com");
@@ -341,6 +403,45 @@ describe("DELETE /api/files/:id", () => {
 		const res = await remove(file.id, cookie);
 		expect(res.statusCode).toBe(204);
 		expect(await list(cookie)).toEqual([]);
+		expect(storage.objects.size).toBe(0);
+	});
+
+	// Security review L2: the signed upload URL stays valid after the delete. A late PUT through it would bring the
+	// object back with no row: stored, uncounted by the quota, never cleaned. A second delete, once the URL has
+	// expired, removes it.
+	it("deletes the object again once its upload URL has expired", async () => {
+		const cookie = await signIn("ada@example.com");
+		const target = createFileResponseSchema.parse(
+			(await register(cookie)).json(),
+		);
+		storage.put(target.uploadUrl, notes.sizeBytes);
+		expect((await complete(target.id, cookie)).statusCode).toBe(200);
+		expect((await remove(target.id, cookie)).statusCode).toBe(204);
+
+		const [job] = await app.db
+			.select()
+			.from(jobs)
+			.where(eq(jobs.type, "delete-file-object"));
+		expect(job?.runAfter.getTime()).toBeGreaterThan(
+			new Date(target.expiresAt).getTime(),
+		);
+
+		// The late PUT: the object is back, with no row pointing at it.
+		storage.put(target.uploadUrl, notes.sizeBytes);
+		expect(storage.objects.size).toBe(1);
+
+		// The worker, when the job comes due.
+		await handlers["delete-file-object"](
+			jobTypes["delete-file-object"].parse(job?.payload),
+			{
+				jobId: "",
+				db: app.db,
+				email: { send: async () => ({}) },
+				storage,
+				log: createLogger("silent"),
+				signal: new AbortController().signal,
+			},
+		);
 		expect(storage.objects.size).toBe(0);
 	});
 });

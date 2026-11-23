@@ -21,6 +21,17 @@ export const jobTypes = {
 	// Deletes what a deleted account uploaded before 12.2, under the old prefix (users/<userId>/). Queued by account
 	// deletion (features/auth/auth.ts); its database rows are already gone (ON DELETE CASCADE).
 	"delete-user-files": z.object({ userId: z.uuid() }),
+	// Deletes one file's object again, once every upload URL for it has expired (security review L2): a PUT through a
+	// URL signed before the file was deleted would bring the object back with no row. Queued by DELETE /files/:id.
+	// Only a file's key shape (organizations/<uuid>/<uuid>), so a payload can never name a whole prefix.
+	"delete-file-object": z.object({
+		key: z
+			.string()
+			.regex(
+				/^organizations\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/,
+				"a file key: organizations/<uuid>/<uuid>",
+			),
+	}),
 	// Deletes abandoned uploads: registered, never completed, older than olderThanHours. Their objects (if the
 	// PUT happened) and their rows, which also gives the space back to the user's quota. Queued every hour.
 	"prune-uploads": z.object({
