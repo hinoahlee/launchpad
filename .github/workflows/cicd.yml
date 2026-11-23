@@ -43,6 +43,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Full history, so origin/main exists: lint's diff checks (scripts/check-*.ts) compare the PR with it and
+          # skip themselves on the default one-commit checkout.
+          fetch-depth: 0
 
       # Installs pnpm (from package.json "packageManager") and Node (from .nvmrc), restores the pnpm store
       # cache keyed on pnpm-lock.yaml, then runs `pnpm install --frozen-lockfile`.
