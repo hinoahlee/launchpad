@@ -14,7 +14,7 @@ Plan a change with the user, interactively. Nothing is built in this skill.
 3. Draft acceptance criteria. For EACH one ask: "what command, test or e2e journey proves this?" A criterion without
    an answer is not accepted: push back, split it, or make it checkable. "Works well" is not a criterion.
    For a bug fix, the first criterion is a test that fails today for the reported reason.
-4. Pick a kebab-case slug and write `.workflow/specs/<slug>.md`:
+4. Pick a kebab-case slug and write `.agentic/specs/<slug>.md`:
 
    ```markdown
    # <title>

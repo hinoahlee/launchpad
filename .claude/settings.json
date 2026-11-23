@@ -37,7 +37,7 @@
 			"Edit(/packages/**)",
 			"Edit(/e2e/**)",
 			"Edit(/docs/**)",
-			"Edit(/.workflow/**)"
+			"Edit(/.agentic/**)"
 		]
 	},
 	"hooks": {

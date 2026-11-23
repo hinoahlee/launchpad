@@ -1,15 +1,15 @@
 ---
 name: deliver
-description: Unattended run from an approved spec (.workflow/specs/<slug>.md) to an open PR. Resumable; run again with the same slug after any interruption. Started by /feature on the user's "go", or by the user.
+description: Unattended run from an approved spec (.agentic/specs/<slug>.md) to an open PR. Resumable; run again with the same slug after any interruption. Started by /feature on the user's "go", or by the user.
 argument-hint: "<slug>"
 ---
 
 You are running unattended: the user is away. Never ask questions; when blocked, record why and stop (step 9).
-Slug: `$ARGUMENTS`. Spec: `.workflow/specs/$ARGUMENTS.md` (missing: stop and say so).
+Slug: `$ARGUMENTS`. Spec: `.agentic/specs/$ARGUMENTS.md` (missing: stop and say so).
 
 ## Rules for the whole run
 - **State lives in `node scripts/agent/run.ts`**, not in your memory. Record each phase BEFORE starting it:
-  `node scripts/agent/run.ts phase <name> [slice]`. Never edit `.workflow/state.json` by hand.
+  `node scripts/agent/run.ts phase <name> [slice]`. Never edit `.agentic/state.json` by hand.
 - **Every step must be safe to repeat.** After any interruption the run restarts from the recorded phase.
 - **"Done" is an exit code**, never your judgment. `node scripts/agent/run.ts check` runs `pnpm verify` (+ `pnpm e2e`
   when the change can affect a browser) and prints only the failing tail. The Stop hook runs the same gate and blocks
@@ -17,7 +17,7 @@ Slug: `$ARGUMENTS`. Spec: `.workflow/specs/$ARGUMENTS.md` (missing: stop and say
 - Keep context small: read only the files you need; for long command output use the tail.
 - Use the Bash tool for commands (the permission allowlist is written for it), one plain command per call: no
   `node -e`, heredocs or scripts in other languages (they aren't allowed, and a permission prompt stalls the run).
-  `run.ts` output is already short: don't pipe or redirect it. Edit files, `.workflow/pr.md` included, with Edit.
+  `run.ts` output is already short: don't pipe or redirect it. Edit files, `.agentic/pr.md` included, with Edit.
 - Use cheaper means for mechanical steps: run commands yourself rather than spawning helpers.
 
 ## 0. Start or resume
@@ -42,11 +42,11 @@ tells you which slice is next.
 `node scripts/agent/run.ts check` until it passes. Fix causes, not symptoms. Commit.
 
 ## 5. review (`phase review`)
-1. `node scripts/agent/run.ts diff` (writes `.workflow/review/<slug>.diff`).
-2. Spawn the `reviewer` subagent with ONLY this prompt: "Review the diff at `.workflow/review/<slug>.diff` against the
-   spec at `.workflow/specs/<slug>.md`." Nothing else: no summary of what you did.
-3. Write its reply, verbatim, to `.workflow/review/<slug>-r<round>.txt` and run
-   `node scripts/agent/run.ts review <round> .workflow/review/<slug>-r<round>.txt`.
+1. `node scripts/agent/run.ts diff` (writes `.agentic/review/<slug>.diff`).
+2. Spawn the `reviewer` subagent with ONLY this prompt: "Review the diff at `.agentic/review/<slug>.diff` against the
+   spec at `.agentic/specs/<slug>.md`." Nothing else: no summary of what you did.
+3. Write its reply, verbatim, to `.agentic/review/<slug>-r<round>.txt` and run
+   `node scripts/agent/run.ts review <round> .agentic/review/<slug>-r<round>.txt`.
    - If the subagent failed (API error, "terminated early", usage limit), run `review <round> --interrupted` and
      spawn it again; an interrupted review is NOT "no findings". If it fails twice, stop (step 9: gave-up, reason).
    - `MALFORMED`: spawn it again once, reminding it of the output format.
@@ -57,9 +57,9 @@ go back to step 5 as round 2. After round 2, don't review again: remaining findi
 
 ## 7. pr (`phase pr`)
 1. `node scripts/agent/run.ts check` must pass on the final commit.
-2. `node scripts/agent/pr-body.ts > .workflow/pr.md`, then replace only the three `TODO(agent)` parts (What, Why,
+2. `node scripts/agent/pr-body.ts > .agentic/pr.md`, then replace only the three `TODO(agent)` parts (What, Why,
    Read in this order). Don't touch the generated record.
-3. `git push -u origin HEAD`, then `gh pr create --title "<type>: <summary>" --body-file .workflow/pr.md`
+3. `git push -u origin HEAD`, then `gh pr create --title "<type>: <summary>" --body-file .agentic/pr.md`
    (Conventional Commit title; it becomes the squash commit). If a PR exists, `gh pr view` it instead.
 
 ## 8. done

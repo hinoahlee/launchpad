@@ -30,14 +30,14 @@ only last describe it (one line of prose). `/promote-correction` walks you throu
 A stuck run stops and says why, instead of burning your usage limit.
 
 **State outside the model.** A run can die at any moment (usage limit, crash, closed laptop). So progress lives on
-disk, not in the conversation: `.workflow/state.json` records the phase *before* it starts, and every slice ends with a
+disk, not in the conversation: `.agentic/state.json` records the phase *before* it starts, and every slice ends with a
 `wip:` commit. Re-running `/deliver <slug>` reads the state and continues; every step is safe to repeat.
 
 ## The flow
 
 ```mermaid
 flowchart TD
-  A["/feature: interview, criteria, each with 'verified by'"] --> B[".workflow/specs/slug.md"]
+  A["/feature: interview, criteria, each with 'verified by'"] --> B[".agentic/specs/slug.md"]
   B -->|you say go| C["/deliver slug: run.ts start (or RESUME at phase)"]
   C --> D[branch] --> E["tests: failing test first for bugs"] --> F["implement: slices, wip: commit each"]
   F --> G["verify: run.ts check (verify, + e2e if browser-facing)"]
@@ -45,7 +45,7 @@ flowchart TD
   G -->|pass| H["review: reviewer subagent, fresh context, read-only"]
   H -->|CONFIRMED findings, round 1| I[fix] --> G
   H -->|none, or round 2 done| J["pr: pr-body.ts + What/Why/Read order, gh pr create"]
-  J --> K["done: state.json moved to .workflow/runs/slug.json"]
+  J --> K["done: state.json moved to .agentic/runs/slug.json"]
   S{{"Stop hook: stop-gate.ts. Blocks ending the turn until verify passes; gives up after 5"}} -.guards every turn end.-> C
 ```
 
@@ -56,7 +56,7 @@ flowchart TD
 | `.claude/skills/feature/SKILL.md` | skill (you type `/feature`) | Interview; refuse criteria without a proving test; write the spec; hand off |
 | `.claude/skills/deliver/SKILL.md` | skill (`/deliver <slug>`) | The unattended state machine: branch → tests → implement → verify → review → fix → pr → done |
 | `.claude/agents/reviewer.md` | subagent | Read-only review in fresh context; one line per finding |
-| `.claude/skills/promote-correction/SKILL.md` | skill | Turn a miss into a type, a check, or one CLAUDE.md line; log it in `.workflow/misses.md` |
+| `.claude/skills/promote-correction/SKILL.md` | skill | Turn a miss into a type, a check, or one CLAUDE.md line; log it in `.agentic/misses.md` |
 | `.claude/skills/kit-init/SKILL.md` | skill | Install the kit into another repo after a gate audit |
 | `.claude/settings.json` | config | Hooks (below) and the permission lists an unattended run needs |
 | `scripts/agent/stop-gate.ts` | Stop hook | Runs verify (+ e2e in a run) when the agent tries to finish; exit 2 sends the failure back; cap of 5 |
@@ -65,7 +65,7 @@ flowchart TD
 | `scripts/agent/pr-body.ts` | CLI | PR description from git + state: files, test counts, checks, reviewer findings, the spec |
 | `scripts/agent/project.ts` | config | The only project-specific kit file: verify/e2e/format commands, browser paths, migrations folder |
 | `scripts/check-test-integrity.ts` | lint check | Fails on focused/skipped tests, `biome-ignore`, fewer tests, edited applied migrations |
-| `.workflow/` (gitignored) | data | `specs/`, `state.json`, `review/`, `runs/<slug>.json`, `misses.md` |
+| `.agentic/` (gitignored) | data | `specs/`, `state.json`, `review/`, `runs/<slug>.json`, `misses.md` |
 
 A test file may lose tests only with a commit trailer `Tests-changed: <path>: <why>`; `pr-body.ts` lists those
 under the template's "Tests changed or removed" heading, so the removal is reviewed instead of hidden.
@@ -126,18 +126,18 @@ sessions follow `desktopSessionCleanupPeriodDays`. This machine has both set to 
 **First time a real usage limit hits during a run, check:** did the CLI show the auto-continue line and resume? Did
 it continue the same phase (`node scripts/agent/run.ts status`) without redoing commits? If the reviewer was the one
 cut off, is the round recorded `interrupted` and re-run? Did the gate's `stops` stay unchanged? Did a weekly limit
-correctly *not* auto-continue? Write what you saw in `.workflow/misses.md` if anything went wrong.
+correctly *not* auto-continue? Write what you saw in `.agentic/misses.md` if anything went wrong.
 
 ## Debugging a bad run
 
-1. `node scripts/agent/run.ts status`: phase, slice, review rounds, last verify. Finished runs: `.workflow/runs/<slug>.json`
+1. `node scripts/agent/run.ts status`: phase, slice, review rounds, last verify. Finished runs: `.agentic/runs/<slug>.json`
    (`history` shows every phase entered; a phase listed twice means a resume).
 2. Gate gave up? `gate.lastFailure` in the state file holds the last 40 lines. Run `pnpm verify` yourself.
 3. Stalled with nothing happening? Almost always a permission prompt, or the machine slept. Check the terminal.
 4. The transcript: newest `.jsonl` in `~/.claude/projects/<project>/`. Search for `"is_error":true` to find denied or
    failed tool calls.
 5. Bad PR that passed every gate? That's a miss: run `/promote-correction <PR> <what>`.
-6. Reset: delete `.workflow/state.json` (the gate recreates it), or `run.ts finish gave-up "<why>"` to archive it.
+6. Reset: delete `.agentic/state.json` (the gate recreates it), or `run.ts finish gave-up "<why>"` to archive it.
 
 ## Decisions, and options we rejected
 
@@ -150,14 +150,20 @@ correctly *not* auto-continue? Write what you saw in `.workflow/misses.md` if an
   format or an exact `NO FINDINGS`; anything else is `MALFORMED` and is re-run, never a pass.
 - **e2e in the gate only during `/deliver`**: it takes minutes; in normal chats the gate runs verify only.
 - **Unchanged tree, no re-run**: the gate fingerprints HEAD + uncommitted changes and skips checks already green on it.
+- **`ask` rules on the gates' own files** (`scripts/`, `.claude/`, `biome.json`, `.github/`, applied migrations): an
+  unattended run that "fixes" a failing check by editing the check stops at a prompt instead. Known gap: the rules
+  cover the Edit tool, not shell commands like `sed`, which `Bash(pnpm:*)`-style allows don't stop either. The
+  reviewer and `check-test-integrity` are the backstop; a PreToolUse hook could close it if it ever happens.
+- **`.agentic/`, not `.workflow/`**: a `.workflow/state.json` makes the global wf-kit guard treat the repo as a wf-kit
+  project and block `git push`, which `/deliver` needs.
 - **Copy, not a plugin**: see "Installing in another repo".
 - **No custom runner, no scheduler, no issue fetching**: one human-started conversation is the trigger.
 
 ## When to add more
 
 Not built on purpose. Revisit after ~10 PRs through `/deliver`, or as soon as the same kind of miss shows up twice in
-`.workflow/misses.md`:
-- **(a) Batch retrospective** over `.workflow/runs/*.json` plus transcript digests: which phases fail, how many gate
+`.agentic/misses.md`:
+- **(a) Batch retrospective** over `.agentic/runs/*.json` plus transcript digests: which phases fail, how many gate
   blocks per run, where tokens go. Cost: a script plus a few hundred thousand tokens per analysis.
 - **(b) UI evidence**: Playwright screenshots or video per acceptance criterion, attached to the PR. Cost: e2e time on
   every run, storage, and a vision-capable review step (tokens).

@@ -3,9 +3,9 @@
 //   status                     print the state
 //   phase <name> [slice]       record the phase BEFORE starting it
 //   check                      verify (+ e2e when the change can affect a browser); prints only the tail
-//   diff                       write the branch's diff for the reviewer: .workflow/review/<slug>.diff
+//   diff                       write the branch's diff for the reviewer: .agentic/review/<slug>.diff
 //   review <round> <file|--interrupted>   record a reviewer round; prints the CONFIRMED findings
-//   finish <pr-opened|gave-up> [note]     close the run: state.json → .workflow/runs/<slug>.json
+//   finish <pr-opened|gave-up> [note]     close the run: state.json → .agentic/runs/<slug>.json
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";

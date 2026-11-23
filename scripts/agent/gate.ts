@@ -27,7 +27,7 @@ export function gate(input: RunState, deps: GateDeps): GateResult {
 			exitCode: 0,
 			gaveUp: true,
 			state,
-			message: `stop gate: gave up after ${MAX_STOPS} failed checks in a row. The last failure is in .workflow/state.json (gate.lastFailure). A person needs to look; the counter resets on their next message.`,
+			message: `stop gate: gave up after ${MAX_STOPS} failed checks in a row. The last failure is in .agentic/state.json (gate.lastFailure). A person needs to look; the counter resets on their next message.`,
 		};
 	}
 

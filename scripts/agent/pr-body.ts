@@ -1,6 +1,6 @@
 // Prints a PR description with .github/pull_request_template.md's headings, prefilled from git and the run's state.
 // The agent writes only What, Why and Read in this order (marked TODO); everything checkable comes from here.
-// Usage: node scripts/agent/pr-body.ts > .workflow/pr.md
+// Usage: node scripts/agent/pr-body.ts > .agentic/pr.md
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -128,7 +128,7 @@ ${list(other)}
 **Reviewer** (${reviews.length ? reviews.map((r) => `round ${r.round}: ${r.status}, ${r.confirmed} confirmed / ${r.plausible} plausible / ${r.style} style`).join("; ") : "not run"})
 ${remaining.length ? `Findings from the last round, for a human to judge:\n${remaining.join("\n")}` : "No findings left from the last round."}
 
-**Spec** (\`.workflow/specs/${slug}.md\`)
+**Spec** (\`.agentic/specs/${slug}.md\`)
 
 ${spec}
 

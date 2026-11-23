@@ -114,10 +114,10 @@ function install() {
 	const gitignore = existsSync(at(".gitignore"))
 		? readFileSync(at(".gitignore"), "utf8")
 		: "";
-	if (!gitignore.includes(".workflow/"))
+	if (!gitignore.includes(".agentic/"))
 		writeFileSync(
 			at(".gitignore"),
-			`${gitignore.trimEnd()}\n\n# Agent run state (kit)\n.workflow/\n`,
+			`${gitignore.trimEnd()}\n\n# Agent run state (kit)\n.agentic/\n`,
 		);
 	console.log(
 		`copied ${GENERIC.length} files; edit scripts/agent/project.ts, then run prove`,
@@ -185,7 +185,7 @@ function enableHooks() {
 		["cat", "head", "tail", "grep", "ls", "wc", "echo"].map(
 			(tool) => `Bash(${tool}:*)`,
 		),
-		["Edit(/.workflow/**)"],
+		["Edit(/.agentic/**)"],
 	);
 	const ask = [
 		"Bash(gh pr merge:*)",
@@ -205,7 +205,7 @@ function enableHooks() {
 	mkdirSync(path.dirname(file), { recursive: true });
 	writeFileSync(file, `${JSON.stringify(settings, null, "\t")}\n`);
 	writeFileSync(
-		at(".workflow", "kit-proof.json"),
+		at(".agentic", "kit-proof.json"),
 		JSON.stringify({ provenAt: new Date().toISOString() }),
 	);
 	console.log(
@@ -217,7 +217,7 @@ try {
 	if (command === "detect") console.log(JSON.stringify(detect(), null, 2));
 	else if (command === "install") install();
 	else if (command === "prove" && rest.length === 2) {
-		mkdirSync(at(".workflow"), { recursive: true });
+		mkdirSync(at(".agentic"), { recursive: true });
 		await prove(rest[0] ?? "", rest[1] ?? "");
 	} else
 		throw new Error(

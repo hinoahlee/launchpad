@@ -1,6 +1,6 @@
 ---
 name: promote-correction
-description: Turn a mistake the gates and reviewer missed into the strongest guard that works (type, then check, then one CLAUDE.md line) and log it in .workflow/misses.md. Run after a human review catches something.
+description: Turn a mistake the gates and reviewer missed into the strongest guard that works (type, then check, then one CLAUDE.md line) and log it in .agentic/misses.md. Run after a human review catches something.
 argument-hint: "<PR number> <what was missed>"
 disable-model-invocation: true
 ---
@@ -14,6 +14,6 @@ Try these in order and stop at the first that works:
 3. **One line in CLAUDE.md**, in the section it belongs to. If CLAUDE.md is over ~80 lines of rules, delete or merge
    one so it doesn't grow.
 
-Show the diff and wait for approval; don't commit before it. Then append one line to `.workflow/misses.md`:
+Show the diff and wait for approval; don't commit before it. Then append one line to `.agentic/misses.md`:
 `YYYY-MM-DD | PR #<n> | <what the gates missed> | fix kind: code / script / prose`.
 Commit the fix on its own branch (`chore/guard-<slug>`) as one Conventional Commit; the user opens the PR.

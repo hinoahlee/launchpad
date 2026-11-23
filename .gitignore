@@ -47,5 +47,6 @@ Thumbs.db
 # Database dumps. Real data: never commit.
 .drill/
 
-# Agent run state, specs, reviews and run records (/feature, /deliver): local to this machine
-.workflow/
+# Agent run state, specs, reviews and run records (/feature, /deliver): local to this machine. Not `.workflow/`:
+# that name marks a wf-kit project, whose global guard blocks git push.
+.agentic/

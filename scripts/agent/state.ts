@@ -1,5 +1,5 @@
 // The state file of a /deliver run, shared by the skill (phases, reviews) and the stop gate (verify results).
-// Lives in .workflow/ (gitignored): it is a record of one run, not project code.
+// Lives in .agentic/ (gitignored): it is a record of one run, not project code.
 import {
 	existsSync,
 	mkdirSync,
@@ -65,7 +65,7 @@ export type RunState = {
 export const repoRoot = path.resolve(
 	fileURLToPath(new URL("../..", import.meta.url)),
 );
-export const workflowDir = (root: string) => path.join(root, ".workflow");
+export const workflowDir = (root: string) => path.join(root, ".agentic");
 export const statePath = (root: string) =>
 	path.join(workflowDir(root), "state.json");
 
