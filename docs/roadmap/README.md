@@ -25,7 +25,7 @@ like you're shadowing a principal engineer.
 | 11 | [File storage](phases/11-storage.md) | done |
 | 12 | [Organizations](phases/12-organizations.md) | done |
 | 13 | [Billing](phases/13-billing.md) | done |
-| 14 | [Hardening + scale](phases/14-hardening.md) | not started |
+| 14 | [Security review](phases/14-hardening.md) | in progress |
 | 15 | [Operations practice](phases/15-operations.md) | not started |
 | 16 | [VPS target](phases/16-vps.md) | not started |
 | 17 | [AWS foundation (optional)](phases/17-aws-foundation.md) | not started |
@@ -35,11 +35,6 @@ like you're shadowing a principal engineer.
 | 21 | [Later: mobile, enterprise](phases/21-later.md) | â€” |
 
 Follow-ups noticed along the way:
-- Phase 14 (hardening): a Sentry `tunnel` (browser errors sent via our own `/api` route), so ad blockers
-  don't hide them; seen in the 6.4 drill. It would also let the CSP drop its Sentry hosts from `connect-src`
-  (7.2). Not done in phase 7: no step named it.
-- Phase 14 (hardening): confirm rate limits key on each visitor's real IP (`TRUST_PROXY_HOPS`, 7.2) by hitting
-  production from a second network. E2E (7.5) can't check it: one machine, no proxy in front.
 - Before launch: replace the placeholder `contactEmail` in `apps/web/src/lib/site.ts` (7.4).
 - Next dependency update: Dependabot flags `glob` and `minimatch` (moderate, build-time) via the Sentry and
   `@fastify/static` packages. Bump when they ship patched versions, or add `overrides` like the esbuild one.
@@ -48,26 +43,15 @@ Follow-ups noticed along the way:
 - Phase 15 (operations): the deploy job only starts the worker's deploy (no URL to poll, and a Render API key
   is too powerful to keep in GitHub). A worker heartbeat (its commit in the database, shown by `/api/version`)
   would let the job wait for it too.
-- Phase 14 (hardening): `react-email` 6 ships its preview CLI (esbuild, Babel, Tailwind, Prettier...) as runtime
-  dependencies: ~67 MB in the image the worker never runs (9.1). Bundling only its components failed: its modules
-  aren't marked side-effect free, so tree-shaking keeps the CLI's imports. Revisit if it splits or marks them.
 - Phase 15 (rotate secrets): the 5.6 drill rotated the database password after a leak. Learned: a new Render
   credential reaches the app only after a Blueprint **Manual Sync** and a redeploy; check `session_user` (the
   login), not `current_user` (Render's new login acts as the original owner role), before deleting the old one.
-- Phase 14 (hardening): an `Origin` check on our own state-changing routes (`/api/organizations/.../files`, `/api/account`), like
-  Better Auth's on `/api/auth/*`. `SameSite=Lax` treats every `*.noahlee.xyz` subdomain as the same site (11.3).
-- Phase 14 (hardening): the per-user quota's row lock (11.2) has no test; ten parallel `app.inject` calls never
-  raced. A test with two real connections holding the lock would prove it.
 - Phase 15 (operations): objects with no row (a failed `storage delete failed; object orphaned`) are never retried.
   A reconcile job (list the bucket, compare with `files`) would catch them; check the log line until then.
 - Before running any decoder on uploads (images, audio): a worker of its own, with only bucket access (11.2 chat).
 - Before live Stripe keys: deleting an account deletes its `billing_customers` row, but the Stripe customer and its
   subscription stay, and keep charging. Delete the customer at Stripe (that cancels its subscriptions) in
   `deleteUser`'s `beforeDelete`; the key then needs Customers write, which it has (13.2).
-- Phase 14 (hardening): a request the client aborts early crashes `@fastify/rate-limit`'s key generator
-  (`request.ip` undefined → `normalizeIP`), logged as `unhandled error` (and sent to Sentry). Seen in dev, 13.2.
-- Phase 14 (hardening): an append-only audit log of security events (sign-ins, account deletion, sessions revoked),
-  readable by the account's owner. Planned as 12.4 for membership changes, which decision 010 removed.
 
 ## What we're building
 

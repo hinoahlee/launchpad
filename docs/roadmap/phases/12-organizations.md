@@ -23,4 +23,4 @@ which they own alone (decision 010). Teams (invites, several members, switching)
 - **Done when:** the migration runs on production, and inserting a file without an organization fails.
 
 Dropped from this phase (decision 010): invites (a teams feature) and the membership audit log (no membership or
-role changes happen). Security events go to an audit log in phase 14 (see the roadmap's follow-ups).
+role changes happen). Security events go to an audit log later (phase 21) (see the roadmap's follow-ups).

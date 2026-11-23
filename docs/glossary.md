@@ -500,3 +500,15 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   storage; Pro: 1 GB). Decided in one table (`ENTITLEMENTS`), not scattered as `if plan === "pro"`. (13.4)
 - **Feature gating** — checking the entitlement in code before allowing an action, and refusing it otherwise (here:
   an upload past the plan's quota gets 413). Checked by the API; the page only shows it. (13.4)
+
+## Phase 14 — Security review
+- **SAST (static application security testing)** — reading source code, without running it, for patterns that
+  lead to vulnerabilities (user input reaching SQL, a shell, a redirect). Ours: CodeQL on every PR. (14.1)
+- **Image scanning** — listing every package inside a container image (OS and npm) and matching their versions
+  against known CVEs. Ours: Trivy in CI, failing when a fixed version exists. (14.1)
+- **Secret scanning** — GitHub checking every pushed commit for known token formats (Stripe, AWS, ...) and
+  alerting. **Push protection** goes further: it refuses the push before the secret is public. (14.1)
+- **Attack surface** — everything an attacker could reach or abuse. Removing what nothing uses (npm in the
+  runtime image) shrinks it for free. (14.1)
+- **Minimum release age** — a waiting period before a new package version may be installed (ours: 7 days, in
+  `pnpm-workspace.yaml`). Most hijacked releases are found and removed within hours, before anyone waited it out. (14.1)

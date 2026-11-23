@@ -3,7 +3,7 @@
 **Goal:** practice the maintenance work that fills most of a live product's life.
 
 ### 15.1 Upgrade day
-- **Build:** work through Renovate PRs, including one major upgrade with breaking changes.
+- **Build:** upgrade dependencies by hand (decision 012), including one major upgrade with breaking changes.
 - **Terms:** major version, changelog, deprecation, codemod.
 
 ### 15.2 Postgres major upgrade

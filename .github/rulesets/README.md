@@ -10,3 +10,9 @@ the same name posted by a token, another app or a script is ignored.
 - Or see who reported a real run: `gh api repos/hinoahlee/launchpad/commits/main/check-runs --jq '.check_runs[].app.id'`
 - Limit: any workflow in this repo also reports as GitHub Actions, so changes to `.github/workflows/` need
   careful review.
+
+## `code_scanning` (14.1)
+Blocks merging while CodeQL reports a new high or critical security alert, or an error-level alert, on the PR.
+CodeQL runs as GitHub's **default setup** (Settings → Advanced Security), not a workflow file. It needs CodeQL
+results for both the PR and `main`: turn default setup on and let it finish on `main` before applying this, or
+every PR waits forever.
