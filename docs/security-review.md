@@ -16,8 +16,8 @@ L4 in 14.3–14.5; L3 and I1 accepted as they are.
 |---|---|---|---|
 | M1 | Medium | Sign-in code emails have no per-address limit | Cap sends per address (small) |
 | M2 | ~~Medium~~ | The real-client-IP setting was never checked in production | **Checked: correct.** No fix |
-| M3 | Medium | An aborted request crashes the rate limiter (500 + Sentry event) | Guard the key generator (small) |
-| L1 | Low | Our own POST routes have no `Origin` check (same-site CSRF) | One `onRequest` hook (small) |
+| M3 | Medium | An aborted request crashes the rate limiter (500 + Sentry event) | **Fixed in 14.3** |
+| L1 | Low | Our own POST routes have no `Origin` check (same-site CSRF) | **Fixed in 14.3** (`lib/same-origin.ts`) |
 | L2 | Low | An upload URL outlives a deleted file | Delete the object again after the URL expires (small) |
 | L3 | Low | Sign-in codes sit in plain text in `jobs.payload` | Drop the code from finished jobs, or accept |
 | L4 | Low | The storage quota's row lock has no test | A two-connection test (small) |

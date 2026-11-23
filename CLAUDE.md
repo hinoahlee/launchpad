@@ -40,6 +40,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   Account deletion: Better Auth's `POST /api/auth/delete-user` (hard delete), only with a session from the last
   `RECENT_SIGN_IN_MINUTES` (else 400 `SESSION_EXPIRED`). New tables pointing at `users` need `ON DELETE CASCADE`;
   cleanup outside Postgres (files, billing) goes in `deleteUser`'s `beforeDelete`/`afterDelete` in `auth.ts`.
+  CSRF on our own routes: POST/PUT/PATCH/DELETE under `/api` with an `Origin` other than APP_URL's get 403
+  (`lib/same-origin.ts`); no `Origin` (non-browser) passes; `/api/auth/*` and `/api/webhooks/*` are exempt.
   E2E: a test that provokes a console error on purpose declares it with `test.use({ expectedErrors: [...] })`.
   Org-scoped routes (decision 011): URL `/api/organizations/:organizationId/...`, `preHandler: requireMembership(minRole)`
   (`features/auth/require-membership.ts`: not a member → 404, role too low → 403), then filter every query on

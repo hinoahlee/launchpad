@@ -4,7 +4,7 @@ import { STATUS_CODES } from "node:http";
 import path from "node:path";
 import fastifyCompress from "@fastify/compress";
 import fastifyHelmet from "@fastify/helmet";
-import fastifyRateLimit from "@fastify/rate-limit";
+import fastifyRateLimit, { normalizeIP } from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import { createDb, type Database } from "@launchpad/db";
 import {
@@ -37,6 +37,7 @@ import { resendWebhookRoutes } from "./features/email-webhooks/routes.ts";
 import { fileRoutes } from "./features/files/routes.ts";
 import { greetingRoutes } from "./features/greeting/routes.ts";
 import { loggerOptions } from "./lib/logger.ts";
+import { requireSameOrigin } from "./lib/same-origin.ts";
 import { reportError } from "./lib/sentry.ts";
 import { createStorageDriver } from "./lib/storage/create-driver.ts";
 import type { StorageDriver } from "./lib/storage/driver.ts";
@@ -273,9 +274,17 @@ export function buildApp(
 			await api.register(fastifyRateLimit, {
 				max: rateLimitMax,
 				timeWindow: "1 minute",
+				// The plugin's default, plus one case: a client that hung up before this hook ran has no address
+				// (`request.ip` undefined), and the default crashes on it (a 500 and a Sentry event per hang-up, so a
+				// script could burn the Sentry quota). Those share one counter: nobody is left to answer anyway.
+				keyGenerator: (request) =>
+					request.ip ? normalizeIP(request.ip) : "client-gone",
 				// The platform's health checks and the uptime monitor call these every few seconds.
 				allowList: (request) => PROBES.has(request.url),
 			});
+
+			// State-changing requests from another site (its page making your browser call us) get 403.
+			api.addHook("onRequest", requireSameOrigin(appUrl(config)));
 
 			// Liveness: failing means "restart me". Never check dependencies here: restarts don't fix a DB outage.
 			api.get(
