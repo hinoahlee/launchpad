@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLogger } from "./logger.ts";
+import { createLogger } from "#lib/logger.ts";
 
 describe("logger", () => {
 	function logLine(fields: Record<string, unknown>) {

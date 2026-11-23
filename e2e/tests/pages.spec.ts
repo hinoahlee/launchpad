@@ -1,7 +1,6 @@
 import { expect, test } from "#support/fixtures.ts";
 
-// Smoke tests: each public page loads and shows what it should, on a phone and a desktop (the two projects in
-// playwright.config.ts). Cheap to run; they catch a broken build, route, header or bundle before users do.
+// Smoke tests: each public page loads, on a phone and a desktop.
 const pages = [
 	{ path: "/", heading: "Launchpad", title: "Launchpad" },
 	{
@@ -55,7 +54,7 @@ test("the footer links to the legal pages", async ({ page }) => {
 test("the landing page's calls to action are links", async ({ page }) => {
 	await page.goto("/");
 	// They look like buttons but must stay links, so screen readers announce them as links.
-	for (const name of ["View on GitHub", "Read the roadmap"]) {
+	for (const name of ["View on GitHub", "Read the README"]) {
 		await expect(page.getByRole("link", { name })).toBeVisible();
 	}
 });

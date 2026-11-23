@@ -44,5 +44,5 @@ Thumbs.db
 # drizzle-kit scratch output from `pnpm db:check`
 .migrations-check/
 
-# Database dumps from restore drills (docs/runbooks/restore-database.md). Real data: never commit.
+# Database dumps. Real data: never commit.
 .drill/

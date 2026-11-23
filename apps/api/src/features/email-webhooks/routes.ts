@@ -2,10 +2,8 @@ import { errorResponseSchema } from "@launchpad/shared";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { suppress } from "#lib/email/suppression.ts";
-import { verifyWebhookSignature } from "#lib/email/webhook-signature.ts";
+import { verifyWebhookSignature } from "./verify-signature.ts";
 
-// The fields we use from Resend's event (they send more). Every event has `type` and `data.to`; email.bounced adds
-// `data.bounce`. Not in @launchpad/shared: only Resend and the API exchange it, never the web app.
 const resendEvent = z.object({
 	type: z.string(),
 	data: z.object({
@@ -14,9 +12,7 @@ const resendEvent = z.object({
 	}),
 });
 
-// Which events mean "never email this address again". A Permanent bounce: the mailbox doesn't exist or refuses
-// us for good. A Temporary one (full mailbox, server down) usually clears up, so it isn't recorded. A complaint:
-// the person pressed "Report spam".
+// Permanent bounces and spam complaints. Temporary bounces usually clear up.
 function suppressionFor(event: z.output<typeof resendEvent>) {
 	if (
 		event.type === "email.bounced" &&
@@ -28,12 +24,10 @@ function suppressionFor(event: z.output<typeof resendEvent>) {
 	return undefined;
 }
 
-// POST /api/webhooks/resend: Resend calls it after each event we subscribed to (Resend → Webhooks).
-// Answers 204 for any genuine event, even ones we ignore: anything other than 2xx makes Resend retry for hours.
+// 204 for any genuine event, even ignored ones: anything else makes Resend retry for hours.
 export function resendWebhookRoutes(secret: string): FastifyPluginAsyncZod {
 	return async (app) => {
-		// The signature covers the exact bytes Resend sent, so this route needs the body as a string, not parsed
-		// JSON. Replaced only inside this plugin: every other route still gets parsed JSON.
+		// The signature covers the raw bytes. Scoped to this plugin.
 		app.removeContentTypeParser("application/json");
 		app.addContentTypeParser(
 			"application/json",
@@ -72,8 +66,7 @@ export function resendWebhookRoutes(secret: string): FastifyPluginAsyncZod {
 					return reply.code(401).send({ error: "invalid_signature" });
 				}
 
-				// Signed by Resend but not the shape we expect: their format changed. A 400 makes Resend retry and
-				// then show the failures in its dashboard, instead of us silently dropping bounces.
+				// Signed but unexpected: their format changed. 400 makes it visible in Resend's dashboard.
 				const parsed = resendEvent.safeParse(safeJson(request.body));
 				if (!parsed.success) {
 					request.log.error(
@@ -90,7 +83,7 @@ export function resendWebhookRoutes(secret: string): FastifyPluginAsyncZod {
 						await suppress(app.db, address, reason);
 					}
 				}
-				// The type and count only: addresses are personal data and stay out of the logs.
+				// Addresses are personal data: counts only.
 				request.log.info(
 					{ event: event.type, suppressed: reason ? event.data.to.length : 0 },
 					"resend webhook",

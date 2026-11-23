@@ -1,63 +1,34 @@
-import {
-	billingCustomers,
-	billingSubscriptions,
-	type Database,
-} from "@launchpad/db";
+import { billingCustomers } from "@launchpad/db";
 import {
 	billingRedirectResponseSchema,
 	billingResponseSchema,
 	errorResponseSchema,
 	organizationParamsSchema,
 } from "@launchpad/shared";
-import { eq } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import {
 	membershipOf,
 	requireMembership,
-} from "#features/auth/require-membership.ts";
-import { requireSession } from "#features/auth/require-session.ts";
-import { planOf } from "#lib/entitlements.ts";
-import { type BillingDriver, isLive } from "./driver.ts";
-import { syncSubscription } from "./sync.ts";
+} from "#lib/auth/guards/require-membership.ts";
+import { requireSession } from "#lib/auth/guards/require-session.ts";
+import type { BillingDriver } from "./driver/types.ts";
+import {
+	billingStatus,
+	customerIdOf,
+	subscribedOf,
+	syncSubscription,
+} from "./service.ts";
 
-async function customerIdOf(
-	db: Database,
-	organizationId: string,
-): Promise<string | undefined> {
-	const [row] = await db
-		.select({ id: billingCustomers.stripeCustomerId })
-		.from(billingCustomers)
-		.where(eq(billingCustomers.organizationId, organizationId));
-	return row?.id;
-}
-
-// /api/organizations/:organizationId/billing: the organization's plan, and the two Stripe pages that change it.
-// Payment details never touch the API: Checkout and the Customer Portal are Stripe's own pages, and the API only
-// creates a session for one and sends the browser there.
-// `billing` undefined (no Stripe settings): only GET, which says billing is off.
-
-// Whether the organization has a subscription that hasn't ended, from our copy (kept current by webhooks).
-async function subscribedOf(
-	db: Database,
-	organizationId: string,
-): Promise<boolean> {
-	const [row] = await db
-		.select({ status: billingSubscriptions.status })
-		.from(billingSubscriptions)
-		.where(eq(billingSubscriptions.organizationId, organizationId));
-	return row ? isLive(row.status) : false;
-}
-
+// Payment details never touch the API: it only creates Stripe Checkout and Customer Portal sessions.
+// Without Stripe settings (`billing` undefined) only GET exists, and says billing is off.
 export const billingRoutes =
 	(billing: BillingDriver | undefined, appUrl: string): FastifyPluginAsyncZod =>
 	async (app) => {
 		app.addHook("onRequest", requireSession);
-		// Any member sees the plan; only owners and admins spend the organization's money.
 		const member = requireMembership("member");
 		const admin = requireMembership("admin");
 
-		// From our database, not Stripe: fast, and works while Stripe is down. Right after a payment it may lag
-		// until the webhook lands (eventual consistency); the page calls /billing/sync to catch up at once.
+		// From our copy, not Stripe: it can lag a webhook behind, so the page calls /billing/sync after a payment.
 		app.get(
 			"/billing",
 			{
@@ -67,20 +38,16 @@ export const billingRoutes =
 					response: { 200: billingResponseSchema },
 				},
 			},
-			async (request) => {
-				const { organizationId } = membershipOf(request);
-				return {
-					enabled: billing !== undefined,
-					subscribed: await subscribedOf(app.db, organizationId),
-					plan: await planOf(app.db, organizationId),
-				};
-			},
+			async (request) =>
+				billingStatus(
+					app.db,
+					membershipOf(request).organizationId,
+					billing !== undefined,
+				),
 		);
 
 		if (!billing) return;
 
-		// Asks Stripe now instead of waiting for the webhook, then answers like GET. The page calls it when it lands
-		// back from Checkout or the portal. Any member: it only refreshes our copy, and costs one Stripe request.
 		app.post(
 			"/billing/sync",
 			{
@@ -98,11 +65,7 @@ export const billingRoutes =
 						syncSubscription(tx, billing, customerId),
 					);
 				}
-				return {
-					enabled: true,
-					subscribed: await subscribedOf(app.db, organizationId),
-					plan: await planOf(app.db, organizationId),
-				};
+				return billingStatus(app.db, organizationId, true);
 			},
 		);
 
@@ -121,8 +84,7 @@ export const billingRoutes =
 			async (request, reply) => {
 				const { organizationId } = membershipOf(request);
 				let customerId = await customerIdOf(app.db, organizationId);
-				// A second checkout would start a second subscription, billed on top of the first. Synced first: right
-				// after a payment, the webhook may not have landed yet, and our copy would still say "not subscribed".
+				// A second checkout would bill a second subscription. Synced first: the webhook may not have landed.
 				if (customerId) {
 					const id = customerId;
 					await app.db.transaction((tx) => syncSubscription(tx, billing, id));
@@ -132,8 +94,7 @@ export const billingRoutes =
 					}
 				}
 				if (!customerId) {
-					// Two requests at once both get here, and Stripe returns the same customer to both (idempotency
-					// key): the second insert finds the row there and changes nothing.
+					// Concurrent requests get the same customer from Stripe (idempotency key); the second insert is a no-op.
 					customerId = await billing.createCustomer({ organizationId });
 					await app.db
 						.insert(billingCustomers)
@@ -171,7 +132,6 @@ export const billingRoutes =
 				}
 				const url = await billing.createPortalSession({
 					customerId,
-					// Changes made there (cancel, new card) reach us by webhook; the marker makes the page sync at once.
 					returnUrl: `${appUrl}/account?billing=updated`,
 				});
 				return { url };

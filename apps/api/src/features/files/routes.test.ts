@@ -23,17 +23,15 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
 import { handlers } from "#lib/jobs/handlers.ts";
-import { jobTypes } from "#lib/jobs/job-types.ts";
+import { jobTypes } from "#lib/jobs/schemas.ts";
 import { createLogger } from "#lib/logger.ts";
-import { createMemoryStorageDriver } from "#lib/storage/memory-driver.ts";
+import { createMemoryStorageDriver } from "#lib/storage/driver/memory/driver.ts";
 import { testConfig } from "#testing/config.ts";
 import { signInWithCode } from "#testing/sign-in.ts";
 
 const APP_URL = "https://app.example.test";
 const storage = createMemoryStorageDriver();
-// S3_BUCKET set (the keys don't matter: the memory driver is passed in) so account deletion queues file cleanup.
-// Every request here comes from one IP, and this file makes well over the default 100 a minute; the rate limit
-// has its own test (app.test.ts).
+// S3_BUCKET set so account deletion queues file cleanup. The rate limit is raised: every request comes from one IP.
 const app = buildApp(
 	testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL, S3_BUCKET: "test" }),
 	{ storage, rateLimitMax: 10_000 },
@@ -41,7 +39,6 @@ const app = buildApp(
 afterAll(async () => {
 	await app.close();
 });
-// Tables are emptied before each test (testing/setup.ts); empty the bucket with them.
 beforeEach(() => {
 	storage.objects.clear();
 });
@@ -57,8 +54,7 @@ const notes: CreateFileBody = {
 
 const someId = "00000000-0000-4000-8000-000000000000";
 
-// The signed-in user's organization (decision 010: they have exactly one), as the web app reads it.
-// Cached per cookie: one get-session per sign-in, not per request (the API rate-limits each client).
+// Cached per cookie: one get-session per sign-in.
 const orgIds = new Map<string, string>();
 const orgOf = async (cookie: string | undefined) => {
 	if (!cookie) return someId;
@@ -154,8 +150,7 @@ describe("POST /api/files (register)", () => {
 		const target = createFileResponseSchema.parse(res.json());
 		expect(target.uploadHeaders).toEqual({ "Content-Type": "text/plain" });
 
-		// The key is the organization's prefix and a random id, never the file's own name. The row records both
-		// the organization (who owns it) and the user (who uploaded it).
+		// The key never contains the file name.
 		const [row] = await app.db.select().from(files);
 		const orgId = await orgOf(cookie);
 		expect(row?.storageKey).toMatch(
@@ -234,13 +229,13 @@ describe("storage quota", () => {
 		expect((await register(cookie)).statusCode).toBe(201);
 	});
 
-	// The gate (13.4): the quota comes from the plan. Same usage, two plans, two answers.
+	// The quota comes from the plan. Same usage, two plans, two answers.
 	it("a free organization is blocked at its quota; a paid one isn't", async () => {
 		const cookie = await signIn("ada@example.com");
 		await fillUpTo(cookie, ENTITLEMENTS.free.storageQuotaBytes);
 		expect((await register(cookie)).statusCode).toBe(413);
 
-		// Paid: what a webhook leaves after Checkout (13.3).
+		// Paid: what a webhook leaves after Checkout.
 		await app.db.insert(billingSubscriptions).values({
 			organizationId: await orgOf(cookie),
 			stripeSubscriptionId: "sub_test",
@@ -265,10 +260,8 @@ describe("storage quota", () => {
 		expect((await register(cookie)).statusCode).toBe(413);
 	});
 
-	// Security review L4. Two uploads at once must not both see room for one: the route locks the organization's row
-	// before summing. Here a second, real connection plays the other upload: it takes the lock and adds a pending
-	// file, then holds its transaction open. Without the lock, the request would sum without that uncommitted row,
-	// see room, and pass the quota.
+	// Two uploads at once must not both see room for one. A second connection takes the organization lock and adds a
+	// pending file, holding its transaction open: without the lock, the request would sum without that row.
 	it("waits for an upload in progress, then counts its bytes", async () => {
 		const cookie = await signIn("ada@example.com");
 		const organizationId = await orgOf(cookie);
@@ -406,9 +399,8 @@ describe("DELETE /api/files/:id", () => {
 		expect(storage.objects.size).toBe(0);
 	});
 
-	// Security review L2: the signed upload URL stays valid after the delete. A late PUT through it would bring the
-	// object back with no row: stored, uncounted by the quota, never cleaned. A second delete, once the URL has
-	// expired, removes it.
+	// The signed upload URL outlives the delete: a late PUT brings the object back with no row. A second delete,
+	// once the URL has expired, removes it.
 	it("deletes the object again once its upload URL has expired", async () => {
 		const cookie = await signIn("ada@example.com");
 		const target = createFileResponseSchema.parse(
@@ -446,9 +438,7 @@ describe("DELETE /api/files/:id", () => {
 	});
 });
 
-// Tenant isolation (decision 011): Bob, a member of org B, can't see, add to, finish, download or delete anything
-// in org A, from either side. Each answer is the same 404 as something that doesn't exist, so Bob can't even
-// learn that an id is real.
+// Tenant isolation: Bob (org B) can't touch org A from either side; every answer is a 404, as for a made-up id.
 describe("org A and org B", () => {
 	const expectNotFound = (res: { statusCode: number; json: () => unknown }) => {
 		expect(res.statusCode).toBe(404);
@@ -509,7 +499,7 @@ describe("org A and org B", () => {
 	});
 });
 
-// RBAC: what a role may do. Everyone owns their organization today (decision 010); a team's `member` would read
+// RBAC: what a role may do. Everyone owns their organization today; a team's `member` would read
 // and upload, and only admins and owners delete.
 describe("roles", () => {
 	const demote = async (email: string) => {
@@ -539,9 +529,7 @@ describe("roles", () => {
 	});
 });
 
-// An account's files go with it (11.4), now through its organization (12.2). The rows cascade with the
-// organization at once; the objects are removed by jobs, delayed past the life of any upload URL signed just
-// before: one for the organization's prefix, one for what the user uploaded before 12.2 under theirs.
+// The rows cascade with the organization at once; the objects go by a job, delayed past any upload URL.
 describe("deleting the account", () => {
 	const context = {
 		jobId: "",
@@ -559,20 +547,13 @@ describe("deleting the account", () => {
 		return job?.payload;
 	};
 
-	it("removes the organization's rows now and queues the bucket cleanup; the jobs delete only its objects", async () => {
+	it("removes the organization's rows now and queues the bucket cleanup; the job deletes only its objects", async () => {
 		const ada = await signIn("ada@example.com");
 		const bob = await signIn("bob@example.com");
 		const orgA = await orgOf(ada);
 		await upload(ada);
 		await upload(ada, { ...notes, fileName: "second.txt" });
 		await upload(bob);
-		const [adaUser] = await app.db
-			.select()
-			.from(users)
-			.where(eq(users.email, "ada@example.com"));
-		if (!adaUser) throw new Error("no user");
-		// Uploaded before 12.2, under the old per-user prefix.
-		storage.objects.set(`users/${adaUser.id}/legacy`, 5);
 
 		const res = await app.inject({
 			method: "POST",
@@ -587,14 +568,11 @@ describe("deleting the account", () => {
 		expect(await queued("delete-organization-files")).toEqual({
 			organizationId: orgA,
 		});
-		expect(await queued("delete-user-files")).toEqual({ userId: adaUser.id });
 
-		// What the worker does when the jobs come due.
 		await handlers["delete-organization-files"](
 			{ organizationId: orgA },
 			context,
 		);
-		await handlers["delete-user-files"]({ userId: adaUser.id }, context);
 		expect([...storage.objects.keys()]).toEqual([
 			expect.stringContaining(`organizations/${await orgOf(bob)}/`),
 		]);

@@ -5,7 +5,7 @@ import { buildApp } from "#app.ts";
 import { testConfig } from "#testing/config.ts";
 import { signInForToken, signInResponse } from "#testing/sign-in.ts";
 
-// Clients without cookies (step 10.5): the session token travels in an Authorization header instead.
+// Clients without cookies: the session token travels in an Authorization header instead.
 const APP_URL = "https://app.example.test";
 const app = buildApp(testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL }));
 afterAll(async () => {

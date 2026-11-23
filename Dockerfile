@@ -32,8 +32,7 @@ RUN pnpm deploy --legacy --filter @launchpad/api --prod /out/api
 
 FROM node:24.22.3-alpine3.24 AS runtime
 ENV NODE_ENV=production
-# The base image ships npm, corepack and Yarn; the app runs only `node`. Removing them drops code nothing runs, and
-# the CVEs that come with it (in 14.1, Trivy's only findings were in npm's own dependencies).
+# The app runs only `node`: removing npm, corepack and Yarn drops code nothing runs, and its CVEs.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 # Same layout as apps/ in the repo, so dist/server.js finds the SPA at ../../web/dist.

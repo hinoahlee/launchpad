@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planFor } from "./entitlements.ts";
+import { planFor } from "#lib/entitlements.ts";
 
 describe("planFor", () => {
 	it("pro while paid, in trial, or retrying a failed renewal", () => {

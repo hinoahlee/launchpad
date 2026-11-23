@@ -1,37 +1,14 @@
-import type { Database } from "@launchpad/db";
-import type { Logger } from "pino";
-import type { EmailDriver } from "#lib/email/driver.ts";
 import { reportError } from "#lib/sentry.ts";
-import type { StorageDriver } from "#lib/storage/driver.ts";
-import { handlers as defaultHandlers, type JobHandlers } from "./handlers.ts";
-import { type JobType, jobTypes } from "./job-types.ts";
-import {
-	type ClaimedJob,
-	claimJob,
-	completeJob,
-	failJob,
-	JOBS_CHANNEL,
-	releaseJob,
-} from "./queue.ts";
-
-export type WorkerOptions = {
-	db: Database;
-	log: Logger;
-	email: EmailDriver;
-	// The bucket, for the file cleanup jobs. Unset: those jobs fail (and say why) when they have work to do.
-	storage?: StorageDriver | undefined;
-	handlers?: JobHandlers;
-	// How long a claimed job is ours. A handler must finish within it; at the end its signal is aborted, and
-	// another worker may take the job. There is no renewal: raise it if a job type needs longer.
-	leaseMs?: number;
-	// How often an idle worker checks for due jobs without a wake-up: delayed jobs and retries becoming due,
-	// expired leases, and any notification missed while the LISTEN connection was down.
-	pollIntervalMs?: number;
-	// On stop: how long to wait for the running handler to finish or give up (deploy contract: exit in 25 s).
-	shutdownGraceMs?: number;
-};
-
-export type Worker = { stop: () => Promise<void> };
+import { JOBS_CHANNEL } from "./constants.ts";
+import { handlers as defaultHandlers } from "./handlers.ts";
+import { claimJob, completeJob, failJob, releaseJob } from "./queue.ts";
+import { type JobType, jobTypes } from "./schemas.ts";
+import type {
+	ClaimedJob,
+	JobHandlers,
+	Worker,
+	WorkerOptions,
+} from "./types.ts";
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
@@ -40,7 +17,7 @@ const DEFAULT_SHUTDOWN_GRACE_MS = 20_000;
 const message = (err: unknown) =>
 	err instanceof Error ? `${err.name}: ${err.message}` : String(err);
 
-// Runs one job at a time until stop(). For more throughput, run more worker processes: claims never collide.
+// One job at a time. For more throughput, run more worker processes: claims never collide.
 export async function startWorker({
 	db,
 	log,
@@ -53,8 +30,7 @@ export async function startWorker({
 }: WorkerOptions): Promise<Worker> {
 	const stopping = new AbortController();
 
-	// Sleeping until the next poll, or until woken. A wake-up that arrives while a job runs is remembered,
-	// so the worker looks again right after instead of sleeping through it.
+	// A wake-up that arrives while a job runs is remembered, so the worker doesn't sleep through it.
 	let wakePending = false;
 	let wakeUp: (() => void) | undefined;
 	const wake = () => {
@@ -74,8 +50,7 @@ export async function startWorker({
 			if (wakePending) done();
 		});
 
-	// LISTEN holds one connection of its own. postgres.js reconnects it if it drops and then calls the third
-	// argument again: we wake up to sweep for jobs queued while we weren't listening.
+	// postgres.js reconnects LISTEN and calls the third argument: sweep for jobs queued meanwhile.
 	const listener = await db.$client.listen(JOBS_CHANNEL, wake, wake);
 
 	async function run(job: ClaimedJob): Promise<void> {
@@ -86,8 +61,7 @@ export async function startWorker({
 		});
 		const started = performance.now();
 
-		// Rows outlive code: a type removed since the job was queued, or a payload from an older schema.
-		// Retrying can't fix either.
+		// Rows outlive code: a removed type, or a payload from an older schema. Retrying can't fix either.
 		const type = job.type as JobType;
 		const parsed = Object.hasOwn(jobTypes, type)
 			? jobTypes[type].safeParse(job.payload)
@@ -99,7 +73,7 @@ export async function startWorker({
 			return;
 		}
 
-		// Each handler takes its own payload type; `type` and `parsed.data` match, which TS can't follow here.
+		// `type` and `parsed.data` match, which TS can't follow here.
 		const handler = handlers[type] as (
 			payload: unknown,
 			ctx: Parameters<JobHandlers[JobType]>[1],
@@ -119,7 +93,6 @@ export async function startWorker({
 				signal,
 			});
 		} catch (err) {
-			// Shutting down: the handler stopped, so hand the job back without spending an attempt.
 			if (stopping.signal.aborted) {
 				if (await releaseJob(db, job)) jobLog.info("job handed back");
 				return;
@@ -140,7 +113,6 @@ export async function startWorker({
 		if (await completeJob(db, job)) {
 			jobLog.info({ durationMs }, "job done");
 		} else {
-			// Our lease ran out and another worker claimed the job: its run is the one that counts.
 			jobLog.warn({ durationMs }, "job taken over by another worker");
 		}
 	}
@@ -152,8 +124,7 @@ export async function startWorker({
 				if (job) await run(job);
 				else await idle(pollIntervalMs);
 			} catch (err) {
-				// The database is unreachable, most likely. A job we held stays `running` until its lease
-				// expires, then another claim picks it up. Wait a poll and try again.
+				// Most likely the database is down. A job we held is retaken once its lease expires.
 				log.error({ err }, "worker loop error");
 				await idle(pollIntervalMs);
 			}
@@ -172,8 +143,7 @@ export async function startWorker({
 				timer = setTimeout(() => resolve(true), shutdownGraceMs);
 			});
 			if (await Promise.race([loopDone.then(() => false), timedOut])) {
-				// The handler ignored its signal. Don't release the job (it may still be running): its lease
-				// expires and another worker takes it, fenced off from this one.
+				// The handler ignored its signal: don't release it (it may still run); its lease hands it on.
 				log.warn("job still running at shutdown; its lease will hand it on");
 			}
 			clearTimeout(timer);

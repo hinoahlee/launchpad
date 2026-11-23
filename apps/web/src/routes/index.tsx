@@ -14,10 +14,10 @@ import {
 	CardHeader,
 	CardTitle,
 } from "#components/ui/card.tsx";
-import { ApiStatus } from "#features/status/api-status.tsx";
-import { pageTitle, site } from "#lib/site.ts";
+import { ApiStatus } from "#features/status/components/api-status.tsx";
+import { site } from "#lib/site/constants.ts";
+import { pageTitle } from "#lib/site/utils.ts";
 
-// The file's path is the URL: routes/index.tsx → "/". Vite regenerates src/routeTree.gen.ts from this folder.
 export const Route = createFileRoute("/")({
 	component: Home,
 });
@@ -65,7 +65,6 @@ function Home() {
 	return (
 		<div className="flex flex-col gap-12 sm:gap-16">
 			<title>{pageTitle()}</title>
-			{/* Phone first: stacked and left-aligned; side-by-side buttons from `sm` up. */}
 			<section className="flex flex-col gap-6 pt-4 sm:pt-10">
 				<div className="flex flex-col gap-3">
 					<h1 className="scroll-m-20 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
@@ -77,9 +76,7 @@ function Home() {
 					</p>
 				</div>
 				<div className="flex flex-col gap-3 sm:flex-row">
-					{/* Links that look like buttons: shadcn's buttonVariants on a plain <a>, so screen readers still
-					    announce a link. (<Button render={<a />}> would add role="button".) data-slot="button" gives
-					    them the 44px touch size from index.css. */}
+					{/* Links styled as buttons, not <Button render={<a />}>, which would add role="button". */}
 					<a
 						href={site.repoUrl}
 						data-slot="button"
@@ -88,11 +85,11 @@ function Home() {
 						View on GitHub
 					</a>
 					<a
-						href={`${site.repoUrl}/tree/main/docs/roadmap`}
+						href={`${site.repoUrl}#readme`}
 						data-slot="button"
 						className={buttonVariants({ variant: "outline", size: "lg" })}
 					>
-						Read the roadmap
+						Read the README
 					</a>
 				</div>
 			</section>
@@ -104,7 +101,6 @@ function Home() {
 				>
 					What's inside
 				</h2>
-				{/* One column on phones, two from `sm` (640px), three from `lg` (1024px). */}
 				<ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{features.map(({ icon: Icon, title, description }) => (
 						<li key={title}>

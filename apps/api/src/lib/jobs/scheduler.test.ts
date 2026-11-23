@@ -8,8 +8,8 @@ import {
 	runKey,
 	startScheduler,
 } from "./scheduler.ts";
-import type { Schedule } from "./schedules.ts";
 import { schedules } from "./schedules.ts";
+import type { Schedule } from "./types.ts";
 
 const db = createTestDb();
 afterAll(() => db.$client.end());

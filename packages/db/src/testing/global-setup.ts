@@ -1,6 +1,5 @@
-import { resetTestDatabase } from "./index.ts";
+import { resetTestDatabase } from "./database.ts";
 
-// Vitest runs this once, before any test file: a fresh schema built from the committed migrations.
 export async function setup(): Promise<void> {
 	await resetTestDatabase();
 }

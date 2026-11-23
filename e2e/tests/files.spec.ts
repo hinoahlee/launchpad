@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "#support/fixtures.ts";
 import { newEmail, signInWithCode } from "#support/sign-in.ts";
 
-// The real flow against the fake bucket (support/fake-bucket.ts): the API signs URLs, the browser PUTs to the
+// The real flow against the fake bucket (scripts/fake-bucket.ts): the API signs URLs, the browser PUTs to the
 // bucket's origin (so the CSP and the bucket's CORS both have to allow it), the API checks the size there.
 const filesCard = (page: Page) =>
 	page

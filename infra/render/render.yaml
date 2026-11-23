@@ -1,6 +1,6 @@
 # Render Blueprint: the Render services for this repo, as code. Render reads this file on every push to main
 # (Blueprint auto-sync) and applies changes. Spec: https://render.com/docs/blueprint-spec
-# Render doesn't build anything: CI publishes the image to GHCR and deploys it (decision 004).
+# Render doesn't build anything: CI publishes the image to GHCR and deploys it.
 # Deploy only through GitHub Actions (push to main, or Actions → Deploy to Render → Run workflow, also for a
 # rollback): it deploys the web first (migrations) and the worker after. Render deploys a service on its own when
 # it's created, when the Blueprint changes it, or on an env edit saved with "deploy": those use `:main` and skip
@@ -21,7 +21,7 @@ services:
     plan: 0.5c-512mb
     # Every deploy runs this first, in a one-off container from the new image with the same env vars. Non-zero
     # exit = the deploy fails and the old version keeps serving. It applies new migrations, so they must work
-    # with the old version too (decision 005).
+    # with the old version too (expand/contract, docs/deploy-contract.md).
     preDeployCommand: node dist/migrate.js
     # Render sends traffic to a new deploy only once this returns 2xx; until then the old one keeps serving.
     healthCheckPath: /api/ready
@@ -67,8 +67,8 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      # File storage: the R2 bucket launchpad-prod (docs/runbooks/r2-bucket.md). All four `sync: false` and set
-      # together in the dashboard: a bucket without its keys stops the boot. Unset: uploads are off. The endpoint
+      # File storage: the R2 bucket launchpad-prod (README, "File storage"). All four `sync: false` and set
+      # together in the dashboard (R2 needs the keys). Unset: uploads are off. The endpoint
       # holds the Cloudflare account ID, kept out of this public file. S3_REGION stays at its default, auto.
       # The worker needs the same four (it deletes files).
       - key: S3_ENDPOINT
@@ -79,7 +79,7 @@ services:
         sync: false
       - key: S3_SECRET_ACCESS_KEY
         sync: false
-      # Billing: Stripe (phase 13). Both `sync: false` and set together in the dashboard. The key is a restricted key
+      # Billing: Stripe. Both `sync: false` and set together in the dashboard. The key is a restricted key
       # (rk_...) from the launchpad sandbox until launch; the price is its monthly price. Unset: billing is off.
       - key: STRIPE_API_KEY
         sync: false
@@ -138,7 +138,7 @@ databases:
     # Name and user inside Postgres. These, the version and the region can't be changed after creation.
     databaseName: launchpad
     user: launchpad
-    # Same major version as local and CI (phase 5), so dumps and SQL behave the same everywhere.
+    # Same major version as local and CI, so dumps and SQL behave the same everywhere.
     postgresMajorVersion: "17"
     region: oregon
     # Smallest paid instance (~$6/mo): point-in-time recovery (3 days on the Hobby workspace), no expiry.

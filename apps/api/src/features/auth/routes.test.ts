@@ -12,8 +12,8 @@ import {
 import { desc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
+import { SIGN_IN_CODES_PER_HOUR } from "#lib/auth/constants.ts";
 import { testConfig } from "#testing/config.ts";
-import { SIGN_IN_CODES_PER_HOUR } from "./sign-in-code-limit.ts";
 
 const APP_URL = "https://app.example.test";
 const app = buildApp(testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL }));
@@ -270,7 +270,7 @@ describe("email code sign-in", () => {
 		expect(await app.db.select().from(jobs)).toEqual([]);
 	});
 
-	// Per address, from any number of IPs (security review M1): stops one inbox from being flooded with codes.
+	// Per address, from any number of IPs: stops one inbox from being flooded with codes.
 	describe(`at most ${SIGN_IN_CODES_PER_HOUR} codes an hour per address`, () => {
 		const sendMax = async (email = EMAIL) => {
 			for (let i = 0; i < SIGN_IN_CODES_PER_HOUR; i++) {

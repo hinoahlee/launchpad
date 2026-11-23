@@ -1,5 +1,4 @@
-// "Chrome on macOS" from a User-Agent header, for the session list. Rough on purpose: enough for a person to
-// recognise their own devices. Order matters: Edge's and Chrome's headers also contain "Safari".
+// "Chrome on macOS". Rough on purpose. Order matters: Edge and Chrome headers also contain "Safari".
 const browsers: [RegExp, string][] = [
 	[/Edg\//, "Edge"],
 	[/Firefox\//, "Firefox"],

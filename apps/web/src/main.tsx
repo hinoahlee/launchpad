@@ -3,21 +3,19 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { ThemeProvider } from "./components/theme-provider.tsx";
-import { config } from "./config.ts";
-import { ApiError } from "./lib/api.ts";
+import { ThemeProvider } from "#components/theme/provider.tsx";
+import { ApiError } from "#lib/api/errors.ts";
 import {
 	initSentry,
 	reactErrorOptions,
 	throwTestErrorIfAsked,
-} from "./lib/sentry.ts";
+} from "#lib/sentry.ts";
+import { config } from "./config.ts";
 import { routeTree } from "./routeTree.gen.ts";
 
-// First, so errors during startup are reported too.
 initSentry(config);
 
-// Server state: data owned by the API, cached here. Fresh for 30 s (a second component asking for it gets the
-// cached copy, no request). Failures retry twice, except 4xx answers, which a retry won't change.
+// 4xx answers aren't retried: a retry won't change them.
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
@@ -28,16 +26,13 @@ const queryClient = new QueryClient({
 	},
 });
 
-// Client-side routing: a link changes the URL and renders the matching route, without reloading the page.
 const router = createRouter({
 	routeTree,
 	context: { queryClient },
-	// Start loading a route's code when its link is hovered or focused, so the click feels instant.
 	defaultPreload: "intent",
 	scrollRestoration: true,
 });
 
-// Makes <Link to="..."> and navigate() type-checked against the real routes.
 declare module "@tanstack/react-router" {
 	interface Register {
 		router: typeof router;

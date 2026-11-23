@@ -5,8 +5,7 @@ import {
 } from "@launchpad/db";
 import { eq } from "drizzle-orm";
 
-// Records an address we must not email again. A second report for the same address keeps the first: a
-// provider can send the same event more than once (it retries until we answer 2xx).
+// A repeated report keeps the first: providers retry until they get a 2xx.
 export async function suppress(
 	db: Database,
 	email: string,
@@ -18,7 +17,7 @@ export async function suppress(
 		.onConflictDoNothing();
 }
 
-// Why this address is suppressed, or undefined when we may email it. Case-insensitive (citext).
+// undefined: we may email it. Case-insensitive (citext).
 export async function suppressionReason(
 	db: Database,
 	email: string,

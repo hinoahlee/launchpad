@@ -1,19 +1,19 @@
 import type { ReactElement } from "react";
 import { render, toPlainText } from "react-email";
-import type { EmailMessage } from "./messages.ts";
+import type { EmailMessage } from "./schemas.ts";
 import {
 	SignInCodeEmail,
 	signInCodeSubject,
 } from "./templates/sign-in-code.tsx";
 import { WelcomeEmail, welcomeSubject } from "./templates/welcome.tsx";
 
-export type RenderedEmail = { subject: string; html: string; text: string };
+type RenderedEmail = { subject: string; html: string; text: string };
 
 function template(message: EmailMessage): {
 	subject: string;
 	element: ReactElement;
 } {
-	// No default case: a new member of emailMessage fails to compile here until it has a template.
+	// No default case: a new email fails to compile here until it has a template.
 	switch (message.template) {
 		case "welcome":
 			return {
@@ -28,7 +28,6 @@ function template(message: EmailMessage): {
 	}
 }
 
-// The HTML part, and a plain-text part derived from it, so the two can't drift apart.
 export async function renderEmail(
 	message: EmailMessage,
 ): Promise<RenderedEmail> {

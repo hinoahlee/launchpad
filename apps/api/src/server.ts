@@ -1,8 +1,8 @@
+import { loadConfig } from "#config/load.ts";
+import { flushSentry, initSentry } from "#lib/sentry.ts";
 import { buildApp } from "./app.ts";
-import { loadConfig } from "./config.ts";
-import { flushSentry, initSentry } from "./lib/sentry.ts";
 
-// Deploy contract: exit within 25 s of SIGTERM, before the platform's SIGKILL.
+// Deploy contract: exit within 25 s of SIGTERM.
 const SHUTDOWN_TIMEOUT_MS = 25_000;
 
 const config = loadConfig();
@@ -18,9 +18,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 	}, SHUTDOWN_TIMEOUT_MS);
 	timer.unref();
 
-	// Stops accepting connections, waits for in-flight requests, runs onClose hooks.
 	await app.close();
-	// Errors captured in the last moments are still in memory: send them before exiting.
 	await flushSentry();
 	app.log.info("shutdown complete");
 	process.exit(0);
@@ -30,7 +28,7 @@ process.once("SIGTERM", shutdown);
 process.once("SIGINT", shutdown);
 
 try {
-	// 0.0.0.0: reachable from outside a container, not just from inside it.
+	// 0.0.0.0: reachable from outside the container.
 	await app.listen({ port: config.PORT, host: "0.0.0.0" });
 } catch (err) {
 	app.log.fatal({ err }, "failed to start");

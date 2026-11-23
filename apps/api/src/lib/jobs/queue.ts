@@ -1,19 +1,12 @@
 import { type Database, jobs, type Transaction } from "@launchpad/db";
 import { and, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { JOBS_CHANNEL, MAX_ATTEMPTS } from "./constants.ts";
+import type { ClaimedJob } from "./types.ts";
 
-// The consumer side of the queue: what a worker does with a row. Every write after the claim is fenced: it
-// only applies while the row is still `running` with the `attempts` value this worker claimed it with.
+// What a worker does with a row. Every write after the claim is fenced: it applies only while the row is still
+// `running` with the `attempts` value this worker claimed it with.
 
-// The NOTIFY channel workers LISTEN on. Postgres delivers a notification when the transaction that sent it
-// commits, and drops it on rollback, so a wake-up never arrives for a job that wasn't saved.
-export const JOBS_CHANNEL = "jobs";
-
-// After this many claims a failing job stops being retried and stays `failed` for a human to look at.
-export const MAX_ATTEMPTS = 5;
-
-// Exponential backoff: wait 10 s after the 1st failure, then 20 s, 40 s, 80 s..., at most 1 hour. Each retry
-// waits twice as long, so a struggling dependency (an email API that's down) gets room to recover instead of
-// being hammered.
+// 10 s, 20 s, 40 s... at most 1 hour.
 const BACKOFF_BASE_MS = 10_000;
 const BACKOFF_MAX_MS = 60 * 60 * 1000;
 
@@ -28,19 +21,8 @@ export async function notifyWorkers(db: Database | Transaction): Promise<void> {
 	await db.execute(sql`select pg_notify(${JOBS_CHANNEL}, '')`);
 }
 
-export type ClaimedJob = {
-	id: string;
-	type: string;
-	payload: unknown;
-	// The fencing token: this claim's number. A later claim of the same job gets a higher one.
-	attempts: number;
-};
-
-// Takes the next job that's due: a queued one whose run_after has passed, or a running one whose lease ran
-// out (its worker crashed or hung). Returns null when there's nothing to do.
-//
-// FOR UPDATE SKIP LOCKED: lock the row we pick, and skip rows another worker has locked instead of waiting
-// for them. Two workers asking at once get different jobs, never the same one.
+// The next due job: queued with run_after passed, or running with an expired lease (its worker died).
+// SKIP LOCKED: concurrent workers get different jobs and never wait on each other.
 export async function claimJob(
 	db: Database,
 	leaseMs: number,
@@ -51,10 +33,7 @@ export async function claimJob(
 			lt(jobs.leaseExpiresAt, sql`now()`),
 		);
 
-		// 1. Abandoned jobs that already used their last attempt: give up on them. Only rows no other worker has
-		// locked (SKIP LOCKED again): a plain UPDATE would wait for another worker's sweep of the same rows, and
-		// two sweeps locking rows in different orders could deadlock. A row we skip is swept by whoever holds
-		// it, or by the next claim.
+		// 1. Expired leases with no attempts left: give up. SKIP LOCKED here too, or two sweeps could deadlock.
 		await tx
 			.update(jobs)
 			.set({
@@ -73,15 +52,13 @@ export async function claimJob(
 				),
 			);
 
-		// 2. Pick the next due job and lock its row. The lock is held until this transaction commits: long
-		// enough for step 3 to mark it running. From then on, the status and lease keep other claims away.
+		// 2. Pick and lock the next due job until this transaction commits.
 		const [due] = await tx
 			.select({ id: jobs.id })
 			.from(jobs)
 			.where(
 				or(
 					and(eq(jobs.status, "queued"), lte(jobs.runAfter, sql`now()`)),
-					// Re-checked here: a lease can run out between step 1 and this query.
 					and(leaseExpired, lt(jobs.attempts, MAX_ATTEMPTS)),
 				),
 			)
@@ -90,7 +67,7 @@ export async function claimJob(
 			.for("update", { skipLocked: true });
 		if (!due) return null;
 
-		// 3. Claim it: a new attempt number (the fencing token) and a fresh lease.
+		// 3. Claim it: a new fencing token and a fresh lease.
 		const [claimed] = await tx
 			.update(jobs)
 			.set({
@@ -110,7 +87,6 @@ export async function claimJob(
 	});
 }
 
-// Still ours: running, and no one has claimed it since we did.
 const current = (job: ClaimedJob) =>
 	and(
 		eq(jobs.id, job.id),
@@ -118,7 +94,7 @@ const current = (job: ClaimedJob) =>
 		eq(jobs.attempts, job.attempts),
 	);
 
-// false: the write was fenced off. Our lease ran out and another worker took the job; its result counts.
+// false: fenced off. Our lease ran out and another worker took the job.
 export async function completeJob(
 	db: Database | Transaction,
 	job: ClaimedJob,
@@ -131,10 +107,9 @@ export async function completeJob(
 	return done.length > 0;
 }
 
-export type FailOutcome = "retry" | "failed" | "stale";
+type FailOutcome = "retry" | "failed" | "stale";
 
-// Records the error and schedules a retry after the backoff, or marks the job failed once it's out of
-// attempts (or at once, with `permanent`: retrying can't help, e.g. a job type no handler knows).
+// `permanent`: fail now, retrying can't help (e.g. an unknown job type).
 export async function failJob(
 	db: Database | Transaction,
 	job: ClaimedJob,
@@ -160,9 +135,8 @@ export async function failJob(
 	return row.status === "failed" ? "failed" : "retry";
 }
 
-// Hands an interrupted job back (the worker is shutting down) without spending its attempt: queued, due now.
-// Only call it once the handler has stopped: the next claim reuses the same attempts number, so a handler
-// still running could otherwise pass the fence.
+// Shutdown: hand the job back without spending an attempt. Only once the handler has stopped: the next claim
+// reuses this attempts number, so a handler still running would pass the fence.
 export async function releaseJob(
 	db: Database | Transaction,
 	job: ClaimedJob,
@@ -180,9 +154,7 @@ export async function releaseJob(
 	return released.length > 0;
 }
 
-// Deletes `done` jobs that finished more than `olderThanDays` ago and returns how many. `failed` jobs are kept:
-// someone should look at them first. Their keys go too, which is safe: a schedule only ever queues its latest
-// run (scheduler.ts), never one from days ago.
+// `failed` jobs are kept for a human. Deleting old keys is safe: a schedule only queues its latest run.
 export async function pruneDoneJobs(
 	db: Database | Transaction,
 	olderThanDays: number,

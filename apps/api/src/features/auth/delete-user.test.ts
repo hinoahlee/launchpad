@@ -7,11 +7,11 @@ import {
 import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
+import { RECENT_SIGN_IN_MINUTES } from "#lib/auth/constants.ts";
 import { testConfig } from "#testing/config.ts";
 import { signInForToken, signInWithCode } from "#testing/sign-in.ts";
-import { RECENT_SIGN_IN_MINUTES } from "./auth.ts";
 
-// Account deletion (step 10.6): POST /api/auth/delete-user, Better Auth's endpoint, configured in auth.ts.
+// Account deletion: POST /api/auth/delete-user, Better Auth's endpoint, configured in auth.ts.
 const APP_URL = "https://app.example.test";
 const app = buildApp(testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL }));
 afterAll(async () => {
@@ -51,7 +51,7 @@ describe("POST /api/auth/delete-user", () => {
 			await app.db
 				.select()
 				.from(jobs)
-				.where(eq(jobs.type, "delete-user-files")),
+				.where(eq(jobs.type, "delete-organization-files")),
 		).toEqual([]);
 	});
 

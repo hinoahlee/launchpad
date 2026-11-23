@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Full commit SHA of an image published from main (step 4.3 or later; earlier ones lack /api/version)
+        description: Full commit SHA of an image published from main
         type: string
         required: true
 
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   deploy:
-    # Opt-in (decision 004): a copy of the template without Render skips this job instead of failing.
+    # Opt-in: without Render configured, this job is skipped instead of failing.
     if: vars.RENDER_URL != ''
     runs-on: ubuntu-latest
     # Longer than the 16-minute wait below, so the step's own error message is what you see.

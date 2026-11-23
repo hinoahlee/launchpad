@@ -7,11 +7,9 @@ import {
 import { and, desc, eq, gt } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { requireSession, sessionOf } from "#features/auth/require-session.ts";
+import { requireSession, sessionOf } from "#lib/auth/guards/require-session.ts";
 
-// The signed-in user's own account: /api/account/*. Every route here needs a session (the hook), and every
-// query is limited to that session's user (authorization): the `userId` filter is what stops user A from
-// reading or deleting user B's rows, so each query must have it.
+// Every query filters on the session's user id: that filter is the authorization.
 export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
 	app.addHook("onRequest", requireSession);
 
@@ -40,13 +38,12 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
 		},
 	);
 
-	// Session revocation: deleting the row signs that device out on its next request.
+	// Deleting the row signs that device out on its next request.
 	app.delete(
 		"/account/sessions/:id",
 		{
 			schema: {
 				params: accountSessionParamsSchema,
-				// 204: done, no body.
 				response: { 204: z.null(), 404: errorResponseSchema },
 			},
 		},
@@ -58,8 +55,7 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
 					and(eq(sessions.id, request.params.id), eq(sessions.userId, user.id)),
 				)
 				.returning({ id: sessions.id });
-			// Someone else's session gets the same 404 as one that doesn't exist (not 403): the answer doesn't
-			// tell a stranger that the id is real.
+			// Another user's session: 404, not 403, so ids can't be probed.
 			if (deleted.length === 0) {
 				reply.code(404);
 				return { error: "not_found" };

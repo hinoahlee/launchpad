@@ -1,16 +1,13 @@
 import { type Database, jobs, type Transaction } from "@launchpad/db";
-import { type JobInput, type JobType, jobTypes } from "./job-types.ts";
 import { notifyWorkers } from "./queue.ts";
+import { type JobInput, type JobType, jobTypes } from "./schemas.ts";
 
-export type EnqueueOptions = {
-	// Don't run before this time (default: as soon as a worker is free).
+type EnqueueOptions = {
 	runAfter?: Date;
 };
 
-// Queues a job and returns its id. Pass the `tx` of the transaction that saves the data the job is about:
-// the job row then commits or rolls back with that data, so a job never points at something that wasn't saved,
-// and saved data never misses its job (the transactional outbox pattern).
-// The payload is checked against its type's schema here, so a bad payload fails the caller, not the worker later.
+// Pass the `tx` of the transaction that saves the data the job is about: the job commits or rolls back with it
+// (transactional outbox). The payload is validated here, so a bad one fails the caller, not the worker.
 export async function enqueue<T extends JobType>(
 	tx: Database | Transaction,
 	type: T,
@@ -22,8 +19,7 @@ export async function enqueue<T extends JobType>(
 	return id;
 }
 
-// Queues a job unless one with this `key` was ever queued (`jobs.key` is unique). Returns false when it already
-// exists. Safe to call from many processes at once: the database keeps exactly one row per key.
+// false: a job with this key was already queued (`jobs.key` is unique), by this process or any other.
 export async function enqueueOnce<T extends JobType>(
 	tx: Database | Transaction,
 	key: string,
@@ -42,14 +38,13 @@ async function insertJob<T extends JobType>(
 	key?: string,
 ): Promise<string | undefined> {
 	const parsed = jobTypes[type].parse(payload);
-	// With a key, a duplicate inserts nothing and returns no row. Without one, there's nothing to conflict on.
 	const [job] = await tx
 		.insert(jobs)
 		.values({ type, payload: parsed, key, ...(runAfter && { runAfter }) })
 		.onConflictDoNothing({ target: jobs.key })
 		.returning({ id: jobs.id });
 	if (!job) return undefined;
-	// Wakes idle workers at once instead of at their next poll. Sent on commit; dropped on rollback.
+	// Postgres delivers it on commit and drops it on rollback.
 	await notifyWorkers(tx);
 	return job.id;
 }
