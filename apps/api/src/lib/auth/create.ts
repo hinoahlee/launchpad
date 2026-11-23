@@ -12,6 +12,7 @@ import {
 import type { FastifyBaseLogger } from "fastify";
 import type { Config } from "#config/schema.ts";
 import { appUrl } from "#config/utils.ts";
+import { forgetAddress } from "#lib/email/forget-address.ts";
 import { enqueue } from "#lib/jobs/enqueue.ts";
 import { AFTER_UPLOAD_URLS_EXPIRE_MS } from "#lib/storage/driver/constants.ts";
 import {
@@ -104,6 +105,7 @@ export function createAuth(
 							}
 						},
 					);
+					await forgetAddress(db, user.email);
 				},
 				afterDelete: async (user) => {
 					// The id only: the email is personal data.
