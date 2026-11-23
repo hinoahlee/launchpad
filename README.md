@@ -88,8 +88,9 @@ Postgres. Change plans and region in `infra/render/render.yaml` before the first
    `infra/render/render.yaml`. Render creates the web service, the worker and Postgres, and generates
    `BETTER_AUTH_SECRET`. Variables marked `sync: false` are prompted for: leave the optional ones empty for now.
 3. **Domain.** Your DNS: a `CNAME` from your hostname to the web service's `onrender.com` host (on Cloudflare: DNS
-   only, grey cloud). It must match `domains` and `APP_URL` in the Blueprint. `TRUST_PROXY_HOPS` is `2` for
-   Cloudflare + Render's load balancer; use `1` without Cloudflare in front.
+   only, grey cloud). It must match `domains` and `APP_URL` in the Blueprint. `TRUST_PROXY_HOPS` stays `2`
+   whatever your DNS provider: Render's own edge is Cloudflare, then its load balancer. Don't proxy the record
+   through your own Cloudflare (orange cloud): that adds a hop, and the setting would then trust a fakeable entry.
 4. **Deploy from GitHub.** For each service, Render → **Settings → Deploy Hook** → copy. In GitHub → **Settings →
    Environments → New environment** `production` (deployment branches: `main` only), add secrets
    `RENDER_DEPLOY_HOOK_URL` (web) and `RENDER_WORKER_DEPLOY_HOOK_URL` (worker). Then **Settings → Secrets and
