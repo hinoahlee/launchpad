@@ -28,6 +28,8 @@ safety rules and code conventions. During a phase, read only that phase's file i
   are in `@launchpad/db`'s schema; a test fails if they drift from what Better Auth expects.
   Email codes (`emailOTP` plugin): the code is queued as a `sign-in-code` `send_email` job; a first sign-in
   creates the user. In dev without Resend, the worker logs the email's text (the code).
+  At most `SIGN_IN_CODES_PER_HOUR` (5) codes per address per hour, counted from those jobs: a Better Auth `before` hook
+  (`sign-in-code-limit.ts`), so a refused request never replaces the code already sent (429 `TOO_MANY_CODES`).
   Google sign-in when `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` are set. Failed callbacks redirect to
   `/sign-in?error=<code>`. Web: `apps/web/src/features/auth` (session query, sign-in card, header menu), the
   shapes it reads in `@launchpad/shared` (`auth.ts`).

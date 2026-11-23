@@ -9,10 +9,11 @@ import {
 	sessionResponseSchema,
 	socialSignInResponseSchema,
 } from "@launchpad/shared";
-import { eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "#app.ts";
 import { testConfig } from "#testing/config.ts";
+import { SIGN_IN_CODES_PER_HOUR } from "./sign-in-code-limit.ts";
 
 const APP_URL = "https://app.example.test";
 const app = buildApp(testConfig({ DATABASE_URL: testDatabaseUrl(), APP_URL }));
@@ -267,6 +268,55 @@ describe("email code sign-in", () => {
 		});
 		expect(res.statusCode).toBe(200);
 		expect(await app.db.select().from(jobs)).toEqual([]);
+	});
+
+	// Per address, from any number of IPs (security review M1): stops one inbox from being flooded with codes.
+	describe(`at most ${SIGN_IN_CODES_PER_HOUR} codes an hour per address`, () => {
+		const sendMax = async (email = EMAIL) => {
+			for (let i = 0; i < SIGN_IN_CODES_PER_HOUR; i++) {
+				expect((await sendCode(email)).statusCode).toBe(200);
+			}
+		};
+		const latestCode = async () => {
+			const [job] = await app.db
+				.select({ code: sql<string>`${jobs.payload}->'props'->>'code'` })
+				.from(jobs)
+				.orderBy(desc(jobs.createdAt))
+				.limit(1);
+			return job?.code ?? "";
+		};
+
+		it("refuses the next one with 429 TOO_MANY_CODES, and keeps the last code working", async () => {
+			await sendMax();
+			const code = await latestCode();
+
+			const res = await sendCode();
+			expect(res.statusCode).toBe(429);
+			expect(errorCode(res)).toBe("TOO_MANY_CODES");
+			// Refused before Better Auth makes a code: the one already in the inbox isn't replaced.
+			expect(await app.db.select().from(jobs)).toHaveLength(
+				SIGN_IN_CODES_PER_HOUR,
+			);
+			expect((await signIn(code)).statusCode).toBe(200);
+		});
+
+		it("counts the address whatever its case", async () => {
+			await sendMax();
+			expect((await sendCode("ADA@example.com")).statusCode).toBe(429);
+		});
+
+		it("doesn't touch other addresses", async () => {
+			await sendMax();
+			expect((await sendCode("bob@example.com")).statusCode).toBe(200);
+		});
+
+		it("allows codes again once the oldest is an hour old", async () => {
+			await sendMax();
+			await app.db
+				.update(jobs)
+				.set({ createdAt: new Date(Date.now() - 61 * 60 * 1000) });
+			expect((await sendCode()).statusCode).toBe(200);
+		});
 	});
 
 	// Better Auth's limits are on in production only (they're in memory, per app: tests would trip each other).

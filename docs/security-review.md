@@ -14,7 +14,7 @@ L4 in 14.3–14.5; L3 and I1 accepted as they are.
 
 | # | Severity | Finding | Fix (estimate) |
 |---|---|---|---|
-| M1 | Medium | Sign-in code emails have no per-address limit | Cap sends per address (small) |
+| M1 | Medium | Sign-in code emails have no per-address limit | **Fixed in 14.4** (`sign-in-code-limit.ts`) |
 | M2 | ~~Medium~~ | The real-client-IP setting was never checked in production | **Checked: correct.** No fix |
 | M3 | Medium | An aborted request crashes the rate limiter (500 + Sentry event) | **Fixed in 14.3** |
 | L1 | Low | Our own POST routes have no `Origin` check (same-site CSRF) | **Fixed in 14.3** (`lib/same-origin.ts`) |
