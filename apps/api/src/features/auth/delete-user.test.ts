@@ -116,6 +116,23 @@ describe("POST /api/auth/delete-user", () => {
 		expect(await userByEmail(email)).toBeUndefined();
 	});
 
+	// The queued emails (sign-in codes included) carry the address; failed ones would be kept forever.
+	it("removes the emails queued to the deleted address, and no one else's", async () => {
+		const toAddress = (email: string) =>
+			app.db.$client<{ id: string }[]>`
+				select id from jobs where type = 'send_email' and payload->>'to' = ${email}`;
+		const cookie = await signIn("wes@example.com");
+		await signIn("xan@example.com");
+		await app.db
+			.update(jobs)
+			.set({ status: "failed" })
+			.where(eq(jobs.type, "send_email"));
+
+		expect((await deleteAccount({ cookie })).statusCode).toBe(200);
+		expect(await toAddress("wes@example.com")).toEqual([]);
+		expect(await toAddress("xan@example.com")).toHaveLength(1);
+	});
+
 	it("deletes only the signed-in user", async () => {
 		const cookie = await signIn("sam@example.com");
 		await signIn("tess@example.com");
