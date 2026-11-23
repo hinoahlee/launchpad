@@ -14,6 +14,7 @@ import type { Config } from "#config/schema.ts";
 import { appUrl } from "#config/utils.ts";
 import { accountRoutes } from "#features/account/routes.ts";
 import { authRoutes } from "#features/auth/routes.ts";
+import { signInMethodsRoutes } from "#features/auth/sign-in-methods/routes.ts";
 import { createBillingDriver } from "#features/billing/driver/create.ts";
 import type { BillingDriver } from "#features/billing/driver/types.ts";
 import { billingRoutes } from "#features/billing/routes.ts";
@@ -121,6 +122,13 @@ export function buildApp(
 
 			api.register(probeRoutes({ db, gitSha: config.GIT_SHA, readyTimeoutMs }));
 			api.register(authRoutes(auth, appUrl(config)), { prefix: "/auth" });
+			api.register(
+				signInMethodsRoutes({
+					google: Boolean(
+						config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET,
+					),
+				}),
+			);
 			api.register(greetingRoutes);
 			api.register(accountRoutes);
 			api.register(billingRoutes(billing, appUrl(config)), {

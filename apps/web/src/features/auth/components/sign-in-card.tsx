@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { CircleAlert } from "lucide-react";
 import { Alert, AlertDescription } from "#components/ui/alert.tsx";
 import { Button } from "#components/ui/button.tsx";
@@ -11,7 +11,7 @@ import {
 } from "#components/ui/card.tsx";
 import { ApiError } from "#lib/api/errors.ts";
 import { site } from "#lib/site/constants.ts";
-import { signInWithGoogle } from "../api.ts";
+import { signInMethodsQuery, signInWithGoogle } from "../api.ts";
 import { signInErrorMessage } from "../sign-in-error.ts";
 import { EmailCodeForm } from "./email-code-form.tsx";
 import { GoogleLogo } from "./google-logo.tsx";
@@ -23,8 +23,6 @@ function startErrorMessage(error: Error): string {
 	if (error.status === 429) {
 		return "Too many sign-in attempts. Wait a minute, then try again.";
 	}
-	if (error.status === 404)
-		return "Google sign-in isn't set up on this server.";
 	return signInErrorMessage("");
 }
 
@@ -36,6 +34,8 @@ export function SignInCard({
 	callbackError?: string | undefined;
 	redirectTo: string;
 }) {
+	// Only when the server has Google's settings; until it answers, email only.
+	const showGoogle = useQuery(signInMethodsQuery).data?.google === true;
 	const google = useMutation({
 		mutationFn: () => signInWithGoogle(redirectTo),
 	});
@@ -62,20 +62,24 @@ export function SignInCard({
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 				)}
-				<Button
-					variant="outline"
-					size="lg"
-					disabled={busy}
-					onClick={() => google.mutate()}
-				>
-					<GoogleLogo />
-					{busy ? "Redirecting to Google…" : "Continue with Google"}
-				</Button>
-				<div className="flex items-center gap-3 text-xs text-muted-foreground uppercase">
-					<span aria-hidden className="h-px flex-1 bg-border" />
-					or
-					<span aria-hidden className="h-px flex-1 bg-border" />
-				</div>
+				{showGoogle && (
+					<>
+						<Button
+							variant="outline"
+							size="lg"
+							disabled={busy}
+							onClick={() => google.mutate()}
+						>
+							<GoogleLogo />
+							{busy ? "Redirecting to Google…" : "Continue with Google"}
+						</Button>
+						<div className="flex items-center gap-3 text-xs text-muted-foreground uppercase">
+							<span aria-hidden className="h-px flex-1 bg-border" />
+							or
+							<span aria-hidden className="h-px flex-1 bg-border" />
+						</div>
+					</>
+				)}
 				<EmailCodeForm />
 			</CardContent>
 		</Card>
