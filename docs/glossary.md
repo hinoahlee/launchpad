@@ -519,3 +519,5 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   security misconfiguration, ...). A checklist for reviews, not a standard to certify against. (14.2)
 - **Email bombing** — flooding someone's inbox by triggering a site's emails to their address many times. Costs the
   site money and sender reputation too. (14.2)
+- **Defence in depth** — several independent protections against the same attack, so one failing isn't enough.
+  CSRF here: SameSite cookies, CORS preflights, and now the `Origin` check, each stopping cases the others miss. (14.3)
