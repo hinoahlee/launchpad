@@ -11,14 +11,17 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "#components/ui/dropdown-menu.tsx";
-import { sessionQuery, signOut } from "../api.ts";
+import { forgetCachedUserData, sessionQuery, signOut } from "../api.ts";
 
 export function UserMenu() {
 	const queryClient = useQueryClient();
 	const session = useQuery(sessionQuery);
 	const signOutMutation = useMutation({
 		mutationFn: signOut,
-		onSuccess: () => queryClient.setQueryData(sessionQuery.queryKey, null),
+		onSuccess: () => {
+			queryClient.setQueryData(sessionQuery.queryKey, null);
+			forgetCachedUserData(queryClient);
+		},
 	});
 
 	// Unknown yet, or the API is down: nothing, rather than a "Sign in" that may be wrong.
