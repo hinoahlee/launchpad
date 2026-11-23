@@ -512,3 +512,10 @@ Terms in the order they were introduced. Each one: a one-line definition, and th
   runtime image) shrinks it for free. (14.1)
 - **Minimum release age** — a waiting period before a new package version may be installed (ours: 7 days, in
   `pnpm-workspace.yaml`). Most hijacked releases are found and removed within hours, before anyone waited it out. (14.1)
+- **Threat model** — who might attack, what they want, and what we assume is safe. Ours: outsiders and other
+  organizations' users, after your data, your account or our money; not someone who already controls Render or
+  GitHub. It decides what counts as a finding. (14.2)
+- **OWASP Top 10** — a widely used list of the most common web app weaknesses (broken access control, injection,
+  security misconfiguration, ...). A checklist for reviews, not a standard to certify against. (14.2)
+- **Email bombing** — flooding someone's inbox by triggering a site's emails to their address many times. Costs the
+  site money and sender reputation too. (14.2)
