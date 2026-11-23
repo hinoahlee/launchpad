@@ -9,7 +9,7 @@ type MemoryBillingDriver = BillingDriver & {
 	subscribe(customerId: string, changes?: Partial<SubscriptionSnapshot>): void;
 	// currentSubscription calls.
 	fetches: number;
-	// The next `n` currentSubscription calls throw.
+	// The next `n` currentSubscription or deleteCustomer calls throw.
 	failNext(n?: number): void;
 	reset(): void;
 };
@@ -19,6 +19,12 @@ export function createMemoryBillingDriver(): MemoryBillingDriver {
 	const customers = new Map<string, string>();
 	const subscriptions = new Map<string, SubscriptionSnapshot>();
 	let failures = 0;
+	const failIfAsked = () => {
+		if (failures > 0) {
+			failures -= 1;
+			throw new Error("stripe unavailable (memory driver)");
+		}
+	};
 	const driver: MemoryBillingDriver = {
 		customers,
 		subscriptions,
@@ -49,10 +55,7 @@ export function createMemoryBillingDriver(): MemoryBillingDriver {
 		},
 		async currentSubscription(customerId) {
 			driver.fetches += 1;
-			if (failures > 0) {
-				failures -= 1;
-				throw new Error("stripe unavailable (memory driver)");
-			}
+			failIfAsked();
 			return subscriptions.get(customerId) ?? null;
 		},
 		async createCheckoutSession({ customerId, successUrl }) {
@@ -66,6 +69,11 @@ export function createMemoryBillingDriver(): MemoryBillingDriver {
 			url.searchParams.set("customer", customerId);
 			url.searchParams.set("return_url", returnUrl);
 			return url.toString();
+		},
+		async deleteCustomer(customerId) {
+			failIfAsked();
+			customers.delete(customerId);
+			subscriptions.delete(customerId);
 		},
 	};
 	return driver;

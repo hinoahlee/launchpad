@@ -85,3 +85,24 @@ export async function syncSubscription(
 		});
 	return "synced";
 }
+
+// Account deletion, before the organization's rows go: deleting the Stripe customer stops every charge. A Stripe
+// failure throws, which stops the deletion, so the person retries rather than being billed for a deleted account.
+export async function closeBillingAccount(
+	db: Database,
+	billing: BillingDriver,
+	organizationId: string,
+): Promise<void> {
+	const customerId = await customerIdOf(db, organizationId);
+	if (!customerId) return;
+	await billing.deleteCustomer(customerId);
+	// Now, not with the organization: if its deletion fails, no row points at a customer Stripe no longer has.
+	await db.transaction(async (tx) => {
+		await tx
+			.delete(billingSubscriptions)
+			.where(eq(billingSubscriptions.organizationId, organizationId));
+		await tx
+			.delete(billingCustomers)
+			.where(eq(billingCustomers.organizationId, organizationId));
+	});
+}

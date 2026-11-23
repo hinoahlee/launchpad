@@ -15,6 +15,8 @@ export type BillingDriver = {
 		customerId: string;
 		returnUrl: string;
 	}): Promise<string>;
+	// Cancels the customer's subscriptions at once (no refund, no more invoices). No error if already deleted.
+	deleteCustomer(customerId: string): Promise<void>;
 };
 
 export type SubscriptionSnapshot = {
