@@ -85,7 +85,7 @@ services:
         sync: false
       - key: STRIPE_PRICE_ID
         sync: false
-      # Stripe → Developers → Webhooks → the endpoint for https://render.noahlee.xyz/api/webhooks/stripe → Signing
+      # Stripe → Developers → Webhooks → the endpoint for https://launchpad.noahlee.xyz/api/webhooks/stripe → Signing
       # secret. Unset: no webhook route; subscriptions change in our database only when someone opens /account.
       - key: STRIPE_WEBHOOK_SECRET
         sync: false

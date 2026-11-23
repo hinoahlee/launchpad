@@ -24,7 +24,7 @@ like you're shadowing a principal engineer.
 | 10 | [Auth](phases/10-auth.md) | done |
 | 11 | [File storage](phases/11-storage.md) | done |
 | 12 | [Organizations](phases/12-organizations.md) | done |
-| 13 | [Billing](phases/13-billing.md) | in progress |
+| 13 | [Billing](phases/13-billing.md) | done |
 | 14 | [Hardening + scale](phases/14-hardening.md) | not started |
 | 15 | [Operations practice](phases/15-operations.md) | not started |
 | 16 | [VPS target](phases/16-vps.md) | not started |
