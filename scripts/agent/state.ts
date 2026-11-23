@@ -53,6 +53,7 @@ export type RunState = {
 	branch?: string;
 	phase?: Phase;
 	slice?: number;
+	handoff?: { role: "tests" | "impl"; base: string; at: string };
 	reviewRounds?: number;
 	outcome?: string;
 	note?: string;

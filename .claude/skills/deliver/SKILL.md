@@ -18,7 +18,7 @@ Slug: `$ARGUMENTS`. Spec: `.agentic/specs/$ARGUMENTS.md` (missing: stop and say 
 - Use the Bash tool for commands (the permission allowlist is written for it), one plain command per call: no
   `node -e`, heredocs or scripts in other languages (they aren't allowed, and a permission prompt stalls the run).
   `run.ts` output is already short: don't pipe or redirect it. Edit files, `.agentic/pr.md` included, with Edit.
-- Use cheaper means for mechanical steps: run commands yourself rather than spawning helpers.
+- Keep your own context small: the agents read and write the code; you read their reports, the spec and run.ts output.
 
 ## 0. Start or resume
 `node scripts/agent/run.ts start $ARGUMENTS <type from the spec: feat|fix>`. It prints `START` or `RESUME ... at
@@ -28,18 +28,33 @@ jump to that phase's step below. Never redo a finished phase.
 ## 1. branch
 `git switch <type>/<slug>` if it exists, else `git switch -c <type>/<slug>` from an up-to-date main.
 
-## 2. tests (`phase tests`)
-Bug fix: write the failing test from the first criterion, run it (just that file; CLAUDE.md says how),
-and confirm it fails *for the reported reason*. Feature: write the tests each criterion names, where it helps to
-have them first. Commit: `wip: <slug> tests`.
+## Two builders, you coordinate
+You don't write code or tests yourself. The `test-writer` subagent writes tests (and only tests) from the spec; the
+`implementer` subagent writes code (never tests). Every time you spawn one:
+1. Commit anything pending, then `node scripts/agent/run.ts handoff tests|impl` (it needs a clean tree).
+2. Spawn the agent with the spec path, what it should do, and the other agent's report if relevant. Nothing else.
+3. `node scripts/agent/run.ts boundary`. A violation: restore the listed files as it says, then spawn the same
+   agent again with the violation message. Never keep out-of-bounds changes.
+4. Commit: `wip: <slug> tests`, `wip: <slug> impl <n>` (checkpoints; the PR is squash-merged).
+If an agent fails with an API/usage error, its partial work is still in the tree: spawn it again with "continue
+from the working tree". On resume in the middle of a handoff, do the same.
 
-## 3. implement (`phase implement <n>` before each slice)
-Follow CLAUDE.md's recipe, if it has one, in small slices (e.g. contract → data → API → API tests → web). After each
-slice run its scoped tests, then commit `wip: <slug> slice <n>` (checkpoint; the PR is squash-merged). On resume, the last `wip:` commit
-tells you which slice is next.
+## 2. tests (`phase tests`)
+Spawn `test-writer`: "Write the tests for `.agentic/specs/<slug>.md`." Its report must say FAILING AS EXPECTED: yes.
+For a bug fix, the first test must fail for the reported reason. If it says no, spawn it once more with its own
+report; still no: stop (step 9).
+
+## 3. implement (`phase implement <n>`, n = 1, then 2 for a dispute round)
+Spawn `implementer`: "Implement `.agentic/specs/<slug>.md` so these tests pass: <files from the test report>.
+The test writer needs: <its NEEDS FROM THE IMPLEMENTER>."
+**Disputes**: when its report lists DISPUTED TESTS, decide each one against the spec, not against which agent sounds
+surer. Spec backs the test: spawn `implementer` again with your ruling. Spec backs the dispute: handoff `tests` and
+spawn `test-writer` with the dispute and your ruling, then implement round 2. Spec unclear: don't guess; note it for
+the PR (What) and keep the test as written. At most 2 implement rounds; still disputed or failing: step 9.
 
 ## 4. verify (`phase verify`)
-`node scripts/agent/run.ts check` until it passes. Fix causes, not symptoms. Commit.
+`node scripts/agent/run.ts check` must pass. If it fails, route the failure: a test file → `test-writer`, anything
+else → `implementer` (with handoff and boundary as above). Never fix it yourself.
 
 ## 5. review (`phase review`)
 1. `node scripts/agent/run.ts diff` (writes `.agentic/review/<slug>.diff`).
@@ -52,13 +67,15 @@ tells you which slice is next.
    - `MALFORMED`: spawn it again once, reminding it of the output format.
 
 ## 6. fix (`phase fix`)
-Fix each CONFIRMED finding (only those), then `run.ts check`, commit `wip: <slug> review fixes <round>`. Round 1 →
-go back to step 5 as round 2. After round 2, don't review again: remaining findings go in the PR.
+Route each CONFIRMED finding (only those) the same way: about a test → `test-writer`, otherwise → `implementer`,
+each with handoff and boundary. Then `run.ts check`, commit `wip: <slug> review fixes <round>`. Round 1 → go back to
+step 5 as round 2. After round 2, don't review again: remaining findings go in the PR.
 
 ## 7. pr (`phase pr`)
 1. `node scripts/agent/run.ts check` must pass on the final commit.
-2. `node scripts/agent/pr-body.ts > .agentic/pr.md`, then replace only the three `TODO(agent)` parts (What, Why,
-   Read in this order). Don't touch the generated record.
+2. `node scripts/agent/pr-body.ts > .agentic/pr.md`, then replace only the `TODO(agent)` parts (What, Why, Read in
+   this order, and why each existing test changed, from the test writer's reports). Note any dispute and your ruling
+   under What. Don't touch the generated record.
 3. `git push -u origin HEAD`, then `gh pr create --title "<type>: <summary>" --body-file .agentic/pr.md`
    (Conventional Commit title; it becomes the squash commit). If a PR exists, `gh pr view` it instead.
 

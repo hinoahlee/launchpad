@@ -3,6 +3,8 @@
 //   status                     print the state
 //   phase <name> [slice]       record the phase BEFORE starting it
 //   check                      verify (+ e2e when the change can affect a browser); prints only the tail
+//   handoff <tests|impl>       record which agent works next, from a clean commit
+//   boundary                   fail if that agent changed files on the other side of the test/impl line
 //   diff                       write the branch's diff for the reviewer: .agentic/review/<slug>.diff
 //   review <round> <file|--interrupted>   record a reviewer round; prints the CONFIRMED findings
 //   finish <pr-opened|gave-up> [note]     close the run: state.json → .agentic/runs/<slug>.json
@@ -18,6 +20,7 @@ import {
 	needsE2e,
 	runCheck,
 } from "./checks.ts";
+import { checkBoundary, startHandoff } from "./handoff.ts";
 import { parseReview } from "./review.ts";
 import {
 	archiveState,
@@ -105,6 +108,21 @@ switch (command) {
 		console.log(
 			`phase: ${run.phase}${slice !== undefined ? ` (slice ${slice})` : ""}`,
 		);
+		break;
+	}
+	case "handoff":
+	case "boundary": {
+		const run = requireRun();
+		try {
+			const message =
+				command === "handoff"
+					? startHandoff(root, run, args[0] ?? "")
+					: checkBoundary(root, run);
+			writeState(root, run);
+			console.log(message);
+		} catch (error) {
+			fail((error as Error).message);
+		}
 		break;
 	}
 	case "check": {

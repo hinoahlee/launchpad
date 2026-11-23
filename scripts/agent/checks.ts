@@ -62,6 +62,20 @@ export function changedFiles(root: string): string[] {
 	return [...new Set([...committed, ...untracked(root)])];
 }
 
+// Files changed since a commit, committed or not.
+export function changedSince(root: string, ref: string): string[] {
+	return [
+		...new Set([
+			...lines(git(root, ["diff", "--name-only", ref])),
+			...untracked(root),
+		]),
+	];
+}
+
+export function isClean(root: string): boolean {
+	return git(root, ["status", "--porcelain"]).trim() === "";
+}
+
 // Identifies the exact code being checked (commit + uncommitted edits), so an unchanged tree isn't re-verified.
 export function fingerprint(root: string): string {
 	const hash = createHash("sha1");

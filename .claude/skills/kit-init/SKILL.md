@@ -17,7 +17,9 @@ proceed unattended) is switched on only by `kit.ts prove`, after a deliberate ba
    Node older than 22.18: stop (the kit's scripts are TypeScript run by Node).
 2. **Install**: on the user's OK, `kit.ts install <target>`. Then fill `scripts/agent/project.ts` with them:
    `VERIFY_COMMAND`, and `E2E_COMMAND`/`E2E_PATHS`, `MIGRATIONS_DIR`, `FORMAT_COMMAND` only if the repo has them.
-3. **Wire the checks**: add `node scripts/check-test-integrity.ts` to the lint script and
+3. **Wire the checks**: set `TEST_PATHS` in `project.ts` (test-only folders), turn on the linter's focused/skipped
+   test rules (Biome `noFocusedTests`/`noSkippedTests`, ESLint `no-only-tests` or similar), add
+   `node scripts/check-applied-migrations.ts` to the lint script if the repo has migrations, and
    `node --test "scripts/**/*.test.ts"` to verify. Run verify; it must pass.
 4. **CLAUDE.md**: if missing, write a minimal one (under 40 lines): commands (from package.json), where code goes
    (from the tree), the rules the user states, and the line "Workflow: `/feature` plans a spec, `/deliver <slug>` runs

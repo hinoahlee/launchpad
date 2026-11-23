@@ -27,13 +27,17 @@ const GENERIC = [
 	"scripts/agent/review.test.ts",
 	"scripts/agent/pr-body.ts",
 	"scripts/agent/format-hook.ts",
-	"scripts/test-integrity.ts",
-	"scripts/test-integrity.test.ts",
-	"scripts/check-test-integrity.ts",
+	"scripts/agent/files.ts",
+	"scripts/agent/files.test.ts",
+	"scripts/agent/handoff.ts",
+	"scripts/agent/role-guard.ts",
+	"scripts/check-applied-migrations.ts",
 	".claude/skills/feature/SKILL.md",
 	".claude/skills/deliver/SKILL.md",
 	".claude/skills/promote-correction/SKILL.md",
 	".claude/agents/reviewer.md",
+	".claude/agents/test-writer.md",
+	".claude/agents/implementer.md",
 	"docs/agentic-workflow.md",
 ];
 
@@ -108,7 +112,7 @@ function install() {
 		const pm = packageManager();
 		writeFileSync(
 			project,
-			`// The only project-specific file of the agent kit; every other kit file is identical everywhere.\n\n// Must exit non-zero on a bad change.\nexport const VERIFY_COMMAND = "${pm} run verify";\n// Empty: no e2e gate.\nexport const E2E_COMMAND = "";\nexport const E2E_PATHS: RegExp[] = [];\n// Empty: no migration check.\nexport const MIGRATIONS_DIR = "";\nexport const MIGRATION_JOURNAL = "";\n// Empty: no format hook.\nexport const FORMAT_COMMAND = "";\n`,
+			`// The only project-specific file of the agent kit; every other kit file is identical everywhere.\n\n// Must exit non-zero on a bad change.\nexport const VERIFY_COMMAND = "${pm} run verify";\n// Empty: no e2e gate.\nexport const E2E_COMMAND = "";\nexport const E2E_PATHS: RegExp[] = [];\n// Test-only folders besides *.test.* / *.spec.* files (the test writer's side).\nexport const TEST_PATHS: RegExp[] = [];\n// Empty: no migration check.\nexport const MIGRATIONS_DIR = "";\nexport const MIGRATION_JOURNAL = "";\n// Empty: no format hook.\nexport const FORMAT_COMMAND = "";\n`,
 		);
 	}
 	const gitignore = existsSync(at(".gitignore"))
