@@ -1,5 +1,6 @@
+import { once } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type Socket } from "node:net";
+import { type AddressInfo, connect, createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { testDatabaseUrl } from "@launchpad/db/testing";
@@ -299,6 +300,38 @@ describe("rate limit", () => {
 		await version(from(client));
 		// A fresh fake IP each time doesn't buy a fresh counter: the real client IP is still read.
 		expect((await version(from(client, "198.51.100.7"))).statusCode).toBe(429);
+	});
+
+	it("survives a client that hangs up before the limiter runs", async () => {
+		const lines: Record<string, unknown>[] = [];
+		const aborting = buildApp(testConfig({ LOG_LEVEL: "info" }), {
+			logStream: { write: (line) => lines.push(JSON.parse(line)) },
+		});
+		// Runs before the limiter's own hook (root hooks run first): says the request arrived, then waits until the
+		// client is gone, so the limiter always sees a closed socket (no address, `request.ip` undefined). Without
+		// this the race is microseconds wide.
+		let arrived: () => void = () => {};
+		const hasArrived = new Promise<void>((resolve) => {
+			arrived = resolve;
+		});
+		aborting.addHook("onRequest", async (request) => {
+			const socket = request.raw.socket;
+			arrived();
+			if (!socket.destroyed) await once(socket, "close");
+		});
+		await aborting.listen({ port: 0, host: "127.0.0.1" });
+		const { port } = aborting.server.address() as AddressInfo;
+
+		const client = connect(port, "127.0.0.1");
+		client.on("error", () => {});
+		client.write("GET /api/version HTTP/1.1\r\nHost: test\r\n\r\n");
+		await hasArrived;
+		client.destroy();
+		// The limiter and the error handler run right after the socket closes; give them a moment.
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		await aborting.close();
+
+		expect(lines.filter((line) => line.msg === "unhandled error")).toEqual([]);
 	});
 
 	it("never limits the probes", async () => {
