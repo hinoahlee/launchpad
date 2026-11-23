@@ -7,7 +7,12 @@ import { Button } from "#components/ui/button.tsx";
 import { Input } from "#components/ui/input.tsx";
 import { Label } from "#components/ui/label.tsx";
 import { ApiError } from "#lib/api/errors.ts";
-import { sendSignInCode, sessionQuery, signInWithCode } from "../api.ts";
+import {
+	forgetCachedUserData,
+	sendSignInCode,
+	sessionQuery,
+	signInWithCode,
+} from "../api.ts";
 
 function errorMessage(error: Error): string {
 	if (!(error instanceof ApiError)) {
@@ -44,8 +49,10 @@ export function EmailCodeForm() {
 	const verify = useMutation({
 		mutationFn: signInWithCode,
 		// Returning the promise keeps the button busy until the session is loaded.
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey }),
+		onSuccess: () => {
+			forgetCachedUserData(queryClient);
+			return queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey });
+		},
 	});
 
 	const sendCode = (email: string) => {

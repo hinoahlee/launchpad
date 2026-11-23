@@ -11,7 +11,11 @@ import { z } from "zod";
 import { Button } from "#components/ui/button.tsx";
 import { DeleteAccountCard } from "#features/account/components/delete-account-card.tsx";
 import { SessionsCard } from "#features/account/components/sessions-card.tsx";
-import { sessionQuery, signOut } from "#features/auth/api.ts";
+import {
+	forgetCachedUserData,
+	sessionQuery,
+	signOut,
+} from "#features/auth/api.ts";
 import { BillingCard } from "#features/billing/components/billing-card.tsx";
 import { FilesCard } from "#features/files/components/files-card.tsx";
 import { pageTitle } from "#lib/site/utils.ts";
@@ -47,7 +51,7 @@ function Account() {
 		onSuccess: async () => {
 			await navigate({ to: "/" });
 			queryClient.setQueryData(sessionQuery.queryKey, null);
-			queryClient.removeQueries({ queryKey: ["account"] });
+			forgetCachedUserData(queryClient);
 		},
 	});
 	// Navigate first, so the "signed out while here" redirect below doesn't fire.
@@ -56,14 +60,14 @@ function Account() {
 		setLeaving(true);
 		await navigate({ to: "/" });
 		queryClient.setQueryData(sessionQuery.queryKey, null);
-		queryClient.removeQueries({ queryKey: ["account"] });
+		forgetCachedUserData(queryClient);
 	};
 	// Sign out; the redirect below takes them to sign-in and back here.
 	const signInAgain = useMutation({
 		mutationFn: signOut,
 		onSuccess: () => {
 			queryClient.setQueryData(sessionQuery.queryKey, null);
-			queryClient.removeQueries({ queryKey: ["account"] });
+			forgetCachedUserData(queryClient);
 		},
 	});
 	const user = session.data?.user;

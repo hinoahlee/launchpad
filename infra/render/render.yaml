@@ -34,8 +34,10 @@ services:
     envVars:
       - key: LOG_LEVEL
         value: info
-      # Two proxies append to X-Forwarded-For before the app: Cloudflare (every Render request passes through it),
-      # then Render's load balancer (the socket). The client IP is the entry before theirs.
+      # Two proxies append to X-Forwarded-For before the app: Render's edge, which is Cloudflare for every service
+      # (whatever DNS points at it; the onrender.com host is a cdn.cloudflare.net alias), then Render's load balancer
+      # (the socket). The client IP is the entry before theirs. Proxying the domain through your own Cloudflare
+      # (orange cloud) would add a third.
       - key: TRUST_PROXY_HOPS
         value: "2"
       # Render fills this in with the database's private-network URL (password included) at deploy time; the

@@ -18,6 +18,11 @@ export const socialSignInResponseSchema = z.object({
 
 export type SocialSignInResponse = z.infer<typeof socialSignInResponseSchema>;
 
+// GET /api/sign-in-methods: which buttons the sign-in page shows. Email codes always work.
+export const signInMethodsResponseSchema = z.object({ google: z.boolean() });
+
+export type SignInMethodsResponse = z.infer<typeof signInMethodsResponseSchema>;
+
 // GET /api/auth/get-session: null when signed out.
 export const sessionUserSchema = z.object({
 	id: z.string(),

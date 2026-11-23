@@ -6,7 +6,7 @@ Apply after editing: `gh api -X PUT repos/<owner>/<repo>/rulesets/<ruleset-id> -
 (the id: `gh api repos/<owner>/<repo>/rulesets --jq ".[].id"`)
 
 ## `"integration_id": 15368`
-The ID of the **GitHub Actions** app. With it, only a `verify` result reported by GitHub Actions counts;
+The ID of the **GitHub Actions** app. With it, only a `verify` (or `e2e`, `image`) result reported by GitHub Actions counts;
 the same name posted by a token, another app or a script is ignored.
 - Look it up: `gh api apps/github-actions --jq .id` → `15368` (https://github.com/apps/github-actions)
 - Or see who reported a real run: `gh api repos/<owner>/<repo>/commits/main/check-runs --jq '.check_runs[].app.id'`

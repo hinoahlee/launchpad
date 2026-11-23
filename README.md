@@ -41,7 +41,7 @@ This README covers setting up and running the project.
      optional, but do it before your first deploy if you want to.
    - `infra/render/render.yaml`: service names, the image URL `ghcr.io/<owner>/<repo>:main`, your domain, `EMAIL_FROM`.
 3. Protect `main`: `gh api -X POST repos/<owner>/<repo>/rulesets --input .github/rulesets/main.json` (squash merges
-   only, `verify` and `image` checks required; notes in [.github/rulesets/README.md](.github/rulesets/README.md)). In
+   only, `verify`, `e2e` and `image` checks required; notes in [.github/rulesets/README.md](.github/rulesets/README.md)). In
    **Settings → Advanced Security**, turn on Dependabot alerts and security updates, and CodeQL default setup.
 
 ## 2. Local development
@@ -88,8 +88,9 @@ Postgres. Change plans and region in `infra/render/render.yaml` before the first
    `infra/render/render.yaml`. Render creates the web service, the worker and Postgres, and generates
    `BETTER_AUTH_SECRET`. Variables marked `sync: false` are prompted for: leave the optional ones empty for now.
 3. **Domain.** Your DNS: a `CNAME` from your hostname to the web service's `onrender.com` host (on Cloudflare: DNS
-   only, grey cloud). It must match `domains` and `APP_URL` in the Blueprint. `TRUST_PROXY_HOPS` is `2` for
-   Cloudflare + Render's load balancer; use `1` without Cloudflare in front.
+   only, grey cloud). It must match `domains` and `APP_URL` in the Blueprint. `TRUST_PROXY_HOPS` stays `2`
+   whatever your DNS provider: Render's own edge is Cloudflare, then its load balancer. Don't proxy the record
+   through your own Cloudflare (orange cloud): that adds a hop, and the setting would then trust a fakeable entry.
 4. **Deploy from GitHub.** For each service, Render → **Settings → Deploy Hook** → copy. In GitHub → **Settings →
    Environments → New environment** `production` (deployment branches: `main` only), add secrets
    `RENDER_DEPLOY_HOOK_URL` (web) and `RENDER_WORKER_DEPLOY_HOOK_URL` (worker). Then **Settings → Secrets and
