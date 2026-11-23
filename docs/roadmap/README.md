@@ -25,7 +25,7 @@ like you're shadowing a principal engineer.
 | 11 | [File storage](phases/11-storage.md) | done |
 | 12 | [Organizations](phases/12-organizations.md) | done |
 | 13 | [Billing](phases/13-billing.md) | done |
-| 14 | [Security review](phases/14-hardening.md) | in progress |
+| 14 | [Security review](phases/14-hardening.md) | done |
 | 15 | [Operations practice](phases/15-operations.md) | not started |
 | 16 | [VPS target](phases/16-vps.md) | not started |
 | 17 | [AWS foundation (optional)](phases/17-aws-foundation.md) | not started |
