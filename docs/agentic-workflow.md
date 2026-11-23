@@ -18,8 +18,15 @@ has nothing to say "no", so the agent would happily loop on broken code. That is
 autonomy on until a deliberate bad change has made verify fail.
 
 **Maker and checker.** The model that wrote the code is the worst judge of it: it remembers what it *meant*. So the
-reviewer is a separate *subagent*, a fresh model instance that sees only the diff, the spec and CLAUDE.md, and can
-only read. It reports findings; only findings it marks CONFIRMED trigger fixes.
+checking is split across separate *subagents* (fresh model instances with their own tools):
+- the **test writer** turns the spec's criteria into failing tests before any code exists, and may change only tests;
+- the **implementer** makes them pass and may never change a test. If it thinks a test is wrong, it has to argue
+  from the spec, and the main agent (the coordinator, who writes neither) rules on it;
+- the **reviewer** reads the finished diff, read-only, and reports findings; only CONFIRMED ones trigger fixes.
+
+No single agent writes both the code and the tests that judge it. The split is enforced twice: a hook in each
+agent refuses edits on the wrong side, and `run.ts boundary` checks the actual diff after each agent, which also
+catches writes made through the shell. The diff is the guarantee; the hook is the early warning.
 
 **Most effort in code-level checks, least in prose.** Rules written in CLAUDE.md are suggestions the model may forget.
 Rules in a type, a lint rule or a script are enforced every time, and their error message teaches the fix at the moment
@@ -39,7 +46,10 @@ disk, not in the conversation: `.agentic/state.json` records the phase *before* 
 flowchart TD
   A["/feature: interview, criteria, each with 'verified by'"] --> B[".agentic/specs/slug.md"]
   B -->|you say go| C["/deliver slug: run.ts start (or RESUME at phase)"]
-  C --> D[branch] --> E["tests: failing test first for bugs"] --> F["implement: slices, wip: commit each"]
+  C --> D[branch] --> E["tests: test-writer agent, tests only, must fail first"] --> F["implement: implementer agent, never tests"]
+  F -->|disputes a test| R{"coordinator rules by the spec"}
+  R -->|test is wrong| E
+  R -->|test stands| F
   F --> G["verify: run.ts check (verify, + e2e if browser-facing)"]
   G -->|fail| F
   G -->|pass| H["review: reviewer subagent, fresh context, read-only"]
@@ -55,20 +65,26 @@ flowchart TD
 |---|---|---|
 | `.claude/skills/feature/SKILL.md` | skill (you type `/feature`) | Interview; refuse criteria without a proving test; write the spec; hand off |
 | `.claude/skills/deliver/SKILL.md` | skill (`/deliver <slug>`) | The unattended state machine: branch → tests → implement → verify → review → fix → pr → done |
+| `.claude/agents/test-writer.md` | subagent | Writes failing tests from the spec; may change only test files |
+| `.claude/agents/implementer.md` | subagent | Makes the tests pass; may never change a test; disputes go in its report |
 | `.claude/agents/reviewer.md` | subagent | Read-only review in fresh context; one line per finding |
 | `.claude/skills/promote-correction/SKILL.md` | skill | Turn a miss into a type, a check, or one CLAUDE.md line; log it in `.agentic/misses.md` |
 | `.claude/skills/kit-init/SKILL.md` | skill | Install the kit into another repo after a gate audit |
 | `.claude/settings.json` | config | Hooks (below) and the permission lists an unattended run needs |
 | `scripts/agent/stop-gate.ts` | Stop hook | Runs verify (+ e2e in a run) when the agent tries to finish; exit 2 sends the failure back; cap of 5 |
 | `scripts/agent/format-hook.ts` | PostToolUse hook | Biome on each edited file; unfixable problems go straight back to the agent |
-| `scripts/agent/run.ts` | CLI | Run state: `start`, `phase`, `check`, `diff`, `review`, `finish` |
-| `scripts/agent/pr-body.ts` | CLI | PR description from git + state: files, test counts, checks, reviewer findings, the spec |
+| `scripts/agent/run.ts` | CLI | Run state: `start`, `phase`, `handoff`, `boundary`, `check`, `diff`, `review`, `finish` |
+| `scripts/agent/role-guard.ts` | agent hook | In each builder agent: refuses an edit on the other side of the test/code line |
+| `scripts/agent/files.ts`, `handoff.ts` | library | What counts as a test file; the boundary check on the diff since a handoff |
+| `scripts/agent/pr-body.ts` | CLI | PR description from git + state: files, existing tests changed, checks, reviewer findings, the spec |
 | `scripts/agent/project.ts` | config | The only project-specific kit file: verify/e2e/format commands, browser paths, migrations folder |
-| `scripts/check-test-integrity.ts` | lint check | Fails on focused/skipped tests, `biome-ignore`, fewer tests, edited applied migrations |
+| `scripts/check-applied-migrations.ts` | lint check | Fails when a migration already on main was edited or deleted |
 | `.agentic/` (gitignored) | data | `specs/`, `state.json`, `review/`, `runs/<slug>.json`, `misses.md` |
 
-A test file may lose tests only with a commit trailer `Tests-changed: <path>: <why>`; `pr-body.ts` lists those
-under the template's "Tests changed or removed" heading, so the removal is reviewed instead of hidden.
+Other deterministic checks: Biome's `noFocusedTests` / `noSkippedTests` (an `.only` or `.skip` fails lint; the one
+legitimate phone-only skip has a per-file exception in `biome.json`), and `scripts/check-applied-migrations.ts`
+(a migration already on main never changes). Existing tests that a run changed or removed are listed in the PR under
+"Tests changed or removed", each with the test writer's reason, so you judge them at review.
 
 ## The primitives, and when not to use them
 
@@ -150,10 +166,13 @@ correctly *not* auto-continue? Write what you saw in `.agentic/misses.md` if any
   format or an exact `NO FINDINGS`; anything else is `MALFORMED` and is re-run, never a pass.
 - **e2e in the gate only during `/deliver`**: it takes minutes; in normal chats the gate runs verify only.
 - **Unchanged tree, no re-run**: the gate fingerprints HEAD + uncommitted changes and skips checks already green on it.
-- **`ask` rules on the gates' own files** (`scripts/`, `.claude/`, `biome.json`, `.github/`, applied migrations): an
-  unattended run that "fixes" a failing check by editing the check stops at a prompt instead. Known gap: the rules
-  cover the Edit tool, not shell commands like `sed`, which `Bash(pnpm:*)`-style allows don't stop either. The
-  reviewer and `check-test-integrity` are the backstop; a PreToolUse hook could close it if it ever happens.
+- **No `ask` rules on the gates' own files** (`scripts/`, `.claude/`, `biome.json`, `.github/`): tried and removed.
+  They prompt you on every legitimate edit to the kit, and they don't cover shell writes (`sed`) anyway. In the
+  default permission mode those paths prompt regardless, because they aren't in `allow`. An agent "fixing" a check
+  by editing it shows up in the diff, which the reviewer and you read; applied migrations have their own check.
+- **Two builder agents instead of a "weakened tests" lint check**: an agent can get around any pattern check (rename
+  a test, loosen an assertion). Taking the tests out of the implementer's hands removes the incentive instead.
+  Costs roughly 1.5–2x tokens in the build phases, plus a round when the agents disagree.
 - **`.agentic/`, not `.workflow/`**: a `.workflow/state.json` makes the global wf-kit guard treat the repo as a wf-kit
   project and block `git push`, which `/deliver` needs.
 - **Copy, not a plugin**: see "Installing in another repo".
@@ -194,7 +213,7 @@ template, which has one. **Brownfield**: audit the gates first (`/kit-init` does
 deliberate bad change makes verify fail).
 
 **Generic** (identical everywhere; `scripts/agent/kit.ts` lists them): the skills, the reviewer, `stop-gate.ts`,
-`run.ts`, `pr-body.ts`, `check-test-integrity.ts` and their tests, this page. **Project-specific**:
+`run.ts`, `pr-body.ts`, the role guard and boundary check, the three agents, and their tests, this page. **Project-specific**:
 `scripts/agent/project.ts` (verify/e2e/format commands, browser paths, migrations folder), CLAUDE.md, the lint
 rules, the permission `Edit` paths.
 

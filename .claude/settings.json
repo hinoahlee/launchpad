@@ -9,12 +9,7 @@
 			"Bash(pnpm --filter * add *)",
 			"Bash(git push --force *)",
 			"Bash(git push -f *)",
-			"Bash(git reset --hard *)",
-			"Edit(/.claude/**)",
-			"Edit(/scripts/**)",
-			"Edit(/biome.json)",
-			"Edit(/.github/**)",
-			"Edit(/packages/db/migrations/**)"
+			"Bash(git reset --hard *)"
 		],
 		"allow": [
 			"Bash(pnpm:*)",
