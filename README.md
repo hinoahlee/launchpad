@@ -166,9 +166,8 @@ its counters are in memory, per instance. Workers scale freely.
   everyone out.
 - **Logs** are JSON lines on stdout with a `requestId`, which every error response and Sentry event also carries:
   search for it.
-- **Before launch**: a real `contactEmail`; your own privacy policy and terms; live Stripe keys only after reviewing
-  that deleting an account leaves its Stripe customer and subscription in place (delete them in `deleteUser`'s
-  `beforeDelete` in `apps/api/src/lib/auth/create.ts`).
+- **Before launch**: a real `contactEmail`; your own privacy policy and terms (they should say that deleting an
+  account deletes its Stripe customer, which cancels the subscription at once, without a refund).
 - **Known limits**: failed jobs (`jobs.status = 'failed'`, `last_error`) are kept but not retried or alerted on; an
   object whose delete failed is logged (`storage delete failed; object orphaned`) and not retried; sign-in codes stay
   in `jobs.payload` until `prune-jobs` removes done jobs (7 days); the app's database user owns the schema.

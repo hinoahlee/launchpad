@@ -78,5 +78,19 @@ export function createStripeDriver({
 			});
 			return session.url;
 		},
+
+		async deleteCustomer(customerId) {
+			try {
+				await stripe.customers.del(customerId);
+			} catch (err) {
+				if (
+					err instanceof Stripe.errors.StripeError &&
+					err.code === "resource_missing"
+				) {
+					return;
+				}
+				throw err;
+			}
+		},
 	};
 }

@@ -17,6 +17,7 @@ import { authRoutes } from "#features/auth/routes.ts";
 import { createBillingDriver } from "#features/billing/driver/create.ts";
 import type { BillingDriver } from "#features/billing/driver/types.ts";
 import { billingRoutes } from "#features/billing/routes.ts";
+import { closeBillingAccount } from "#features/billing/service.ts";
 import { stripeWebhookRoutes } from "#features/billing/webhook/routes.ts";
 import { resendWebhookRoutes } from "#features/email-webhooks/routes.ts";
 import { fileRoutes } from "#features/files/routes.ts";
@@ -99,7 +100,12 @@ export function buildApp(
 		await db.$client.end({ timeout: 5 });
 	});
 
-	const auth = createAuth(config, db, app.log);
+	const auth = createAuth(config, db, app.log, {
+		...(billing && {
+			beforeOrganizationDelete: (organizationId) =>
+				closeBillingAccount(db, billing, organizationId),
+		}),
+	});
 	app.decorate("auth", auth);
 	app.decorateRequest("authSession", null);
 	app.decorateRequest("membership", null);

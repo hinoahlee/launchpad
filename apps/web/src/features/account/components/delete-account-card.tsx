@@ -80,7 +80,8 @@ export function DeleteAccountCard({
 									<AlertDialogTitle>Delete your account?</AlertDialogTitle>
 									<AlertDialogDescription>
 										Your account is deleted right away and you're signed out
-										everywhere. This can't be undone.
+										everywhere. A paid plan is canceled at once, without a
+										refund. This can't be undone.
 									</AlertDialogDescription>
 								</AlertDialogHeader>
 								{remove.isError && (

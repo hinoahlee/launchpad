@@ -44,6 +44,17 @@ export async function initialOrganizationId(
 	});
 }
 
+export async function organizationIdsOf(
+	db: Database,
+	userId: string,
+): Promise<string[]> {
+	const rows = await db
+		.select({ id: members.organizationId })
+		.from(members)
+		.where(eq(members.userId, userId));
+	return rows.map((row) => row.id);
+}
+
 // Deletes the user's organization (its rows cascade). `afterEach` runs in the same transaction: queue cleanup of
 // what lives outside Postgres there, so it's queued if and only if the rows are gone.
 export async function deleteUserOrganization(

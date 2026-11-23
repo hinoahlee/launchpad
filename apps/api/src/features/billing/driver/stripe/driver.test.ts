@@ -12,7 +12,7 @@ type Sent = {
 };
 
 // Swaps the network for a fake Stripe: records each request and answers with `reply`'s JSON.
-function fakeStripe(reply: (sent: Sent) => object) {
+function fakeStripe(reply: (sent: Sent) => object, status = 200) {
 	const sent: Sent[] = [];
 	const fetchFn = async (
 		input: string | URL | Request,
@@ -28,7 +28,7 @@ function fakeStripe(reply: (sent: Sent) => object) {
 			),
 		};
 		sent.push(request);
-		return Response.json(reply(request));
+		return Response.json(reply(request), { status });
 	};
 	const driver = createStripeDriver({
 		apiKey: "rk_test_123",
@@ -147,5 +147,43 @@ describe("Stripe driver", () => {
 		expect(sent[0]?.path).toBe("/v1/subscriptions");
 		expect(sent[0]?.params.get("customer")).toBe("cus_1");
 		expect(sent[0]?.params.get("status")).toBe("all");
+	});
+
+	it("delete customer: DELETE /v1/customers/:id, and an already deleted one is no error", async () => {
+		const { driver, sent } = fakeStripe(() => ({
+			id: "cus_1",
+			object: "customer",
+			deleted: true,
+		}));
+		await driver.deleteCustomer("cus_1");
+		expect(sent[0]?.method).toBe("DELETE");
+		expect(sent[0]?.path).toBe("/v1/customers/cus_1");
+
+		const missing = fakeStripe(
+			() => ({
+				error: {
+					type: "invalid_request_error",
+					code: "resource_missing",
+					message: "No such customer: 'cus_1'",
+				},
+			}),
+			404,
+		);
+		await expect(
+			missing.driver.deleteCustomer("cus_1"),
+		).resolves.toBeUndefined();
+
+		// Any other refusal fails the deletion that asked for it.
+		const refused = fakeStripe(
+			() => ({
+				error: {
+					type: "invalid_request_error",
+					code: "parameter_invalid",
+					message: "Invalid customer id",
+				},
+			}),
+			400,
+		);
+		await expect(refused.driver.deleteCustomer("cus_1")).rejects.toThrow();
 	});
 });

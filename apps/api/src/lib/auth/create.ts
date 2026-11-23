@@ -23,14 +23,22 @@ import {
 import {
 	deleteUserOrganization,
 	initialOrganizationId,
+	organizationIdsOf,
 } from "./personal-organization.ts";
 import { signInCodeLimit } from "./sign-in-code-limit.ts";
+
+export type AuthHooks = {
+	// Account deletion, before the user's organization is deleted: cleanup in other services (billing). Throwing
+	// stops the deletion.
+	beforeOrganizationDelete?: (organizationId: string) => Promise<void>;
+};
 
 // Better Auth, mounted at /api/auth/* (routes.ts). Its tables live in @launchpad/db's schema.
 export function createAuth(
 	config: Config,
 	db: Database,
 	log: FastifyBaseLogger,
+	{ beforeOrganizationDelete }: AuthHooks = {},
 ) {
 	if (
 		config.NODE_ENV === "production" &&
@@ -73,6 +81,11 @@ export function createAuth(
 				enabled: true,
 				// Before, not after: afterwards nothing says which organization was theirs.
 				beforeDelete: async (user) => {
+					if (beforeOrganizationDelete) {
+						for (const id of await organizationIdsOf(db, user.id)) {
+							await beforeOrganizationDelete(id);
+						}
+					}
 					await deleteUserOrganization(
 						db,
 						user.id,
