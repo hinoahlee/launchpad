@@ -14,8 +14,8 @@ checks pass.
 **The verify gate.** A *gate* is a check that must pass before work moves on. Ours is `pnpm verify`: lint, our own
 checks in `scripts/`, type checking, tests, build, migration check. It decides "done" by its *exit code* (0 = pass),
 never by the model saying "looks good". A loop can only be as trustworthy as its gate: an empty repo with agent files
-has nothing to say "no", so the agent would happily loop on broken code. That is why `/kit-init` refuses to switch
-autonomy on until a deliberate bad change has made verify fail.
+has nothing to say "no", so the agent would happily loop on broken code. Before trusting a gate, make a deliberate
+bad change and watch it fail.
 
 **Maker and checker.** The model that wrote the code is the worst judge of it: it remembers what it *meant*. So the
 checking is split across separate *subagents* (fresh model instances with their own tools):
@@ -31,7 +31,7 @@ catches writes made through the shell. The diff is the guarantee; the hook is th
 **Most effort in code-level checks, least in prose.** Rules written in CLAUDE.md are suggestions the model may forget.
 Rules in a type, a lint rule or a script are enforced every time, and their error message teaches the fix at the moment
 it matters. So when something goes wrong: first try to make it impossible (types), then detectable (a script), and
-only last describe it (one line of prose). `/promote-correction` walks you through exactly that order.
+only last describe it (one line of prose).
 
 **Backpressure and brakes.** Every loop has a cap: 5 failed stops in a row, 2 review rounds, 2 reviewer retries.
 A stuck run stops and says why, instead of burning your usage limit.
@@ -68,8 +68,6 @@ flowchart TD
 | `.claude/agents/test-writer.md` | subagent | Writes failing tests from the spec; may change only test files |
 | `.claude/agents/implementer.md` | subagent | Makes the tests pass; may never change a test; disputes go in its report |
 | `.claude/agents/reviewer.md` | subagent | Read-only review in fresh context; one line per finding |
-| `.claude/skills/promote-correction/SKILL.md` | skill | Turn a miss into a type, a check, or one CLAUDE.md line; log it in `.agentic/misses.md` |
-| `.claude/skills/kit-init/SKILL.md` | skill | Install the kit into another repo after a gate audit |
 | `.claude/settings.json` | config | Hooks (below) and the permission lists an unattended run needs |
 | `scripts/agent/stop-gate.ts` | Stop hook | Runs verify (+ e2e in a run) when the agent tries to finish; exit 2 sends the failure back; cap of 5 |
 | `scripts/agent/format-hook.ts` | PostToolUse hook | Biome on each edited file; unfixable problems go straight back to the agent |
@@ -79,7 +77,7 @@ flowchart TD
 | `scripts/agent/pr-body.ts` | CLI | PR description from git + state: files, existing tests changed, checks, reviewer findings, the spec |
 | `scripts/agent/project.ts` | config | The only project-specific kit file: verify/e2e/format commands, browser paths, migrations folder |
 | `scripts/check-applied-migrations.ts` | lint check | Fails when a migration already on main was edited or deleted |
-| `.agentic/` (gitignored) | data | `specs/`, `state.json`, `review/`, `runs/<slug>.json`, `misses.md` |
+| `.agentic/` (gitignored) | data | `specs/`, `state.json`, `review/`, `runs/<slug>.json` |
 
 Other deterministic checks: Biome's `noFocusedTests` / `noSkippedTests` (an `.only` or `.skip` fails lint; the one
 legitimate phone-only skip has a per-file exception in `biome.json`), and `scripts/check-applied-migrations.ts`
@@ -142,7 +140,7 @@ sessions follow `desktopSessionCleanupPeriodDays`. This machine has both set to 
 **First time a real usage limit hits during a run, check:** did the CLI show the auto-continue line and resume? Did
 it continue the same phase (`node scripts/agent/run.ts status`) without redoing commits? If the reviewer was the one
 cut off, is the round recorded `interrupted` and re-run? Did the gate's `stops` stay unchanged? Did a weekly limit
-correctly *not* auto-continue? Write what you saw in `.agentic/misses.md` if anything went wrong.
+correctly *not* auto-continue?
 
 ## Debugging a bad run
 
@@ -152,8 +150,7 @@ correctly *not* auto-continue? Write what you saw in `.agentic/misses.md` if any
 3. Stalled with nothing happening? Almost always a permission prompt, or the machine slept. Check the terminal.
 4. The transcript: newest `.jsonl` in `~/.claude/projects/<project>/`. Search for `"is_error":true` to find denied or
    failed tool calls.
-5. Bad PR that passed every gate? That's a miss: run `/promote-correction <PR> <what>`.
-6. Reset: delete `.agentic/state.json` (the gate recreates it), or `run.ts finish gave-up "<why>"` to archive it.
+5. Reset: delete `.agentic/state.json` (the gate recreates it), or `run.ts finish gave-up "<why>"` to archive it.
 
 ## Decisions, and options we rejected
 
@@ -175,13 +172,12 @@ correctly *not* auto-continue? Write what you saw in `.agentic/misses.md` if any
   Costs roughly 1.5–2x tokens in the build phases, plus a round when the agents disagree.
 - **`.agentic/`, not `.workflow/`**: a `.workflow/state.json` makes the global wf-kit guard treat the repo as a wf-kit
   project and block `git push`, which `/deliver` needs.
-- **Copy, not a plugin**: see "Installing in another repo".
 - **No custom runner, no scheduler, no issue fetching**: one human-started conversation is the trigger.
 
 ## When to add more
 
-Not built on purpose. Revisit after ~10 PRs through `/deliver`, or as soon as the same kind of miss shows up twice in
-`.agentic/misses.md`:
+Not built on purpose. Revisit after ~10 PRs through `/deliver`, or as soon as you catch the same kind of miss twice
+in review:
 - **(a) Batch retrospective** over `.agentic/runs/*.json` plus transcript digests: which phases fail, how many gate
   blocks per run, where tokens go. Cost: a script plus a few hundred thousand tokens per analysis.
 - **(b) UI evidence**: Playwright screenshots or video per acceptance criterion, attached to the PR. Cost: e2e time on
@@ -205,20 +201,3 @@ Not built on purpose. Revisit after ~10 PRs through `/deliver`, or as soon as th
 - **Self-waiting headless runner**: a script that runs `claude -p`, parses "resets <time>" from the error, sleeps and
   re-runs `/deliver <slug>` (the state machine already makes that safe). Only worth it if CLI auto-continue proves
   unreliable, or for runs longer than its 3 continuations.
-
-## Installing in another repo
-
-An autonomous loop is safe only with a verify command that fails on bad changes. **Greenfield**: start from this
-template, which has one. **Brownfield**: audit the gates first (`/kit-init` does it, and refuses autonomy until a
-deliberate bad change makes verify fail).
-
-**Generic** (identical everywhere; `scripts/agent/kit.ts` lists them): the skills, the reviewer, `stop-gate.ts`,
-`run.ts`, `pr-body.ts`, the role guard and boundary check, the three agents, and their tests, this page. **Project-specific**:
-`scripts/agent/project.ts` (verify/e2e/format commands, browser paths, migrations folder), CLAUDE.md, the lint
-rules, the permission `Edit` paths.
-
-**Copy, not a plugin.** A plugin would update in one place, but its skills become `/kit:deliver`, plugin subagents
-ignore `hooks` and `permissionMode`, the scripts would live outside the repo where CI and reviewers can't see them, and
-you'd run a marketplace. Copying keeps every gate in the repo, reviewed in PRs and run by CI. Updates are a re-run
-of `kit.ts install`, shown as a normal diff. To use it: open Claude Code in the target repo with this checkout added as
-a directory (`claude --add-dir <path to launchpad>`, or the Desktop app's additional folders), then `/kit-init`.
