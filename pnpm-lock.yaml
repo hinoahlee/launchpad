@@ -327,6 +327,9 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.6.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
       turbo:
         specifier: 'catalog:'
         version: 2.11.11
