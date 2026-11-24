@@ -44,8 +44,8 @@ export function editedMigrations(
 	changes: {
 		path: string;
 		status: "A" | "M" | "D";
-		before?: string;
-		after?: string;
+		before?: string | undefined;
+		after?: string | undefined;
 	}[],
 	migrations = PROJECT_MIGRATIONS,
 ): string[] {
