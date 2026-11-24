@@ -47,6 +47,12 @@ Stop hook won't let the run finish until `pnpm verify` passes. You review and me
 (`node scripts/agent/run.ts status`); an interrupted run resumes with the same `/deliver <slug>`. For runs you walk
 away from, use the interactive `claude` CLI (it waits out usage limits) and keep the machine awake.
 
+For a series of features, `/roadmap` plans them with you as an ordered queue of specs (`.agentic/queue.json`), then
+`node scripts/agent/queue.ts` delivers them one by one in fresh sessions and merges each once CI passes. It stops
+for you when a run needs judgment (findings left, a dispute between the agents, changed tests, migrations, auth,
+billing, dependencies or the checks themselves; `HUMAN_REVIEW_PATHS` in `scripts/agent/project.ts`), after every
+`pauseEvery` merges, and when done; start it again to continue. It waits out usage limits on its own.
+
 ## 3. Deploy
 
 ### What any platform needs

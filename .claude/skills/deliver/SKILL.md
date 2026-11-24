@@ -24,6 +24,9 @@ Slug: `$ARGUMENTS`. Spec: `.agentic/specs/$ARGUMENTS.md` (missing: stop and say 
 `node scripts/agent/run.ts start $ARGUMENTS <type from the spec: feat|fix>`. It prints `START` or `RESUME ... at
 phase X` with the state. On RESUME: `git status` and `git log --oneline origin/main..HEAD` to see what is done, then
 jump to that phase's step below. Never redo a finished phase.
+On START, check the spec still fits the code (a queued spec was written before earlier features merged): if it
+names tables, schemas or routes that don't exist and it doesn't create, or contradicts what's there, stop (step 9)
+with `gave-up "spec stale: <what>"`. Don't adapt the spec yourself.
 
 ## 1. branch
 `git switch <type>/<slug>` if it exists, else `git switch -c <type>/<slug>` from an up-to-date main.
@@ -48,7 +51,8 @@ report; still no: stop (step 9).
 Spawn `implementer`: "Implement `.agentic/specs/<slug>.md` so these tests pass: <files from the test report>.
 The test writer needs: <its NEEDS FROM THE IMPLEMENTER>."
 **Disputes**: when its report lists DISPUTED TESTS, decide each one against the spec, not against which agent sounds
-surer. Spec backs the test: spawn `implementer` again with your ruling. Spec backs the dispute: handoff `tests` and
+surer. Record each one first: `node scripts/agent/run.ts dispute "<test>: <ruling, quoting the spec>"`.
+Spec backs the test: spawn `implementer` again with your ruling. Spec backs the dispute: handoff `tests` and
 spawn `test-writer` with the dispute and your ruling, then implement round 2. Spec unclear: don't guess; note it for
 the PR (What) and keep the test as written. At most 2 implement rounds; still disputed or failing: step 9.
 
