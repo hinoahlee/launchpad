@@ -25,7 +25,7 @@ touches environment variables, deployment or third-party accounts.
 
 Checks enforce the rest; their failure messages say how to fix (if a check is wrong, change it in its own PR): Biome,
 `scripts/check-*.ts` (file sizes, import boundaries, edited applied migrations), `tsc`, `db:check`, e2e.
-Workflow: `/feature` plans a spec, `/deliver <slug>` runs it to a PR (`.claude/skills/`, `.claude/agents/`).
+Workflow: `/feature` plans a spec, `/deliver <slug>` runs it to a PR, `/roadmap` + `node scripts/agent/queue.ts` run a series (`.claude/`, `scripts/agent/`).
 
 ## Commands
 Run from the repo root. Needs Postgres: `pnpm db:up` first.
@@ -152,7 +152,7 @@ Smaller recipes:
 ## Git and PRs
 - `main` is protected: branch `<type>/<short-slug>` (`feat/notes`), squash-merged PR, required checks green.
 - Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`). One concern per PR.
-- PR description: `.github/pull_request_template.md`. The agent never merges PRs.
+- PR description: `.github/pull_request_template.md`. Agents never merge PRs; only `scripts/agent/queue.ts` does, by its rules.
 
 ## Gotchas
 - Shell variables don't reach the apps (Turborepo filters them): set them in `apps/api/.env`.

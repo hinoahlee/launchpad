@@ -54,6 +54,7 @@ export type RunState = {
 	phase?: Phase;
 	slice?: number;
 	handoff?: { role: "tests" | "impl"; base: string; at: string };
+	disputes?: string[];
 	reviewRounds?: number;
 	outcome?: string;
 	note?: string;

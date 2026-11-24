@@ -7,6 +7,7 @@
 //   boundary                   fail if that agent changed files on the other side of the test/impl line
 //   diff                       write the branch's diff for the reviewer: .agentic/review/<slug>.diff
 //   review <round> <file|--interrupted>   record a reviewer round; prints the CONFIRMED findings
+//   dispute "<ruling>"         record a test dispute and how it was ruled (a queued run then waits for a person)
 //   finish <pr-opened|gave-up> [note]     close the run: state.json → .agentic/runs/<slug>.json
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -213,6 +214,15 @@ switch (command) {
 			`review round ${round}: ${confirmed.length} confirmed, ${count("PLAUSIBLE")} plausible, ${count("STYLE")} style`,
 		);
 		for (const f of confirmed) console.log(`CONFIRMED ${f.location} ${f.text}`);
+		break;
+	}
+	case "dispute": {
+		const run = requireRun();
+		if (!args.length)
+			fail('usage: dispute "<test>: <your ruling and the spec line>"');
+		run.disputes = [...(run.disputes ?? []), args.join(" ")];
+		writeState(root, run);
+		console.log(`dispute recorded (${run.disputes.length})`);
 		break;
 	}
 	case "finish": {
