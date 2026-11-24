@@ -31,7 +31,6 @@
 			"Edit(/apps/**)",
 			"Edit(/packages/**)",
 			"Edit(/e2e/**)",
-			"Edit(/docs/**)",
 			"Edit(/.agentic/**)"
 		]
 	},

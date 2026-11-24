@@ -11,10 +11,10 @@ touches environment variables, deployment or third-party accounts.
 3. **Tenant isolation.** Every query in a protected route filters on the session's user id or the membership's
    organization id. Another user's or organization's row is a 404, never a 403. Test both sides.
 4. **Migrations are generated and reviewed**, and must work with the previous release still running
-   (expand/contract, [docs/deploy-contract.md](docs/deploy-contract.md) row 10).
+   (expand/contract: only add, or remove what no running release reads; README "Deploy").
 5. **Never weaken or delete a test to make it pass.**
 6. **Never read `.env` files or print secrets.** New env vars: `apps/api/src/config/schema.ts` (Zod), `apps/api/.env.example`
-   (documented there) and the table in `docs/deploy-contract.md`, in the same PR.
+   (documented there), in the same PR.
 7. **Comments only for what the code can't say**: a non-obvious reason, a trap, or a deliberate choice that looks
    like a bug. No history ("added in…", "used to…"), no restating the code.
 8. **Keep files small and in their place** (below): split by responsibility.
@@ -25,7 +25,7 @@ touches environment variables, deployment or third-party accounts.
 
 Checks enforce the rest; their failure messages say how to fix (if a check is wrong, change it in its own PR): Biome,
 `scripts/check-*.ts` (file sizes, import boundaries, edited applied migrations), `tsc`, `db:check`, e2e.
-Workflow: `/feature` plans a spec, `/deliver <slug>` runs it to a PR ([docs/agentic-workflow.md](docs/agentic-workflow.md)).
+Workflow: `/feature` plans a spec, `/deliver <slug>` runs it to a PR (`.claude/skills/`, `.claude/agents/`).
 
 ## Commands
 Run from the repo root. Needs Postgres: `pnpm db:up` first.
@@ -46,7 +46,7 @@ TypeScript (strict, Node 24, no build step in dev), pnpm workspaces + Turborepo,
 `fastify-type-provider-zod`, Drizzle ORM on PostgreSQL 17, Better Auth, pino, Sentry. Web: Vite + React 19,
 TanStack Router (file routes) + TanStack Query, Tailwind 4 + shadcn/ui (Base UI). Tests: Vitest against a real
 Postgres, Playwright. Services, each optional: Resend (email), any S3 bucket (files), Stripe (billing), Sentry.
-Ships as one Docker image; [docs/deploy-contract.md](docs/deploy-contract.md) is what any platform relies on.
+Ships as one Docker image; README "What any platform needs" is what every platform relies on: change it in the same PR as the code.
 
 ## Architecture
 ```
@@ -102,7 +102,7 @@ A file's path should tell you what's in it. Names are kebab-case; these names al
 ## Features included
 - **Auth** (`lib/auth`, `features/auth`, web `features/auth`): Better Auth at `/api/auth/*`. Email codes (queued as a
   `sign-in-code` email; in dev the worker prints it) and Google (when configured). Sessions are rows: cookie for
-  browsers, `Authorization: Bearer` for other clients ([docs/api-clients.md](docs/api-clients.md)). Guards in
+  browsers, `Authorization: Bearer` for other clients (README "Call the API without a browser"). Guards in
   `lib/auth/guards/`. Account deletion is a hard delete needing a recent sign-in; tables pointing at `users` must
   `ON DELETE CASCADE`, cleanup outside Postgres goes in `deleteUser` in `lib/auth/create.ts`.
 - **Organizations** (`lib/auth`): every user owns exactly one, created at first sign-in and active on every session.
