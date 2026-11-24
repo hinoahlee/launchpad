@@ -29,6 +29,18 @@ export const MIGRATIONS_DIR: string = "packages/db/migrations/";
 export const MIGRATION_JOURNAL: string =
 	"packages/db/migrations/meta/_journal.json";
 
+// A queued run (scripts/agent/queue.ts) touching any of these stops for a person instead of merging itself:
+// data that can't be rolled back, money, sign-in and security, dependencies, and the checks themselves.
+export const HUMAN_REVIEW_PATHS = [
+	/^packages\/db\/migrations\//,
+	/^apps\/api\/src\/(features|lib)\/(auth|billing)\//,
+	/^apps\/api\/src\/http\//,
+	/(^|\/)package\.json$/,
+	/^pnpm-(lock|workspace)\.yaml$/,
+	/^(\.github|\.claude|scripts|infra)\//,
+	/^(biome\.json|Dockerfile|CLAUDE\.md)$/,
+];
+
 // Formats and lints one file after each agent edit (the file path is appended). Empty: no format hook.
 export const FORMAT_COMMAND: string =
 	"pnpm exec biome check --write --no-errors-on-unmatched";
