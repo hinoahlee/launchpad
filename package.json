@@ -11,11 +11,12 @@
 		"dev": "turbo run dev dev:worker",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
-		"lint": "biome check . && node scripts/check-file-size.ts && node scripts/check-imports.ts",
+		"lint": "biome check . && node scripts/check-file-size.ts && node scripts/check-imports.ts && node scripts/check-applied-migrations.ts",
 		"format": "biome check --write .",
 		"test": "turbo run test",
+		"test:scripts": "node --test \"scripts/**/*.test.ts\"",
 		"e2e": "turbo run e2e",
-		"verify": "pnpm lint && turbo run typecheck test build db:check",
+		"verify": "pnpm lint && pnpm test:scripts && tsc -p scripts && turbo run typecheck test build db:check",
 		"db:up": "docker compose -f compose.dev.yml up -d --wait",
 		"db:down": "docker compose -f compose.dev.yml down",
 		"db:generate": "pnpm --filter @launchpad/db db:generate",
@@ -25,6 +26,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
+		"@types/node": "catalog:",
 		"turbo": "catalog:",
 		"typescript": "catalog:"
 	}

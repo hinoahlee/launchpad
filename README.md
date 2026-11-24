@@ -1,174 +1,128 @@
 # launchpad
 
-A production-ready template for a web app: a Fastify API and a React SPA in one container image, with Postgres,
+A production-ready web app template: a Fastify API and a React SPA in one container image, with Postgres,
 background jobs, email, sign-in (email codes and Google), organizations, file uploads, Stripe billing, error
-tracking, CI/CD and end-to-end tests.
+tracking, CI/CD and end-to-end tests. Every external service is optional: with no accounts at all, the repo
+installs, tests, passes CI and runs. It deploys to Render out of the box and to anything that runs a container.
 
-It is built to be portable. Everything a platform needs is in one image and a short list of commands, env vars
-and probes ([docs/deploy-contract.md](docs/deploy-contract.md)): no platform SDKs, no local disk, config from the
-environment only. The default target is Render (a Blueprint and a deploy workflow are included), but the same
-image runs on a VPS (Docker Compose + a reverse proxy), on AWS (ECS/App Runner + RDS + S3) or on any container
-platform. Every external service is optional: with no accounts at all, the repo installs, tests, passes CI and runs.
+**Working on the code?** [CLAUDE.md](CLAUDE.md) has the commands, architecture, conventions and how to add a feature.
 
-**Working on the code?** Read [CLAUDE.md](CLAUDE.md): commands, architecture, conventions and how to add a feature.
-This README covers setting up and running the project.
+## 1. Set up
 
-- [1. Start a new project](#1-start-a-new-project)
-- [2. Local development](#2-local-development)
-- [3. Production (Render)](#3-production-render)
-- [4. Other platforms (VPS, AWS)](#4-other-platforms-vps-aws)
-- [5. Operating it](#5-operating-it)
+Tools: Git and the GitHub CLI (`gh auth login`), Node 24 (e.g. `fnm install 24`), pnpm (`npm install -g pnpm`; on
+Windows not Corepack, whose launcher hangs `turbo` on Ctrl+C), and Docker.
 
-## 1. Start a new project
+1. **Use this template** on GitHub, then clone your new repository.
+2. Rename what names your product: `PRODUCT_NAME` in `packages/shared/src/constants.ts`;
+   `apps/web/src/lib/site/constants.ts` (tagline, repo URL, a real `contactEmail`); the landing, privacy and terms
+   pages in `apps/web/src/routes/`; names, image URL, domain and `EMAIL_FROM` in `infra/render/render.yaml`.
+   Optionally the `@launchpad/*` package scope and the `launchpad` database name (search the repo).
+3. Protect `main`: `gh api -X POST repos/<owner>/<repo>/rulesets --input .github/rulesets/main.json` (squash merges,
+   required checks; see [.github/rulesets/README.md](.github/rulesets/README.md)). Turn on Dependabot and CodeQL in
+   **Settings → Advanced Security**.
 
-### Tools
-| Tool | Check |
-|---|---|
-| Git, and the GitHub CLI (`gh auth login`) | `gh auth status` |
-| Node 24 (e.g. via fnm: `fnm install 24`) | `node -v` |
-| pnpm, installed with `npm install -g pnpm` (on Windows, not Corepack: its launcher hangs `turbo` on Ctrl+C) | `pnpm -v` |
-| Docker (Docker Desktop on macOS/Windows) | `docker version` |
-
-### Make it yours
-1. On GitHub: **Use this template** → a new repository (or clone and push to a new one). Then clone it.
-2. Rename. Search the repo for `launchpad` and `Launchpad` and replace what names *your* product:
-   - `PRODUCT_NAME` in `packages/shared/src/constants.ts` (header, page titles, emails, auth).
-   - `apps/web/src/lib/site/constants.ts`: tagline, description, repo URL, a real `contactEmail`, `legalUpdated`.
-   - `apps/web/src/routes/index.tsx`: the landing page (it describes the template); `privacy.tsx` and `terms.tsx`
-     (starting points, not legal advice).
-   - Package scope `@launchpad/*` (every `package.json` and import) and the `launchpad` database name/user in
-     `compose.dev.yml`, `apps/api/.env.example`, `.github/workflows/cicd.yml` and `packages/db/src/testing/database.ts`:
-     optional, but do it before your first deploy if you want to.
-   - `infra/render/render.yaml`: service names, the image URL `ghcr.io/<owner>/<repo>:main`, your domain, `EMAIL_FROM`.
-3. Protect `main`: `gh api -X POST repos/<owner>/<repo>/rulesets --input .github/rulesets/main.json` (squash merges
-   only, `verify`, `e2e` and `image` checks required; notes in [.github/rulesets/README.md](.github/rulesets/README.md)). In
-   **Settings → Advanced Security**, turn on Dependabot alerts and security updates, and CodeQL default setup.
-
-## 2. Local development
+## 2. Develop locally
 
 ```bash
 pnpm install
 cp apps/api/.env.example apps/api/.env   # PowerShell: Copy-Item apps/api/.env.example apps/api/.env
-pnpm db:up        # Postgres 17 in Docker on localhost:5433 (data kept in a volume)
+pnpm db:up        # Postgres 17 in Docker on localhost:5433
 pnpm db:migrate   # create the tables (again whenever a migration arrives)
-pnpm dev          # http://localhost:5173 (web; /api is proxied to the API on :3000) + the worker
+pnpm dev          # http://localhost:5173 (web; /api proxied to :3000) + the worker
 ```
 
-Sign in at <http://localhost:5173/sign-in> with any email address: without an email provider, the worker prints
-the email, code included, in the `pnpm dev` terminal. Before opening a PR, run `pnpm verify` (and `pnpm e2e` for UI
-or API changes; the first time: `pnpm --filter @launchpad/e2e exec playwright install chromium`). All commands:
-[CLAUDE.md](CLAUDE.md#commands).
+Sign in at <http://localhost:5173/sign-in> with any email: without an email provider, the worker prints the code in
+the `pnpm dev` terminal. Before a PR: `pnpm verify`, plus `pnpm e2e` for UI or API changes (first time:
+`pnpm --filter @launchpad/e2e exec playwright install chromium`).
 
-Every integration below is off until its variables are set in `apps/api/.env` (each is documented in
-`apps/api/.env.example`). Use test/sandbox accounts and separate keys for development, never production's.
+Integrations (Resend, Google, S3, Stripe, Sentry) stay off until their variables are set in `apps/api/.env`.
+**`apps/api/.env.example` documents every variable**: what it does, when it's needed, and local notes. Use
+sandbox accounts and separate keys for development, never production's.
 
-| Integration | Set | Local notes |
-|---|---|---|
-| Email (Resend) | `RESEND_API_KEY`, `EMAIL_FROM` | Usually leave empty: emails are printed instead. |
-| Google sign-in | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Redirect URI `http://localhost:5173/api/auth/callback/google`. |
-| File uploads | `S3_*` | A dev bucket whose CORS allows `http://localhost:5173` (see [File storage](#file-storage)). |
-| Billing (Stripe) | `STRIPE_API_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Sandbox keys. Webhooks: `stripe listen` (command in `.env.example`). |
-| Errors (Sentry) | `SENTRY_DSN` | Leave empty locally. |
+### Building with Claude Code
+`/feature` plans a change with you and writes a spec where every acceptance criterion names the test that proves it.
+On "go", `/deliver <slug>` builds it unattended to an open PR: a test-writer agent writes failing tests, an
+implementer agent makes them pass (neither may touch the other's files), a read-only reviewer checks the diff, and a
+Stop hook won't let the run finish until `pnpm verify` passes. You review and merge. Run state lives in `.agentic/`
+(`node scripts/agent/run.ts status`); an interrupted run resumes with the same `/deliver <slug>`. For runs you walk
+away from, use the interactive `claude` CLI (it waits out usage limits) and keep the machine awake.
 
-## 3. Production (Render)
+## 3. Deploy
 
-The pipeline: a PR runs CI (`verify`, `e2e`, `image`). A merge to `main` publishes the image to GitHub's registry
-as `ghcr.io/<owner>/<repo>:<sha>`, then deploys that exact digest to Render: the web service first (its pre-deploy
-step runs migrations, and the job waits until `/api/version` reports the new commit), then the worker. GitHub holds
-only Render's deploy hooks, which can deploy nothing but this repository's image.
+### What any platform needs
+- **The image** from GHCR, by digest (CI publishes `ghcr.io/<owner>/<repo>:<sha>` for each `main` commit;
+  `linux/amd64`, non-root). Three commands:
+  - `node dist/migrate.js` once per release, before new code starts (exit 0/1);
+  - `node dist/server.js` (default): SPA + `/api` on `$PORT`;
+  - `node dist/worker.js`: background jobs, one or more, no HTTP. Deploy it after the server, and turn off the
+    image's `HEALTHCHECK` for it (that probe is the server's).
+- **Probes**: `/api/health` (alive), `/api/ready` (can serve; checks the DB), `/api/version` (deployed commit).
+- **PostgreSQL 17** as `DATABASE_URL`. Behind a transaction-mode pooler, also `DATABASE_DIRECT_URL` (worker, migrate).
+- **TLS** at the proxy, and `TRUST_PROXY_HOPS` = proxies that append to `X-Forwarded-For` (Render 2, Caddy or an
+  ALB 1). Too low and every visitor shares one rate limit; too high and clients can fake their IP.
+- **Production config**: `APP_URL` (public origin), `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), plus any
+  optional service. Invalid config exits at boot.
+- **Shutdown**: SIGTERM with at least 25 s before SIGKILL. **No local disk**: files go to the bucket, the rest to Postgres.
 
-Cost on Render's paid plans: about $7/month each for the web service and the worker, plus about $6/month for
-Postgres. Change plans and region in `infra/render/render.yaml` before the first sync (some can't change later).
+Migrations must work with the previous release still running (expand/contract): only add, or remove what no running
+release reads. A rename takes several PRs: add, write both, backfill, read the new one, drop the old.
 
-### Steps
-1. **Publish the first image.** Merge anything to `main` (or re-run CI on `main`): the `publish` job pushes the image.
-   Then GitHub → your profile → **Packages** → the package → **Package settings** → **Change visibility: Public**
-   (Render pulls it without credentials), and link it to the repository if it isn't.
-2. **Create the Blueprint.** Render → **New → Blueprint** → this repository, Blueprint path
-   `infra/render/render.yaml`. Render creates the web service, the worker and Postgres, and generates
-   `BETTER_AUTH_SECRET`. Variables marked `sync: false` are prompted for: leave the optional ones empty for now.
-3. **Domain.** Your DNS: a `CNAME` from your hostname to the web service's `onrender.com` host (on Cloudflare: DNS
-   only, grey cloud). It must match `domains` and `APP_URL` in the Blueprint. `TRUST_PROXY_HOPS` stays `2`
-   whatever your DNS provider: Render's own edge is Cloudflare, then its load balancer. Don't proxy the record
-   through your own Cloudflare (orange cloud): that adds a hop, and the setting would then trust a fakeable entry.
-4. **Deploy from GitHub.** For each service, Render → **Settings → Deploy Hook** → copy. In GitHub → **Settings →
-   Environments → New environment** `production` (deployment branches: `main` only), add secrets
-   `RENDER_DEPLOY_HOOK_URL` (web) and `RENDER_WORKER_DEPLOY_HOOK_URL` (worker). Then **Settings → Secrets and
-   variables → Actions → Variables**: `RENDER_URL` = `https://<your domain>`. The next merge deploys; to deploy now
-   or roll back: Actions → **Deploy to Render** → Run workflow with a commit SHA from `main`.
-5. **Check.** `https://<domain>/api/ready` answers `{"status":"ok"}` and `/api/version` the deployed commit.
+### Render (the default)
+Cost: about $7/month each for the web service and worker, plus about $6 for Postgres.
+1. **Publish the first image**: merge anything to `main`. Then GitHub → Packages → the package → **Change
+   visibility: Public** (Render pulls it without credentials).
+2. **Blueprint**: Render → **New → Blueprint** → this repo, path `infra/render/render.yaml`. It creates the web
+   service, worker and Postgres and generates `BETTER_AUTH_SECRET`; leave optional prompts empty for now.
+3. **Domain**: a `CNAME` to the web service's `onrender.com` host, matching `domains` and `APP_URL` in the
+   Blueprint. On Cloudflare, DNS only (grey cloud): proxying adds a hop `TRUST_PROXY_HOPS` doesn't count.
+4. **Deploy from GitHub**: copy each service's **Deploy Hook**. In GitHub → **Environments** → `production`
+   (branch `main` only), add secrets `RENDER_DEPLOY_HOOK_URL` and `RENDER_WORKER_DEPLOY_HOOK_URL`, and the Actions
+   variable `RENDER_URL` = `https://<domain>`. Each merge to `main` now deploys (web first, migrations in its
+   pre-deploy step, then the worker).
+5. **Check**: `/api/ready` returns `{"status":"ok"}` and `/api/version` the commit.
 
-From now on, deploy only through GitHub. In Render's dashboard, save env var edits with **Save only**, then run the
-deploy workflow (a "save and deploy" uses `:main` and skips the web-before-worker order).
+Deploy only through GitHub from then on: save env edits in Render with **Save only**, then run the **Deploy to
+Render** workflow (also how you roll back: run it with an older SHA).
+
+### Other platforms
+**VPS**: Docker Compose with server, worker, Postgres and Caddy; run migrate as a one-off `docker compose run` before
+`up`; add `pg_dump` backups. **AWS**: ECS Fargate or App Runner for server and worker, a one-off task for migrate,
+RDS, S3 with a task role (no keys), an ALB; copy `.github/workflows/deploy-render.yml` as the shape of the deploy job
+(by digest, wait for `/api/version`, then the worker), with OIDC instead of keys. More than one API instance needs a
+shared rate-limit store (`apps/api/src/http/rate-limit.ts`); workers scale freely.
 
 ### Optional services
-Each is off until configured. Set secrets in Render's dashboard (both services where noted), then redeploy.
+Set each in the platform (Render dashboard), on the services `.env.example` names, then redeploy.
+- **Email (Resend)**: verify a sending domain (a subdomain keeps its reputation apart), a "Sending access" key for
+  it. Webhook `https://<domain>/api/webhooks/resend` with `email.bounced` and `email.complained`.
+- **Google sign-in**: a Web OAuth client with redirect URI `https://<domain>/api/auth/callback/google`.
+- **Files (any S3-compatible bucket)**: a private bucket and a key limited to it. Its CORS must allow the app's origin:
+  `[{"AllowedOrigins":["https://<domain>"],"AllowedMethods":["PUT","GET"],"AllowedHeaders":["Content-Type"],"ExposeHeaders":["ETag"],"MaxAgeSeconds":3600}]`.
+  Upload failing? A CSP error in the browser console means `S3_ENDPOINT` is wrong; a CORS error means the origin
+  doesn't match exactly.
+- **Billing (Stripe)**: a product with a monthly price; a restricted key (write: Customers, Checkout Sessions,
+  Customer portal; read: Subscriptions, Prices); the Customer Portal on; a webhook `https://<domain>/api/webhooks/stripe`
+  for the events in `SYNC_EVENTS` (`apps/api/src/features/billing/webhook/constants.ts`).
+- **Errors (Sentry)**: two projects. Platform: `SENTRY_DSN` (API). The web build reads GitHub Actions settings, baked
+  in at build time: variables `SENTRY_DSN_WEB`, `SENTRY_ORG`, `SENTRY_PROJECT_WEB`, secret `SENTRY_AUTH_TOKEN`
+  (source maps). Add an uptime monitor on `/api/ready`.
 
-**Email (Resend).** Add and verify a sending domain (a subdomain like `mail.example.com` keeps its reputation apart).
-Create an API key with "Sending access" for that domain. Worker: `RESEND_API_KEY`, and `EMAIL_FROM` in the Blueprint
-(`Name <hello@mail.example.com>`). Then Resend → **Webhooks** → endpoint `https://<domain>/api/webhooks/resend`,
-events `email.bounced` and `email.complained`; web: `RESEND_WEBHOOK_SECRET` (`whsec_…`). Bounced and complaining
-addresses are never emailed again.
+## 4. Call the API without a browser
 
-**Google sign-in.** Google Cloud → **Google Auth Platform** → a Web client with redirect URI
-`https://<domain>/api/auth/callback/google`. Web: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+Mobile apps and scripts use the same session as a bearer token. Sign in with
+`POST /api/auth/email-otp/send-verification-otp` then `POST /api/auth/sign-in/email-otp`; the token comes back in the
+`set-auth-token` response header. Send it as `Authorization: Bearer <token>`, exactly as received, with no `Origin`
+header, and keep it in the OS's secure storage. A 401 means the session is gone: sign in again. Browsers never get
+the header and keep using the cookie.
 
-<a id="file-storage"></a>**File storage (any S3-compatible bucket; Cloudflare R2 shown).** Create a private bucket
-(e.g. `myapp-prod`). Its CORS policy must allow the app's origin:
-```json
-[{ "AllowedOrigins": ["https://<domain>"], "AllowedMethods": ["PUT", "GET"],
-   "AllowedHeaders": ["Content-Type"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3600 }]
-```
-Create an API token with Object Read & Write on that bucket only. Web **and** worker: `S3_ENDPOINT`
-(`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`), `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`
-(`S3_REGION` stays `auto` for R2). On AWS S3: no endpoint, the bucket's region, and keys optional (an IAM role works).
-Uploads go browser ↔ bucket directly; the API only signs URLs. If uploads fail, the browser console says why:
-a CSP error means `S3_ENDPOINT` is wrong; a CORS error means the bucket's `AllowedOrigins` doesn't match exactly.
+## 5. Operate it
 
-**Billing (Stripe).** Create a product with a monthly price, and a restricted key with write access to Customers,
-Checkout Sessions and Customer portal, read access to Subscriptions and Prices. Turn on the Customer Portal. Web:
-`STRIPE_API_KEY` (`rk_…`), `STRIPE_PRICE_ID` (`price_…`). Then a webhook endpoint `https://<domain>/api/webhooks/stripe`
-subscribed to the events in `SYNC_EVENTS` (`apps/api/src/features/billing/webhook/constants.ts`); web:
-`STRIPE_WEBHOOK_SECRET`. Use a sandbox until launch.
-
-**Error tracking (Sentry).** Two projects (API and web). Render, both services: `SENTRY_DSN` (the API project).
-GitHub Actions variables: `SENTRY_DSN_WEB`, `SENTRY_ORG`, `SENTRY_PROJECT_WEB`, and secret `SENTRY_AUTH_TOKEN`
-(uploads source maps on `main` builds). Add an uptime monitor on `https://<domain>/api/ready`.
-
-## 4. Other platforms (VPS, AWS)
-
-Anything that runs a Linux container can host it. Provide what [docs/deploy-contract.md](docs/deploy-contract.md) lists:
-- The image from GHCR, by digest. Three commands: `node dist/migrate.js` once per release before the new code
-  starts, `node dist/server.js` (HTTP on `$PORT`, health check `/api/ready`), `node dist/worker.js` (one or more; no HTTP).
-- PostgreSQL 17 as `DATABASE_URL` (add `?sslmode=require` where the provider needs TLS). Behind a transaction-mode
-  pooler (PgBouncer, RDS Proxy), also `DATABASE_DIRECT_URL` for the worker and migrations.
-- TLS at the proxy or load balancer, `TRUST_PROXY_HOPS` = the number of proxies that append to `X-Forwarded-For`,
-  `APP_URL`, `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), and the optional services' variables.
-- SIGTERM with at least 25 s before SIGKILL.
-
-**VPS:** Docker Compose with the server, the worker, Postgres and Caddy (TLS, `TRUST_PROXY_HOPS=1`); run migrate as a
-one-off `docker compose run` before `up`. Add backups (`pg_dump` to off-site storage) yourself.
-**AWS:** ECS Fargate (or App Runner) services for server and worker, a one-off ECS task for migrate, RDS Postgres,
-S3 with a task role (no keys), an ALB (`TRUST_PROXY_HOPS=1`). Copy `.github/workflows/deploy-render.yml` as the shape
-of a deploy job: deploy by digest, wait for `/api/version`, then the worker. Use OIDC for GitHub → AWS, not keys.
-
-To scale the API beyond one instance, give the rate limiter a shared store (Redis; `apps/api/src/http/rate-limit.ts`):
-its counters are in memory, per instance. Workers scale freely.
-
-## 5. Operating it
-
-- **Deploys and rollbacks** go through GitHub Actions only (Render: **Deploy to Render** with an older SHA). For a
-  bug in production, revert the PR first and debug after.
-- **Migrations** must keep working with the release before them (expand/contract): a rename or a new `NOT NULL`
-  column takes several deploys. Review every generated SQL file.
-- **Backups**: Render Postgres has point-in-time recovery (restores into a new database). Practise a restore before
-  you need one. Never restore over the only copy.
+- **Rollback**: revert the PR first, debug after. Deploys and rollbacks only go through GitHub Actions.
+- **Backups**: Render Postgres has point-in-time recovery into a new database. Practise a restore before you need one.
 - **Secrets**: rotate by adding the new value, deploying, then revoking the old. Changing `BETTER_AUTH_SECRET` signs
   everyone out.
-- **Logs** are JSON lines on stdout with a `requestId`, which every error response and Sentry event also carries:
-  search for it.
-- **Before launch**: a real `contactEmail`; your own privacy policy and terms (they should say that deleting an
-  account deletes its Stripe customer, which cancels the subscription at once, without a refund).
-- **Known limits**: failed jobs (`jobs.status = 'failed'`, `last_error`) are kept but not retried or alerted on; an
-  object whose delete failed is logged (`storage delete failed; object orphaned`) and not retried; sign-in codes stay
-  in `jobs.payload` until `prune-jobs` removes done jobs (7 days); the app's database user owns the schema.
+- **Logs**: JSON lines on stdout; every error response and Sentry event carries the `requestId` to search for.
+- **Before launch**: a real `contactEmail`, and your own privacy policy and terms. They should say that deleting an
+  account deletes its Stripe customer, cancelling the subscription at once without a refund.
+- **Known limits**: failed jobs are kept (`jobs.status = 'failed'`) but not retried or alerted on; a failed object
+  delete is logged, not retried; sign-in codes stay in `jobs.payload` until `prune-jobs` clears done jobs (7 days).

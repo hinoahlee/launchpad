@@ -21,7 +21,7 @@ services:
     plan: 0.5c-512mb
     # Every deploy runs this first, in a one-off container from the new image with the same env vars. Non-zero
     # exit = the deploy fails and the old version keeps serving. It applies new migrations, so they must work
-    # with the old version too (expand/contract, docs/deploy-contract.md).
+    # with the old version too (expand/contract, README "Deploy").
     preDeployCommand: node dist/migrate.js
     # Render sends traffic to a new deploy only once this returns 2xx; until then the old one keeps serving.
     healthCheckPath: /api/ready

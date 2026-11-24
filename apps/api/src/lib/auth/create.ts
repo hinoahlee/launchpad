@@ -139,7 +139,7 @@ export function createAuth(
 				beforeStoreCookie: () => false,
 			}),
 			// Non-browser clients: `Authorization: Bearer <set-auth-token>` works wherever the cookie does
-			// (docs/api-clients.md). Only the signed token: `sessions.token` stores the bare one, so a database leak
+			// (README "Call the API without a browser"). Only the signed token: `sessions.token` stores the bare one, so a database leak
 			// hands out nothing usable.
 			bearer({ requireSignature: true }),
 			// One person, one organization: users can't create, delete, rename or invite. Teams start by lifting

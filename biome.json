@@ -22,6 +22,10 @@
 	},
 	"linter": {
 		"rules": {
+			"suspicious": {
+				"noFocusedTests": "error",
+				"noSkippedTests": "error"
+			},
 			"style": {
 				"noDefaultExport": "error",
 				"noProcessEnv": "error",
@@ -66,6 +70,16 @@
 				"rules": {
 					"style": {
 						"noDefaultExport": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["e2e/tests/pages.spec.ts"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noSkippedTests": "off"
 					}
 				}
 			}

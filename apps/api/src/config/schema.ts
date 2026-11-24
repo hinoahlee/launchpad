@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-// Every environment variable the API reads. Each is documented in apps/api/.env.example and
-// docs/deploy-contract.md.
+// Every environment variable the API reads. Each is documented in apps/api/.env.example.
 
 // An empty value (`SENTRY_DSN=` in .env) means "not set".
 const unset = z.literal("").transform(() => undefined);
