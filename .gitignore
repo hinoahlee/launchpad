@@ -47,6 +47,7 @@ Thumbs.db
 # Database dumps. Real data: never commit.
 .drill/
 
-# Claude Code worktrees and verify screenshots (ai-eng plugin)
+# Claude Code worktrees, verify screenshots and the Playwright MCP output (ai-eng plugin)
 .claude/worktrees/
 .claude/screenshots/
+.playwright-mcp/
