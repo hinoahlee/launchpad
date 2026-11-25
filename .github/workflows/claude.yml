@@ -1,0 +1,93 @@
+# Claude review: on every PR update, and when a maintainer mentions @claude in a PR comment. Runs the checks, then
+# the ai-eng plugin's reviewer and security-reviewer agents, which post blockers as review comments. Pushes nothing.
+name: Claude review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: claude-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    # PR comments only, from people with write access: an issue_comment run has this repository's secrets and
+    # checks out the PR's code. Fork PRs get no secrets, so the review step would fail there: skip them.
+    if: >-
+      (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+        contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    # The same throwaway Postgres as cicd.yml's verify job: unit tests need it.
+    services:
+      postgres:
+        image: postgres:17.12-trixie
+        env:
+          POSTGRES_USER: launchpad
+          POSTGRES_PASSWORD: launchpad
+          POSTGRES_DB: launchpad
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U launchpad -d launchpad"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # issue_comment runs on main: check out the PR it was posted on.
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || '' }}
+          # Full history, so the reviewers can diff the PR against origin/main.
+          fetch-depth: 0
+
+      # The plugin. A private marketplace repo needs a read-only token in AI_ENG_MARKETPLACE_TOKEN.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: <OWNER>/ai-eng-marketplace
+          path: .ai-eng
+          persist-credentials: false
+          token: ${{ secrets.AI_ENG_MARKETPLACE_TOKEN || github.token }}
+
+      # pnpm from package.json "packageManager", Node from .nvmrc, then `pnpm install --frozen-lockfile`.
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          cache: true
+          require-lockfile: true
+
+      - run: pnpm verify
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          claude_args: >-
+            --plugin-dir ./.ai-eng/plugins/ai-eng
+            --allowedTools "Read,Grep,Glob,Task,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number || github.event.issue.number }} in ${{ github.repository }}.
+            The PR branch is checked out; its base is origin/main, so read `git diff origin/main...HEAD` where the
+            agents' instructions say `main...HEAD`. The acceptance criteria are in the PR description (`gh pr view`).
+
+            1. Run the `ai-eng:reviewer` and `ai-eng:security-reviewer` agents in parallel. Tell each to diff
+               against origin/main and give it the PR description's acceptance criteria and epic link.
+            2. Post each blocker as an inline review comment on its file and line
+               (mcp__github_inline_comment__create_inline_comment), with the finding and the fix.
+            3. Post one PR comment (`gh pr comment`) listing every finding by severity, or "No blockers." if
+               there are none.
+
+            Do not edit files, commit or push.
