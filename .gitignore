@@ -46,3 +46,7 @@ Thumbs.db
 
 # Database dumps. Real data: never commit.
 .drill/
+
+# Claude Code worktrees and verify screenshots (ai-eng plugin)
+.claude/worktrees/
+.claude/screenshots/

@@ -1,0 +1,11 @@
+{
+	"extraKnownMarketplaces": {
+		"team-tools": {
+			"source": { "source": "github", "repo": "<OWNER>/ai-eng-marketplace" }
+		}
+	},
+	"enabledPlugins": { "ai-eng@team-tools": true },
+	"permissions": {
+		"deny": ["Read(./**/.env)"]
+	}
+}

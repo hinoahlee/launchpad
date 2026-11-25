@@ -54,7 +54,7 @@ jobs:
           cache: true
           require-lockfile: true
 
-      - run: pnpm verify
+      - run: pnpm verify:ci
 
       # Known vulnerabilities (CVEs) in our npm dependencies, from GitHub's advisory database. Fails on high or
       # critical only: moderate ones are reviewed case by case (Dependabot alerts list them all). A new advisory can
