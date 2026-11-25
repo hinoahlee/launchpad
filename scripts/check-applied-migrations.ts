@@ -2,7 +2,7 @@
 // Compares the branch (committed and uncommitted) with origin/main.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { editedMigrations, isMigration } from "./agent/files.ts";
+import { editedMigrations, isMigration } from "./migrations.ts";
 
 const git = (args: string[]) =>
 	execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });

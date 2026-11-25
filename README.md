@@ -5,7 +5,7 @@ background jobs, email, sign-in (email codes and Google), organizations, file up
 tracking, CI/CD and end-to-end tests. Every external service is optional: with no accounts at all, the repo
 installs, tests, passes CI and runs. It deploys to Render out of the box and to anything that runs a container.
 
-**Working on the code?** [CLAUDE.md](CLAUDE.md) has the commands, architecture, conventions and how to add a feature.
+**Working on the code?** [docs/architecture.md](docs/architecture.md) maps the code; [docs/conventions.md](docs/conventions.md) has the conventions and how to add a feature.
 
 ## 1. Set up
 
@@ -38,20 +38,6 @@ the `pnpm dev` terminal. Before a PR: `pnpm verify`, plus `pnpm e2e` for UI or A
 Integrations (Resend, Google, S3, Stripe, Sentry) stay off until their variables are set in `apps/api/.env`.
 **`apps/api/.env.example` documents every variable**: what it does, when it's needed, and local notes. Use
 sandbox accounts and separate keys for development, never production's.
-
-### Building with Claude Code
-`/feature` plans a change with you and writes a spec where every acceptance criterion names the test that proves it.
-On "go", `/deliver <slug>` builds it unattended to an open PR: a test-writer agent writes failing tests, an
-implementer agent makes them pass (neither may touch the other's files), a read-only reviewer checks the diff, and a
-Stop hook won't let the run finish until `pnpm verify` passes. You review and merge. Run state lives in `.agentic/`
-(`node scripts/agent/run.ts status`); an interrupted run resumes with the same `/deliver <slug>`. For runs you walk
-away from, use the interactive `claude` CLI (it waits out usage limits) and keep the machine awake.
-
-For a series of features, `/roadmap` plans them with you as an ordered queue of specs (`.agentic/queue.json`), then
-`node scripts/agent/queue.ts` delivers them one by one in fresh sessions and merges each once CI passes. It stops
-for you when a run needs judgment (findings left, a dispute between the agents, changed tests, migrations, auth,
-billing, dependencies or the checks themselves; `HUMAN_REVIEW_PATHS` in `scripts/agent/project.ts`), after every
-`pauseEvery` merges, and when done; start it again to continue. It waits out usage limits on its own.
 
 ## 3. Deploy
 
