@@ -21,7 +21,7 @@ Postgres must be running for unit tests, e2e and the dev server: `pnpm db:up` (D
 
 ## Rules
 - Feature work happens in a worktree (`claude --worktree <name>`), never on `main` in the main checkout.
-- Epic work ships behind the epic's feature flag, off by default; every PR merges with the flag off.
+- Unfinished features ship behind a feature flag, off by default; every PR merges with the flag off.
 - Never edit generated files: `apps/web/src/components/ui/` (shadcn CLI), `apps/web/src/routeTree.gen.ts` (Vite),
   `pnpm-lock.yaml` (pnpm), `packages/db/migrations/` (`pnpm db:generate` writes new ones; applied ones never change).
 - Never read or print `.env` files. New env vars go in `apps/api/src/config/schema.ts` and `apps/api/.env.example`.

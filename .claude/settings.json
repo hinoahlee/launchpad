@@ -1,10 +1,4 @@
 {
-	"extraKnownMarketplaces": {
-		"team-tools": {
-			"source": { "source": "github", "repo": "hinoahlee/ai-eng-marketplace" }
-		}
-	},
-	"enabledPlugins": { "ai-eng@team-tools": true },
 	"permissions": {
 		"deny": ["Read(./**/.env)"]
 	}
