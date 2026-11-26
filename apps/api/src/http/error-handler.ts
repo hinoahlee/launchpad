@@ -2,6 +2,7 @@ import { STATUS_CODES } from "node:http";
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { hasZodFastifySchemaValidationErrors } from "fastify-type-provider-zod";
 import { reportError } from "#lib/sentry.ts";
+import { HttpError } from "./errors.ts";
 
 // 413 → "payload_too_large".
 function statusCode(status: number): string {
@@ -26,8 +27,9 @@ export function errorHandler(
 			})),
 		};
 	}
+	const trusted = err instanceof HttpError || err.code?.startsWith("FST_");
 	const status =
-		err.statusCode !== undefined && err.statusCode >= 400
+		trusted && err.statusCode !== undefined && err.statusCode >= 400
 			? err.statusCode
 			: 500;
 	reply.code(status);
