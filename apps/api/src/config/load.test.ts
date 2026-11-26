@@ -105,6 +105,14 @@ describe("Google settings", () => {
 	});
 });
 
+describe("SENTRY_ENVIRONMENT", () => {
+	it("treats an empty value (as in .env.example, uncommented) as unset", () => {
+		expect(
+			loadConfig({ ...base, SENTRY_ENVIRONMENT: "" }).SENTRY_ENVIRONMENT,
+		).toBeUndefined();
+	});
+});
+
 describe("APP_URL", () => {
 	it("treats an empty value as unset", () => {
 		expect(loadConfig({ ...base, APP_URL: "" }).APP_URL).toBeUndefined();
