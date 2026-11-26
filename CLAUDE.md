@@ -10,7 +10,7 @@ env vars and deploys. [REVIEW.md](REVIEW.md) is what review checks.
 
 ## Checks
 Postgres must be running for unit tests, e2e and the dev server: `pnpm db:up` (Docker), then `pnpm db:migrate`.
-- `pnpm verify`: lint, typecheck, unit tests, failing fast. The Stop hook runs it.
+- `pnpm verify`: lint, typecheck, unit tests, failing fast. Run it before you finish.
 - `pnpm lint` (Biome + `scripts/check-*.ts`), `pnpm format` (fixes), `pnpm typecheck`, `pnpm test`
 - One test file: `pnpm --filter @launchpad/api exec vitest run <path>`
 - `pnpm e2e`: builds, then Playwright (phone + desktop) against the production server; specs in `e2e/tests/`.
