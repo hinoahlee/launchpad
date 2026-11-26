@@ -120,3 +120,7 @@ the header and keep using the cookie.
   account deletes its Stripe customer, cancelling the subscription at once without a refund.
 - **Known limits**: failed jobs are kept (`jobs.status = 'failed'`) but not retried or alerted on; a failed object
   delete is logged, not retried. A sign-in code is removed from `jobs.payload` once its email is sent or fails for good.
+
+## License
+
+MIT: see [LICENSE](LICENSE). An app you build from this template can use any license, as long as it keeps the MIT notice for the template's code.
