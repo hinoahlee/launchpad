@@ -5,6 +5,8 @@ type MemoryBillingDriver = BillingDriver & {
 	// Customer id → organization id.
 	customers: Map<string, string>;
 	subscriptions: Map<string, SubscriptionSnapshot>;
+	// Customer id → Checkout sessions created and not yet expired.
+	openCheckouts: Map<string, number>;
 	// What paying at Checkout leaves at Stripe: an active subscription.
 	subscribe(customerId: string, changes?: Partial<SubscriptionSnapshot>): void;
 	// currentSubscription calls.
@@ -18,6 +20,7 @@ type MemoryBillingDriver = BillingDriver & {
 export function createMemoryBillingDriver(): MemoryBillingDriver {
 	const customers = new Map<string, string>();
 	const subscriptions = new Map<string, SubscriptionSnapshot>();
+	const openCheckouts = new Map<string, number>();
 	let failures = 0;
 	const failIfAsked = () => {
 		if (failures > 0) {
@@ -28,6 +31,7 @@ export function createMemoryBillingDriver(): MemoryBillingDriver {
 	const driver: MemoryBillingDriver = {
 		customers,
 		subscriptions,
+		openCheckouts,
 		fetches: 0,
 		subscribe(customerId, changes = {}) {
 			subscriptions.set(customerId, {
@@ -45,6 +49,7 @@ export function createMemoryBillingDriver(): MemoryBillingDriver {
 		reset() {
 			customers.clear();
 			subscriptions.clear();
+			openCheckouts.clear();
 			failures = 0;
 			driver.fetches = 0;
 		},
@@ -59,10 +64,14 @@ export function createMemoryBillingDriver(): MemoryBillingDriver {
 			return subscriptions.get(customerId) ?? null;
 		},
 		async createCheckoutSession({ customerId, successUrl }) {
+			openCheckouts.set(customerId, (openCheckouts.get(customerId) ?? 0) + 1);
 			const url = new URL(`${MEMORY_BILLING_ORIGIN}/checkout`);
 			url.searchParams.set("customer", customerId);
 			url.searchParams.set("success_url", successUrl);
 			return url.toString();
+		},
+		async expireOpenCheckoutSessions(customerId) {
+			openCheckouts.delete(customerId);
 		},
 		async createPortalSession({ customerId, returnUrl }) {
 			const url = new URL(`${MEMORY_BILLING_ORIGIN}/portal`);

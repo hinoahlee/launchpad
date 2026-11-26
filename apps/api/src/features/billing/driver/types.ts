@@ -11,6 +11,8 @@ export type BillingDriver = {
 		successUrl: string;
 		cancelUrl: string;
 	}): Promise<string>;
+	// Expires the customer's Checkout sessions that are still open, so an older tab can't be paid as well.
+	expireOpenCheckoutSessions(customerId: string): Promise<void>;
 	createPortalSession(input: {
 		customerId: string;
 		returnUrl: string;

@@ -23,7 +23,7 @@ export async function customerIdOf(
 
 // A subscription that hasn't ended, from our copy (kept current by the webhook).
 export async function subscribedOf(
-	db: Database,
+	db: Database | Transaction,
 	organizationId: string,
 ): Promise<boolean> {
 	const [row] = await db
@@ -48,17 +48,32 @@ export async function billingStatus(
 // Saves the customer's subscription as Stripe has it now. Locks the customer row, then fetches: the last sync to
 // commit always saved the newest state, so a late or out-of-order webhook can't roll it back. Never trust a
 // webhook's payload instead.
+//
+// The lock is held while Stripe answers, so each waiting sync also holds a database connection. Where the caller
+// is a member who can send many at once, pass `wait: false`: if another sync holds the lock it returns "busy" at
+// once, and that sync saves a state at least as new.
 export async function syncSubscription(
 	tx: Transaction,
 	billing: BillingDriver,
 	customerId: string,
-): Promise<"synced" | "unknown_customer"> {
-	const [customer] = await tx
+	{ wait = true }: { wait?: boolean } = {},
+): Promise<"synced" | "unknown_customer" | "busy"> {
+	const byId = eq(billingCustomers.stripeCustomerId, customerId);
+	const locked = tx
 		.select({ organizationId: billingCustomers.organizationId })
 		.from(billingCustomers)
-		.where(eq(billingCustomers.stripeCustomerId, customerId))
-		.for("update");
-	if (!customer) return "unknown_customer";
+		.where(byId);
+	const [customer] = await (wait
+		? locked.for("update")
+		: locked.for("update", { skipLocked: true }));
+	if (!customer) {
+		if (wait) return "unknown_customer";
+		const [exists] = await tx
+			.select({ id: billingCustomers.stripeCustomerId })
+			.from(billingCustomers)
+			.where(byId);
+		return exists ? "busy" : "unknown_customer";
+	}
 	const { organizationId } = customer;
 
 	const subscription = await billing.currentSubscription(customerId);

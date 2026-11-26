@@ -54,6 +54,30 @@ describe("Stripe driver", () => {
 		expect(request?.params.get("metadata[organizationId]")).toBe(ORG);
 	});
 
+	it("expires each of the customer's open Checkout sessions", async () => {
+		const { driver, sent } = fakeStripe((request) =>
+			request.method === "GET"
+				? {
+						object: "list",
+						has_more: false,
+						url: "/v1/checkout/sessions",
+						data: [
+							{ id: "cs_1", object: "checkout.session" },
+							{ id: "cs_2", object: "checkout.session" },
+						],
+					}
+				: { id: "cs_x", object: "checkout.session", status: "expired" },
+		);
+		await driver.expireOpenCheckoutSessions("cus_1");
+		expect(sent[0]?.path).toBe("/v1/checkout/sessions");
+		expect(sent[0]?.params.get("customer")).toBe("cus_1");
+		expect(sent[0]?.params.get("status")).toBe("open");
+		expect(sent.slice(1).map((r) => `${r.method} ${r.path}`)).toEqual([
+			"POST /v1/checkout/sessions/cs_1/expire",
+			"POST /v1/checkout/sessions/cs_2/expire",
+		]);
+	});
+
 	it("checkout: a subscription to the configured price, tagged with the organization", async () => {
 		const { driver, sent } = fakeStripe(() => ({
 			id: "cs_1",

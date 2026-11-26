@@ -71,6 +71,17 @@ export function createStripeDriver({
 			return session.url;
 		},
 
+		async expireOpenCheckoutSessions(customerId) {
+			const open = stripe.checkout.sessions.list({
+				customer: customerId,
+				status: "open",
+				limit: 100,
+			});
+			for await (const session of open) {
+				await stripe.checkout.sessions.expire(session.id);
+			}
+		},
+
 		async createPortalSession({ customerId, returnUrl }) {
 			const session = await stripe.billingPortal.sessions.create({
 				customer: customerId,
