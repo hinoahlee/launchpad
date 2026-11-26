@@ -151,8 +151,11 @@ describe("prune-uploads", () => {
 			(r) => r.key,
 		);
 		expect(left.sort()).toEqual([recent, finished].sort());
-		expect([...storage.objects.keys()].sort()).toEqual(
-			[recent, finished].sort(),
+		// The rows go at once; each object goes in a delete-file-object job queued with its row's delete.
+		await vi.waitFor(() =>
+			expect([...storage.objects.keys()].sort()).toEqual(
+				[recent, finished].sort(),
+			),
 		);
 	});
 
