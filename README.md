@@ -68,9 +68,11 @@ Cost: about $7/month each for the web service and worker, plus about $6 for Post
 3. **Domain**: a `CNAME` to the web service's `onrender.com` host, matching `domains` and `APP_URL` in the
    Blueprint. On Cloudflare, DNS only (grey cloud): proxying adds a hop `TRUST_PROXY_HOPS` doesn't count.
 4. **Deploy from GitHub**: copy each service's **Deploy Hook**. In GitHub → **Environments** → `production`
-   (branch `main` only), add secrets `RENDER_DEPLOY_HOOK_URL` and `RENDER_WORKER_DEPLOY_HOOK_URL`, and the Actions
-   variable `RENDER_URL` = `https://<domain>`. Each merge to `main` now deploys (web first, migrations in its
-   pre-deploy step, then the worker).
+   (branch `main` only), add secrets `RENDER_DEPLOY_HOOK_URL` and `RENDER_WORKER_DEPLOY_HOOK_URL`. Then under
+   **Settings → Secrets and variables → Actions → Variables**, add the *repository* variable `RENDER_URL` =
+   `https://<domain>` (not an environment variable: the workflows read it before the environment applies, and skip
+   the deploy without it). Each merge to `main` now deploys (web first, migrations in its pre-deploy step, then the
+   worker).
 5. **Check**: `/api/ready` returns `{"status":"ok"}` and `/api/version` the commit.
 
 Deploy only through GitHub from then on: save env edits in Render with **Save only**, then run the **Deploy to

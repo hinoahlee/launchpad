@@ -7,10 +7,12 @@ on:
   push:
     branches: [main]
 
-# A newer push to the same PR/branch cancels the run it makes outdated.
+# A newer push to a PR cancels the run it makes outdated. On main a run is never cancelled, since it may be halfway
+# through a deploy (web migrated, worker not yet): runs on main go one at a time, and while one runs only the newest
+# push waits (GitHub drops an older waiting run, whose commits the newer one contains).
 concurrency:
   group: cicd-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # GITHUB_TOKEN gets read-only repo access; jobs ask for more only if they need it.
 permissions:
