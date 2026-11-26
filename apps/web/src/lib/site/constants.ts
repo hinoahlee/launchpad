@@ -9,5 +9,5 @@ export const site = {
 	// Replace with a real inbox before launch.
 	contactEmail: "hello@example.com",
 	// Bump when /privacy or /terms changes.
-	legalUpdated: "November 21, 2026",
+	legalUpdated: "November 26, 2026",
 } as const;

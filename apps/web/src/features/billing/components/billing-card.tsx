@@ -63,11 +63,13 @@ export function BillingCard({
 		onSuccess: (data) =>
 			queryClient.setQueryData(billingQuery(organizationId).queryKey, data),
 	});
+	// With billing off, /billing/sync doesn't exist: wait until we know, and only sync when it's on.
+	const enabled = billing.data?.enabled;
 	useEffect(() => {
-		if (!returnedFromStripe) return;
-		sync();
+		if (!returnedFromStripe || enabled === undefined) return;
+		if (enabled) sync();
 		onReturnHandled();
-	}, [returnedFromStripe, sync, onReturnHandled]);
+	}, [returnedFromStripe, enabled, sync, onReturnHandled]);
 	const redirect = useMutation({
 		mutationFn: (page: "checkout" | "portal") =>
 			billingRedirect(organizationId, page),
@@ -77,6 +79,7 @@ export function BillingCard({
 
 	// Back button from Stripe: the back/forward cache restores this page as it left, button disabled.
 	useEffect(() => {
+		if (!enabled) return;
 		const onPageShow = (event: PageTransitionEvent) => {
 			if (!event.persisted) return;
 			reset();
@@ -84,9 +87,9 @@ export function BillingCard({
 		};
 		window.addEventListener("pageshow", onPageShow);
 		return () => window.removeEventListener("pageshow", onPageShow);
-	}, [reset, sync]);
+	}, [enabled, reset, sync]);
 
-	if (billing.data?.enabled === false) return null;
+	if (enabled === false) return null;
 
 	const subscribed = billing.data?.subscribed;
 	const pro = billing.data?.plan === "pro";

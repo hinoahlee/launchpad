@@ -37,8 +37,20 @@ function Privacy() {
 					<li>
 						<strong className="font-medium">Sign-in emails.</strong> To send you
 						a sign-in code, we keep the email (address and code) in a queue
-						until it's sent. If an address bounces or marks our email as spam,
-						we record that so we never email it again.
+						until it's sent; the code is then removed from it. If an address
+						bounces or marks our email as spam, we record that so we never email
+						it again.
+					</li>
+					<li>
+						<strong className="font-medium">Your files.</strong> Files you
+						upload, with their name, type and size, stored in a private storage
+						bucket that only signed, short-lived links can read.
+					</li>
+					<li>
+						<strong className="font-medium">Billing.</strong> If you subscribe,
+						Stripe collects your payment details on its own pages; we never see
+						them. We keep your Stripe customer id and your subscription's
+						status, plan and renewal date.
 					</li>
 					<li>
 						<strong className="font-medium">Server logs.</strong> Each request
@@ -69,10 +81,11 @@ function Privacy() {
 			<LegalSection title="Who processes it">
 				<p>
 					{site.name} runs on Render (hosting and database), behind Cloudflare
-					(network and security). Resend sends our emails, Google handles "Sign
-					in with Google", and Sentry receives error reports. They handle data
-					only to provide those services. Your data isn't sold or shared with
-					anyone else.
+					(network and security). Uploaded files are stored with Cloudflare R2.
+					Stripe handles payments and subscriptions, Resend sends our emails,
+					Google handles "Sign in with Google", and Sentry receives error
+					reports. They handle data only to provide those services. Your data
+					isn't sold or shared with anyone else.
 				</p>
 			</LegalSection>
 
@@ -98,9 +111,12 @@ function Privacy() {
 				<p>
 					You can delete your account any time from your{" "}
 					<Link to="/account">account page</Link>. Your account, its sign-in
-					methods and every session are deleted at once. What remains is listed
-					above: queued emails until they expire, the do-not-email list, and
-					backups until they age out.
+					methods and every session are deleted at once. If you subscribed, your
+					Stripe customer is deleted first, which cancels the subscription at
+					once, without a refund. Your files are deleted from storage shortly
+					after, in the background. What remains is listed above: queued emails
+					until they expire, the do-not-email list, Stripe's own records of past
+					payments, and backups until they age out.
 				</p>
 			</LegalSection>
 
