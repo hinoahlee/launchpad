@@ -26,7 +26,7 @@ import {
 	initialOrganizationId,
 	organizationIdsOf,
 } from "./personal-organization.ts";
-import { signInCodeLimit } from "./sign-in-code-limit.ts";
+import { queueSignInCode, signInCodeLimit } from "./sign-in-code-limit.ts";
 
 export type AuthHooks = {
 	// Account deletion, before the user's organization is deleted: cleanup in other services (billing). Throwing
@@ -127,11 +127,12 @@ export function createAuth(
 						log.warn({ type }, "auth: email code requested for an unused flow");
 						return;
 					}
-					await enqueue(db, "send_email", {
-						template: "sign-in-code",
-						to: email,
-						props: { code: otp, expiresInMinutes: SIGN_IN_CODE_MINUTES },
-					});
+					// Same response either way: whether a code went out says nothing to the caller.
+					if (!(await queueSignInCode(db, email, otp))) {
+						log.warn(
+							"auth: sign-in code not sent, hourly limit for the address",
+						);
+					}
 				},
 			}),
 			lastLoginMethod({

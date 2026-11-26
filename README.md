@@ -119,4 +119,4 @@ the header and keep using the cookie.
 - **Before launch**: a real `contactEmail`, and your own privacy policy and terms. They should say that deleting an
   account deletes its Stripe customer, cancelling the subscription at once without a refund.
 - **Known limits**: failed jobs are kept (`jobs.status = 'failed'`) but not retried or alerted on; a failed object
-  delete is logged, not retried; sign-in codes stay in `jobs.payload` until `prune-jobs` clears done jobs (7 days).
+  delete is logged, not retried. A sign-in code is removed from `jobs.payload` once its email is sent or fails for good.

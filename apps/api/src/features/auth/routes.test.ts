@@ -169,7 +169,7 @@ describe("email code sign-in", () => {
 	const errorCode = (res: { json: () => unknown }) =>
 		authErrorResponseSchema.parse(res.json()).code;
 
-	it("queues an email with a 6-digit code, and stores only its hash", async () => {
+	it("queues an email with a 6-digit code; the verifications table stores only its hash", async () => {
 		const res = await sendCode();
 		expect(res.statusCode).toBe(200);
 		const code = await queuedCode();
@@ -298,6 +298,16 @@ describe("email code sign-in", () => {
 				SIGN_IN_CODES_PER_HOUR,
 			);
 			expect((await signIn(code)).statusCode).toBe(200);
+		});
+
+		it("never queues more than the limit, even for requests sent at once", async () => {
+			const results = await Promise.all(
+				Array.from({ length: SIGN_IN_CODES_PER_HOUR * 3 }, () => sendCode()),
+			);
+			for (const res of results) expect([200, 429]).toContain(res.statusCode);
+			expect(await app.db.select().from(jobs)).toHaveLength(
+				SIGN_IN_CODES_PER_HOUR,
+			);
 		});
 
 		it("counts the address whatever its case", async () => {
