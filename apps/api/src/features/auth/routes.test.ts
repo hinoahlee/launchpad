@@ -270,6 +270,23 @@ describe("email code sign-in", () => {
 		expect(await app.db.select().from(jobs)).toEqual([]);
 	});
 
+	// A reset would give the account a password, and /delete-user with a password skips the recent sign-in.
+	it.each([
+		"/email-otp/request-password-reset",
+		"/forget-password/email-otp",
+		"/email-otp/reset-password",
+		"/email-otp/verify-email",
+		"/email-otp/check-verification-otp",
+	])("404s the unused email-code route %s", async (route) => {
+		const res = await post(`/api/auth${route}`, {
+			email: EMAIL,
+			otp: "123456",
+			password: "a-password-long-enough",
+			type: "forget-password",
+		});
+		expect(res.statusCode).toBe(404);
+	});
+
 	// Per address, from any number of IPs: stops one inbox from being flooded with codes.
 	describe(`at most ${SIGN_IN_CODES_PER_HOUR} codes an hour per address`, () => {
 		const sendMax = async (email = EMAIL) => {

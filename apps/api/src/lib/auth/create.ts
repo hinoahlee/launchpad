@@ -56,6 +56,15 @@ export function createAuth(
 		// Set, so it never builds links from the client-controlled Host header.
 		baseURL: origin,
 		basePath: "/api/auth",
+		// emailOTP mounts password reset and email verification too. Unused, but live: they store codes that no
+		// per-address limit covers, and a reset sets a password, which lets /delete-user skip the recent sign-in.
+		disabledPaths: [
+			"/email-otp/request-password-reset",
+			"/forget-password/email-otp",
+			"/email-otp/reset-password",
+			"/email-otp/verify-email",
+			"/email-otp/check-verification-otp",
+		],
 		secret: config.BETTER_AUTH_SECRET ?? DEV_SECRET,
 		trustedOrigins: [origin],
 		database: drizzleAdapter(db, { provider: "pg", usePlural: true }),
@@ -122,7 +131,8 @@ export function createAuth(
 				storeOTP: "hashed",
 				// Queuing takes the same time whether the address has an account or not, so the response leaks nothing.
 				sendVerificationOTP: async ({ email, otp, type }) => {
-					// Email verification and password reset aren't used.
+					// Email verification and password reset: their routes are in disabledPaths, so a code is never sent
+					// and the one Better Auth stores can't be used.
 					if (type !== "sign-in") {
 						log.warn({ type }, "auth: email code requested for an unused flow");
 						return;
