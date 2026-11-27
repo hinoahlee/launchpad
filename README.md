@@ -49,7 +49,7 @@ sandbox accounts and separate keys for development, never production's.
   - `node dist/worker.js`: background jobs, one or more, no HTTP. Deploy it after the server, and turn off the
     image's `HEALTHCHECK` for it (that probe is the server's).
 - **Probes**: `/api/health` (alive), `/api/ready` (can serve; checks the DB), `/api/version` (deployed commit).
-- **PostgreSQL 17** as `DATABASE_URL`. Behind a transaction-mode pooler, also `DATABASE_DIRECT_URL` (worker, migrate).
+- **PostgreSQL 17** as `DATABASE_URL`, connected directly (no pooler).
 - **TLS** at the proxy, and `TRUST_PROXY_HOPS` = proxies that append to `X-Forwarded-For` (Render 2, Caddy or an
   ALB 1). Too low and every visitor shares one rate limit; too high and clients can fake their IP.
 - **Production config**: `APP_URL` (public origin), `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), plus any
