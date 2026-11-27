@@ -1,166 +1,32 @@
-# CLAUDE.md
+# launchpad
 
-How to work in this codebase. Setup (local and production) is in [README.md](README.md): read it when a task
-touches environment variables, deployment or third-party accounts.
+A full-stack web app template in a pnpm + Turborepo monorepo on Node 24 and TypeScript. `apps/api` is a Fastify 5 API
+with Zod-typed routes, Better Auth, a Postgres job queue and a worker. `apps/web` is a Vite + React 19 SPA with
+TanStack Router and Query, Tailwind 4 and shadcn/ui. `packages/db` holds the Drizzle ORM schema and migrations
+(PostgreSQL 17); `packages/shared` holds the Zod API contract both apps import. Playwright e2e tests are in `e2e/`.
+Biome formats and lints. Read [docs/architecture.md](docs/architecture.md) for the layout and features,
+[docs/conventions.md](docs/conventions.md) for how code is written here, and [README.md](README.md) for setup,
+env vars and deploys. [REVIEW.md](REVIEW.md) is what review checks.
+
+## Checks
+Postgres must be running for unit tests, e2e and the dev server: `pnpm db:up` (Docker), then `pnpm db:migrate`.
+- `pnpm verify`: lint, typecheck, unit tests, failing fast. Run it before you finish.
+- `pnpm lint` (Biome + `scripts/check-*.ts`), `pnpm format` (fixes), `pnpm typecheck`, `pnpm test`
+- One test file: `pnpm --filter @launchpad/api exec vitest run <path>`
+- `pnpm e2e`: builds, then Playwright (phone + desktop) against the production server; specs in `e2e/tests/`.
+  One spec: `pnpm --filter @launchpad/e2e exec playwright test tests/<name>.spec.ts` after `pnpm build`.
+  First time: `pnpm --filter @launchpad/e2e exec playwright install chromium`.
+- `pnpm dev`: web on http://localhost:5173 (proxies `/api`), API on 3000, worker. Sign-in codes print in the worker log.
+- `pnpm verify:ci`: verify plus build and the migrations check (what CI runs). No seed command exists.
 
 ## Rules
-1. **Finish with proof.** `pnpm verify` must pass; also `pnpm e2e` when a page, a route the web app calls, auth,
-   files or the CSP changed. The Stop hook runs verify, and e2e during `/deliver` (`scripts/agent/stop-gate.ts`).
-2. **Contract first.** Every request/response body the web app and the API exchange is a Zod schema in
-   `packages/shared`, imported by both. No local copies. Zod at every other boundary too: env, webhooks, external APIs.
-3. **Tenant isolation.** Every query in a protected route filters on the session's user id or the membership's
-   organization id. Another user's or organization's row is a 404, never a 403. Test both sides.
-4. **Migrations are generated and reviewed**, and must work with the previous release still running
-   (expand/contract: only add, or remove what no running release reads; README "Deploy").
-5. **Never weaken or delete a test to make it pass.**
-6. **Never read `.env` files or print secrets.** New env vars: `apps/api/src/config/schema.ts` (Zod), `apps/api/.env.example`
-   (documented there), in the same PR.
-7. **Comments only for what the code can't say**: a non-obvious reason, a trap, or a deliberate choice that looks
-   like a bug. No history ("added in…", "used to…"), no restating the code.
-8. **Keep files small and in their place** (below): split by responsibility.
-9. **UI components come from the shadcn CLI**, never by hand: `pnpm --filter @launchpad/web exec shadcn add <name>`.
-   The CSP allows no inline scripts or styles.
-10. Ask before adding a dependency, a service or a new pattern. Pin exact versions in `pnpm-workspace.yaml`'s
-    `catalog:` (packages use `"catalog:"`); pick releases at least two weeks old.
-
-Checks enforce the rest; their failure messages say how to fix (if a check is wrong, change it in its own PR): Biome,
-`scripts/check-*.ts` (file sizes, import boundaries, edited applied migrations), `tsc`, `db:check`, e2e.
-Workflow: `/feature` plans a spec, `/deliver <slug>` runs it to a PR, `/roadmap` + `node scripts/agent/queue.ts` run a series (`.claude/`, `scripts/agent/`).
-
-## Commands
-Run from the repo root. Needs Postgres: `pnpm db:up` first.
-```bash
-pnpm dev          # web (5173, proxies /api) + API server (3000) + worker, in watch mode
-pnpm verify       # lint (+ scripts/check-*), script tests, typecheck, test, build, db:check: "safe to merge?"
-pnpm e2e          # build, then Playwright (phone + desktop) against the production server
-pnpm test         # Vitest, every package (one test file: pnpm --filter @launchpad/api exec vitest run <path>)
-pnpm format       # fix formatting and safe lint issues
-pnpm db:up        # start local Postgres (Docker); db:down stops it
-pnpm db:generate  # after editing packages/db/src/schema/: write the next migration, then review its SQL
-pnpm db:migrate   # apply migrations to apps/api/.env's DATABASE_URL
-pnpm db:studio    # browse the database
-```
-
-## Stack
-TypeScript (strict, Node 24, no build step in dev), pnpm workspaces + Turborepo, Biome. API: Fastify 5 +
-`fastify-type-provider-zod`, Drizzle ORM on PostgreSQL 17, Better Auth, pino, Sentry. Web: Vite + React 19,
-TanStack Router (file routes) + TanStack Query, Tailwind 4 + shadcn/ui (Base UI). Tests: Vitest against a real
-Postgres, Playwright. Services, each optional: Resend (email), any S3 bucket (files), Stripe (billing), Sentry.
-Ships as one Docker image; README "What any platform needs" is what every platform relies on: change it in the same PR as the code.
-
-## Architecture
-```
-apps/api/src/
-  app.ts               buildApp(): plugins, hooks, every route registered (the only file importing features)
-  server.ts worker.ts migrate.ts   the three process entrypoints (dist/*.js in the image)
-  config/              schema.ts (every env var, Zod), load.ts (parse at boot), utils.ts (derived values)
-  http/                hooks that run on every request: security headers, rate limit, same-origin check, request
-                       IDs + logging, error handler, SPA serving. No routes.
-  features/<name>/     everything that answers HTTP: probes, auth (/api/auth/*), account, files, billing,
-                       email-webhooks, greeting. routes.ts + service.ts, nested folders for sub-parts.
-  lib/<name>/          infrastructure features use: auth (Better Auth instance, guards), jobs, email, storage,
-                       entitlements, logger, sentry. Registers no routes.
-  testing/             test helpers (testConfig, sign-in flows)
-apps/web/src/
-  main.tsx             providers, router, query client
-  routes/              pages (file = URL); routeTree.gen.ts is generated by Vite and committed
-  features/<name>/     api.ts (queries/mutations) + components/*.tsx
-  components/          ui/ (shadcn, generated: don't edit by hand), layout/ (app shell), theme/
-  lib/                 api/ (client + ApiError), site/ (product identity), sentry
-packages/shared/src/   schemas/<domain>.ts (the API contract), constants.ts (PRODUCT_NAME, plans...), types.ts
-packages/db/src/       schema/ (one file per domain + constants), client, runMigrations, testing/; SQL in migrations/
-e2e/                   tests/ (journeys), support/ (fixtures, DB helpers), scripts/ (fake S3 bucket, DB reset)
-```
-Request path: `http/` hooks (request ID, rate limit, same-origin check) → route plugin → `requireSession` /
-`requireMembership` → handler → Zod-serialized response, or `{ error: "snake_case", requestId }`.
-
-### Where code goes
-A file's path should tell you what's in it. Names are kebab-case; these names always mean the same thing:
-
-| Name | Holds | Only |
-|---|---|---|
-| `routes.ts` | a Fastify plugin: schemas, guards, status codes | HTTP; logic goes to `service.ts` |
-| `service.ts` | database and business logic for the folder | no Fastify types |
-| `schemas.ts` | Zod schemas and the types inferred from them | |
-| `types.ts` | types | no runtime code |
-| `constants.ts` | fixed values (numbers, strings, sets, lookup tables) | no functions |
-| `utils.ts` | small pure helpers | no I/O |
-| `errors.ts` | error classes | |
-| `driver/` | one external service behind an interface: `types.ts` (the interface), `create.ts` (picks the implementation from config; `undefined` when unconfigured, which switches the feature off), `<impl>/driver.ts` (`stripe/`, `s3/`, `resend/`, and `memory/` for tests) | |
-| `components/` (web) | one React component per file (`sessions-card.tsx`) | |
-
-- **Placement**: a type or constant imported by another file goes in its folder's `types.ts` / `constants.ts`; one
-  used by a single file stays in that file. Types inferred from a value (`z.infer`, `$inferSelect`, `ReturnType`)
-  stay beside it. Anything else gets a descriptive name for the one thing it does (`verify-event.ts`, `keys.ts`).
-- **Imports**: relative inside a module, `#` alias across modules; only `app.ts` and web `routes/` import features
-  (`scripts/check-imports.ts` defines modules and says how to fix a violation).
-- **Tests** sit next to the file: `foo.ts` → `foo.test.ts`; a feature's HTTP tests may be split by topic
-  (`features/auth/bearer.test.ts`). Most are integration tests through `app.inject()` against a real database; unit
-  tests for pure logic; e2e only for journeys only a browser proves.
-- Errors: `reply.code(4xx); return { error: "snake_case_code" }`, with that status in the route's `response` schema.
-
-## Features included
-- **Auth** (`lib/auth`, `features/auth`, web `features/auth`): Better Auth at `/api/auth/*`. Email codes (queued as a
-  `sign-in-code` email; in dev the worker prints it) and Google (when configured). Sessions are rows: cookie for
-  browsers, `Authorization: Bearer` for other clients (README "Call the API without a browser"). Guards in
-  `lib/auth/guards/`. Account deletion is a hard delete needing a recent sign-in; tables pointing at `users` must
-  `ON DELETE CASCADE`, cleanup outside Postgres goes in `deleteUser` in `lib/auth/create.ts`.
-- **Organizations** (`lib/auth`): every user owns exactly one, created at first sign-in and active on every session.
-  Org-scoped URLs are `/api/organizations/:organizationId/...`. Teams later: lift the limits in the `organization()`
-  plugin (`lib/auth/create.ts`) and the unique indexes in `packages/db/src/schema/organizations.ts`.
-- **Account** (`features/account`): list and revoke your sessions. The simplest protected feature: copy it.
-- **Files** (`features/files`): presigned upload/download to an S3 bucket (`lib/storage`), per-plan quota. The
-  org-scoped reference.
-- **Billing** (`features/billing`): Stripe Checkout + Customer Portal; `webhook/` syncs by re-fetching from Stripe.
-  Gate features on `entitlementsOf(db, organizationId)` (`lib/entitlements.ts`), limits in `ENTITLEMENTS`
-  (`packages/shared/src/constants.ts`).
-- **Jobs** (`lib/jobs`): a Postgres queue. `enqueue(tx, type, payload)` inside the transaction that saves the data;
-  handlers must be idempotent (at-least-once); recurring jobs in `schedules.ts` (cron, UTC).
-- **Email** (`lib/email`): only ever by queuing `send_email`. React Email templates render in the worker only.
-- **Security**: CSP + HSTS, per-IP rate limits, same-origin check on unsafe methods, request IDs on every error,
-  Sentry on 5xx. **Ops** (`features/probes`): `/api/health`, `/api/ready`, `/api/version`; JSON logs, graceful shutdown.
-- `features/greeting` (API) and the `echo` job are minimal samples that tests rely on: keep them as references.
-
-## Recipe: add a feature
-Work in this order; each step compiles and tests on its own. Read the closest existing feature first
-(`features/account` for user-scoped, `features/files` for org-scoped).
-1. **Plan**: write down the endpoints, tables and pages, and which user or organization owns each row.
-2. **Contract**: `packages/shared/src/schemas/<feature>.ts` (request/response/params schemas + inferred types),
-   exported from `index.ts`. Org-scoped params extend `organizationParamsSchema`.
-3. **Data** (if needed): a table in `packages/db/src/schema/<domain>.ts` (export it from `schema/index.ts`), with
-   `organization_id`/`user_id` referencing their table `ON DELETE CASCADE`. `pnpm db:generate`, read the SQL.
-4. **API**: `apps/api/src/features/<feature>/routes.ts` + `service.ts`. User-scoped: `app.addHook("onRequest",
-   requireSession)` and `sessionOf(request).user.id`. Org-scoped: also `preHandler: requireMembership("member" |
-   "admin" | "owner")` and `membershipOf(request).organizationId`. Register it in `app.ts`.
-5. **API tests** (`routes.test.ts`): 401 without a session, a validation failure, the happy path, another user's or
-   organization's data (both their URL and their ids in yours), and role limits. Copy the setup from a sibling test.
-6. **Web**: `apps/web/src/features/<feature>/api.ts` calling `api(path, schema, init)` (`#lib/api/client.ts`),
-   components in `components/` built from `#components/ui`, a page in `routes/` (protected pages copy `beforeLoad`
-   from `routes/account.tsx`).
-7. **E2E** only for a critical journey: `e2e/tests/<feature>.spec.ts`, importing from `#support/fixtures.ts`.
-8. `pnpm verify` and `pnpm e2e`, then a PR (below).
-
-Smaller recipes:
-- **Background work**: payload schema in `lib/jobs/schemas.ts` → handler in `handlers.ts` (the compiler requires it)
-  → `enqueue(tx, ...)`. Recurring: an entry in `schedules.ts`.
-- **An email**: a member in `lib/email/schemas.ts`, a template in `templates/`, a case in `render.tsx`. Never import a
-  template from server code: `pnpm dev` runs the server on plain Node, which can't load `.tsx` (the worker uses tsx).
-- **An external service**: a `driver/` folder as in the table above; tests pass the memory driver to `buildApp`.
-- **An env var**: rule 6. Optional integrations are "all set or all unset", checked in `config/load.ts`.
-- **A plan limit**: `ENTITLEMENTS` in `packages/shared/src/constants.ts`, enforced with `entitlementsOf`.
-
-## Git and PRs
-- `main` is protected: branch `<type>/<short-slug>` (`feat/notes`), squash-merged PR, required checks green.
-- Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`). One concern per PR.
-- PR description: `.github/pull_request_template.md`. Agents never merge PRs; only `scripts/agent/queue.ts` does, by its rules.
-
-## Gotchas
-- Shell variables don't reach the apps (Turborepo filters them): set them in `apps/api/.env`.
-- Tests share one database (`launchpad_test`, emptied before each test), so test files run one at a time. A test
-  making many requests from one IP passes `rateLimitMax` to `buildApp`. Drivers are injected:
-  `buildApp(config, { storage, billing })` with the memory drivers.
-- An e2e test that provokes a console error on purpose declares it: `test.use({ expectedErrors: [/.../] })`.
-- Dev runs the API's `.ts` with plain Node (type stripping): `tsc` rejects enums and other syntax needing a compile
-  step, and imports keep their `.ts` extension.
-- Better Auth's endpoints answer `{ code, message }`, not our `{ error }`; `lib/api/client.ts` handles both.
-- Rate limits are per process (in memory). Running several API instances needs a shared store (`http/rate-limit.ts`).
+- Feature work happens in a worktree (`claude --worktree <name>`), never on `main` in the main checkout.
+- Merging deploys to production: every PR must leave the app working for users. Keep unfinished user-facing
+  parts unreachable (no link or route) until the PR that completes them, or behind a feature flag, off by default,
+  when the change alters existing behaviour.
+- Never edit generated files: `apps/web/src/components/ui/` (shadcn CLI), `apps/web/src/routeTree.gen.ts` (Vite),
+  `pnpm-lock.yaml` (pnpm), `packages/db/migrations/` (`pnpm db:generate` writes new ones; applied ones never change).
+- Never read or print `.env` files. New env vars go in `apps/api/src/config/schema.ts` and `apps/api/.env.example`.
+- No-go without the user's explicit ask: `infra/`, `.github/`, `Dockerfile`, `scripts/check-*.ts`, auth and billing
+  internals (`apps/api/src/lib/auth/`, `apps/api/src/features/billing/`), and new dependencies.
+- Conventional Commits; one concern per PR; never merge a PR.

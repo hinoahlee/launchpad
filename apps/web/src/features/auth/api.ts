@@ -38,12 +38,16 @@ export function forgetCachedUserData(queryClient: QueryClient): void {
 }
 
 // Better Auth answers with Google's sign-in page; Google returns to /api/auth/callback/google, which sets the
-// cookie and redirects to `callbackURL` (or `errorCallbackURL?error=<code>`).
+// cookie and redirects to `callbackURL` (or `errorCallbackURL`, with `error=<code>` added to its query). A failed
+// attempt keeps where the person was going, so signing in afterwards still lands there.
 export async function signInWithGoogle(callbackURL = "/"): Promise<void> {
 	const request: SocialSignInRequest = {
 		provider: "google",
 		callbackURL,
-		errorCallbackURL: "/sign-in",
+		errorCallbackURL:
+			callbackURL === "/"
+				? "/sign-in"
+				: `/sign-in?redirect=${encodeURIComponent(callbackURL)}`,
 	};
 	const { url } = await api(
 		"/auth/sign-in/social",

@@ -1,5 +1,5 @@
 // `pnpm lint` runs this: fails when a source file outgrows its limit. Small files keep each read cheap for
-// people and agents. Over the limit: split by responsibility (see CLAUDE.md, "Where code goes").
+// people and tools. Over the limit: split by responsibility (see docs/conventions.md, "Where code goes").
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 

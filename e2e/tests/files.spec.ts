@@ -46,7 +46,7 @@ test("a file over the limit is refused before uploading", async ({ page }) => {
 	const card = filesCard(page);
 	let registered = false;
 	page.on("request", (request) => {
-		if (request.method() === "POST" && request.url().endsWith("/api/files")) {
+		if (request.method() === "POST" && request.url().endsWith("/files")) {
 			registered = true;
 		}
 	});

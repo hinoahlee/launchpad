@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 // of the S3 API for that, with path-style URLs (/<bucket>/<key>). It doesn't check signatures: the S3 driver's
 // unit tests cover what gets signed.
 //
-// CORS like the real bucket's policy (README, "File storage"): only the app's origin, PUT and GET, the
+// CORS like the real bucket's policy (README, "Optional services" → "Files"): only the app's origin, PUT and GET, the
 // Content-Type header. A CORS mistake in the app then fails here the way it would in production.
 //
 // Usage: node fake-bucket.ts <port> <allowed origin>

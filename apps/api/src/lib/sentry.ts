@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/node";
 import type { Config } from "#config/schema.ts";
+import { safeError } from "#lib/safe-error.ts";
 
 type Overrides = Pick<Sentry.NodeOptions, "transport">;
 
@@ -28,7 +29,7 @@ export function initSentry(config: Config, overrides: Overrides = {}): void {
 
 // Tags (`requestId`, `jobId`) lead from the Sentry issue to the log lines.
 export function reportError(err: unknown, tags: Record<string, string>): void {
-	Sentry.captureException(err, { tags });
+	Sentry.captureException(safeError(err), { tags });
 }
 
 export async function flushSentry(timeoutMs = 2_000): Promise<void> {

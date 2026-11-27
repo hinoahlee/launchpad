@@ -25,7 +25,7 @@ export const envSchema = z.object({
 	DATABASE_URL: postgresUrl,
 	DATABASE_DIRECT_URL: optional(postgresUrl),
 	SENTRY_DSN: optional(z.url()),
-	SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+	SENTRY_ENVIRONMENT: optionalString,
 	DEBUG_ERROR_ROUTE: z.stringbool().default(false),
 	TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 	RESEND_API_KEY: optionalString,

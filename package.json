@@ -1,6 +1,7 @@
 {
 	"name": "launchpad",
 	"private": true,
+	"license": "MIT",
 	"type": "module",
 	"packageManager": "pnpm@12.21.0",
 	"engines": {
@@ -16,7 +17,8 @@
 		"test": "turbo run test",
 		"test:scripts": "node --test \"scripts/**/*.test.ts\"",
 		"e2e": "turbo run e2e",
-		"verify": "pnpm lint && pnpm test:scripts && tsc -p scripts && turbo run typecheck test build db:check",
+		"verify": "pnpm lint && pnpm typecheck && tsc -p scripts && pnpm test:scripts && pnpm test",
+		"verify:ci": "pnpm verify && turbo run build db:check",
 		"db:up": "docker compose -f compose.dev.yml up -d --wait",
 		"db:down": "docker compose -f compose.dev.yml down",
 		"db:generate": "pnpm --filter @launchpad/db db:generate",

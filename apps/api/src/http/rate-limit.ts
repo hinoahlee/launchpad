@@ -1,5 +1,6 @@
 import { normalizeIP, type RateLimitPluginOptions } from "@fastify/rate-limit";
 import { PROBE_PATHS } from "./constants.ts";
+import { HttpError } from "./errors.ts";
 
 // Per client IP, in this process's memory: each instance counts on its own. Running several instances, pass a
 // shared store (`redis`) here.
@@ -11,5 +12,10 @@ export function rateLimitOptions(max: number): RateLimitPluginOptions {
 		keyGenerator: (request) =>
 			request.ip ? normalizeIP(request.ip) : "client-gone",
 		allowList: (request) => PROBE_PATHS.has(request.url),
+		errorResponseBuilder: (_request, context) =>
+			new HttpError(
+				context.statusCode,
+				`Rate limit exceeded, retry in ${context.after}`,
+			),
 	};
 }

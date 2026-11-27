@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { describe, expect, it } from "vitest";
 import { createLogger } from "#lib/logger.ts";
 
@@ -29,6 +30,31 @@ describe("logger", () => {
 			},
 		});
 		expect(JSON.stringify(line)).not.toMatch(/hunter2|t0k3n|Bearer|sid=1/);
+	});
+
+	it("logs a failed query without its parameters or the Postgres detail", () => {
+		const cause = Object.assign(new Error("duplicate key"), {
+			code: "23505",
+			detail: "Key (email)=(a@b.co) already exists.",
+		});
+		const err = new DrizzleQueryError(
+			"insert into users (email) values ($1)",
+			["a@b.co"],
+			cause,
+		);
+		for (const key of ["err", "error"]) {
+			const line = logLine({ [key]: err });
+			expect(line[key].message).toBe(
+				"Failed query: insert into users (email) values ($1)",
+			);
+			expect(line[key].code).toBe("23505");
+			expect(JSON.stringify(line)).not.toContain("a@b.co");
+		}
+	});
+
+	it("logs other errors as usual", () => {
+		const line = logLine({ err: new Error("boom") });
+		expect(line.err).toMatchObject({ type: "Error", message: "boom" });
 	});
 
 	it("redacts headers nested in a request object", () => {

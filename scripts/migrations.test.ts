@@ -1,46 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { editedMigrations, isTestFile, outOfBounds } from "./files.ts";
+import {
+	editedMigrations,
+	isMigration,
+	outOfOrderMigrations,
+} from "./migrations.ts";
 
-// Explicit, so these tests pass in any repo whatever its scripts/agent/project.ts says.
-const TEST_PATHS = [/^e2e\//, /\/testing\//];
 const MIGRATIONS = {
 	dir: "db/migrations/",
 	journal: "db/migrations/meta/_journal.json",
 };
 
-describe("isTestFile", () => {
-	test("test and spec files in any JS/TS flavour, and test-only folders", () => {
-		for (const file of [
-			"a.test.ts",
-			"b.spec.tsx",
-			"c.test.mjs",
-			"e2e/support/fixtures.ts",
-			"src/testing/sign-in.ts",
-		]) {
-			assert.equal(isTestFile(file, TEST_PATHS), true, file);
-		}
-		for (const file of ["routes.ts", "testing.ts", "latest.ts"]) {
-			assert.equal(isTestFile(file, TEST_PATHS), false, file);
-		}
-	});
-});
-
-describe("outOfBounds", () => {
-	const changed = [
-		"src/routes.ts",
-		"src/routes.test.ts",
-		".agentic/state.json",
-	];
-	test("the test writer may change only tests", () => {
-		assert.deepEqual(outOfBounds("tests", changed, TEST_PATHS), [
-			"src/routes.ts",
-		]);
-	});
-	test("the implementer may not change tests", () => {
-		assert.deepEqual(outOfBounds("impl", changed, TEST_PATHS), [
-			"src/routes.test.ts",
-		]);
+describe("isMigration", () => {
+	test("only files inside the migrations folder", () => {
+		assert.equal(isMigration("db/migrations/0001_a.sql", MIGRATIONS), true);
+		assert.equal(isMigration("db/src/schema/users.ts", MIGRATIONS), false);
 	});
 });
 
@@ -75,5 +49,21 @@ describe("editedMigrations", () => {
 		};
 		assert.deepEqual(editedMigrations([appended], MIGRATIONS), []);
 		assert.deepEqual(editedMigrations([rewritten], MIGRATIONS), [path]);
+	});
+});
+
+describe("outOfOrderMigrations", () => {
+	const journal = (...whens: number[]) =>
+		JSON.stringify({
+			entries: whens.map((when, idx) => ({ idx, when, tag: `000${idx}_m` })),
+		});
+
+	test("accepts entries in time order", () => {
+		assert.deepEqual(outOfOrderMigrations(journal(1, 2, 3)), []);
+	});
+
+	test("flags an entry not newer than the one before it", () => {
+		assert.deepEqual(outOfOrderMigrations(journal(1, 3, 2)), ["0002_m"]);
+		assert.deepEqual(outOfOrderMigrations(journal(1, 1)), ["0001_m"]);
 	});
 });

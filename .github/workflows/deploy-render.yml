@@ -31,7 +31,8 @@ jobs:
     environment:
       name: production
       url: ${{ vars.RENDER_URL }}
-    # One deploy at a time; a newer one waits instead of cancelling a deploy halfway.
+    # One deploy at a time; a newer one waits instead of cancelling a deploy halfway. (CI never cancels a run on
+    # main either: see the concurrency setting in cicd.yml.)
     concurrency:
       group: deploy-production
       cancel-in-progress: false

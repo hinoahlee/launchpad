@@ -365,6 +365,9 @@ describe("POST /api/files/:id/complete", () => {
 		);
 		expect(await app.db.select().from(files)).toEqual([]);
 		expect(storage.objects.size).toBe(0);
+		// A PUT through the still-valid upload URL would bring the object back: a second delete waits for it.
+		const types = await app.db.select({ type: jobs.type }).from(jobs);
+		expect(types).toContainEqual({ type: "delete-file-object" });
 	});
 });
 

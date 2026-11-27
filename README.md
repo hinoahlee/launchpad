@@ -5,7 +5,7 @@ background jobs, email, sign-in (email codes and Google), organizations, file up
 tracking, CI/CD and end-to-end tests. Every external service is optional: with no accounts at all, the repo
 installs, tests, passes CI and runs. It deploys to Render out of the box and to anything that runs a container.
 
-**Working on the code?** [CLAUDE.md](CLAUDE.md) has the commands, architecture, conventions and how to add a feature.
+**Working on the code?** [docs/architecture.md](docs/architecture.md) maps the code; [docs/conventions.md](docs/conventions.md) has the conventions and how to add a feature.
 
 ## 1. Set up
 
@@ -39,20 +39,6 @@ Integrations (Resend, Google, S3, Stripe, Sentry) stay off until their variables
 **`apps/api/.env.example` documents every variable**: what it does, when it's needed, and local notes. Use
 sandbox accounts and separate keys for development, never production's.
 
-### Building with Claude Code
-`/feature` plans a change with you and writes a spec where every acceptance criterion names the test that proves it.
-On "go", `/deliver <slug>` builds it unattended to an open PR: a test-writer agent writes failing tests, an
-implementer agent makes them pass (neither may touch the other's files), a read-only reviewer checks the diff, and a
-Stop hook won't let the run finish until `pnpm verify` passes. You review and merge. Run state lives in `.agentic/`
-(`node scripts/agent/run.ts status`); an interrupted run resumes with the same `/deliver <slug>`. For runs you walk
-away from, use the interactive `claude` CLI (it waits out usage limits) and keep the machine awake.
-
-For a series of features, `/roadmap` plans them with you as an ordered queue of specs (`.agentic/queue.json`), then
-`node scripts/agent/queue.ts` delivers them one by one in fresh sessions and merges each once CI passes. It stops
-for you when a run needs judgment (findings left, a dispute between the agents, changed tests, migrations, auth,
-billing, dependencies or the checks themselves; `HUMAN_REVIEW_PATHS` in `scripts/agent/project.ts`), after every
-`pauseEvery` merges, and when done; start it again to continue. It waits out usage limits on its own.
-
 ## 3. Deploy
 
 ### What any platform needs
@@ -63,7 +49,7 @@ billing, dependencies or the checks themselves; `HUMAN_REVIEW_PATHS` in `scripts
   - `node dist/worker.js`: background jobs, one or more, no HTTP. Deploy it after the server, and turn off the
     image's `HEALTHCHECK` for it (that probe is the server's).
 - **Probes**: `/api/health` (alive), `/api/ready` (can serve; checks the DB), `/api/version` (deployed commit).
-- **PostgreSQL 17** as `DATABASE_URL`. Behind a transaction-mode pooler, also `DATABASE_DIRECT_URL` (worker, migrate).
+- **PostgreSQL 17** as `DATABASE_URL`, connected directly (no pooler).
 - **TLS** at the proxy, and `TRUST_PROXY_HOPS` = proxies that append to `X-Forwarded-For` (Render 2, Caddy or an
   ALB 1). Too low and every visitor shares one rate limit; too high and clients can fake their IP.
 - **Production config**: `APP_URL` (public origin), `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), plus any
@@ -82,9 +68,11 @@ Cost: about $7/month each for the web service and worker, plus about $6 for Post
 3. **Domain**: a `CNAME` to the web service's `onrender.com` host, matching `domains` and `APP_URL` in the
    Blueprint. On Cloudflare, DNS only (grey cloud): proxying adds a hop `TRUST_PROXY_HOPS` doesn't count.
 4. **Deploy from GitHub**: copy each service's **Deploy Hook**. In GitHub → **Environments** → `production`
-   (branch `main` only), add secrets `RENDER_DEPLOY_HOOK_URL` and `RENDER_WORKER_DEPLOY_HOOK_URL`, and the Actions
-   variable `RENDER_URL` = `https://<domain>`. Each merge to `main` now deploys (web first, migrations in its
-   pre-deploy step, then the worker).
+   (branch `main` only), add secrets `RENDER_DEPLOY_HOOK_URL` and `RENDER_WORKER_DEPLOY_HOOK_URL`. Then under
+   **Settings → Secrets and variables → Actions → Variables**, add the *repository* variable `RENDER_URL` =
+   `https://<domain>` (not an environment variable: the workflows read it before the environment applies, and skip
+   the deploy without it). Each merge to `main` now deploys (web first, migrations in its pre-deploy step, then the
+   worker).
 5. **Check**: `/api/ready` returns `{"status":"ok"}` and `/api/version` the commit.
 
 Deploy only through GitHub from then on: save env edits in Render with **Save only**, then run the **Deploy to
@@ -131,4 +119,8 @@ the header and keep using the cookie.
 - **Before launch**: a real `contactEmail`, and your own privacy policy and terms. They should say that deleting an
   account deletes its Stripe customer, cancelling the subscription at once without a refund.
 - **Known limits**: failed jobs are kept (`jobs.status = 'failed'`) but not retried or alerted on; a failed object
-  delete is logged, not retried; sign-in codes stay in `jobs.payload` until `prune-jobs` clears done jobs (7 days).
+  delete is logged, not retried. A sign-in code is removed from `jobs.payload` once its email is sent or fails for good.
+
+## License
+
+MIT: see [LICENSE](LICENSE). An app you build from this template can use any license, as long as it keeps the MIT notice for the template's code.

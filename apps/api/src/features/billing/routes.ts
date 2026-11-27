@@ -62,7 +62,7 @@ export const billingRoutes =
 				const customerId = await customerIdOf(app.db, organizationId);
 				if (customerId) {
 					await app.db.transaction((tx) =>
-						syncSubscription(tx, billing, customerId),
+						syncSubscription(tx, billing, customerId, { wait: false }),
 					);
 				}
 				return billingStatus(app.db, organizationId, true);
@@ -84,15 +84,6 @@ export const billingRoutes =
 			async (request, reply) => {
 				const { organizationId } = membershipOf(request);
 				let customerId = await customerIdOf(app.db, organizationId);
-				// A second checkout would bill a second subscription. Synced first: the webhook may not have landed.
-				if (customerId) {
-					const id = customerId;
-					await app.db.transaction((tx) => syncSubscription(tx, billing, id));
-					if (await subscribedOf(app.db, organizationId)) {
-						reply.code(409);
-						return { error: "already_subscribed" };
-					}
-				}
 				if (!customerId) {
 					// Concurrent requests get the same customer from Stripe (idempotency key); the second insert is a no-op.
 					customerId = await billing.createCustomer({ organizationId });
@@ -101,12 +92,25 @@ export const billingRoutes =
 						.values({ organizationId, stripeCustomerId: customerId })
 						.onConflictDoNothing({ target: billingCustomers.organizationId });
 				}
-				const url = await billing.createCheckoutSession({
-					customerId,
-					organizationId,
-					successUrl: `${appUrl}/account?billing=success`,
-					cancelUrl: `${appUrl}/account`,
+				const id = customerId;
+				// A second paid checkout would bill a second subscription. Under the customer row's lock, so two
+				// clicks run one after the other: synced first (the webhook may not have landed), then any session
+				// still open in another tab is expired, so only the newest one can be paid.
+				const url = await app.db.transaction(async (tx) => {
+					await syncSubscription(tx, billing, id);
+					if (await subscribedOf(tx, organizationId)) return undefined;
+					await billing.expireOpenCheckoutSessions(id);
+					return billing.createCheckoutSession({
+						customerId: id,
+						organizationId,
+						successUrl: `${appUrl}/account?billing=success`,
+						cancelUrl: `${appUrl}/account`,
+					});
 				});
+				if (!url) {
+					reply.code(409);
+					return { error: "already_subscribed" };
+				}
 				return { url };
 			},
 		);

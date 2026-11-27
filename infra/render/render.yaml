@@ -69,7 +69,7 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      # File storage: the R2 bucket launchpad-prod (README, "File storage"). All four `sync: false` and set
+      # File storage: the R2 bucket launchpad-prod (README, "Optional services" → "Files"). All four `sync: false` and set
       # together in the dashboard (R2 needs the keys). Unset: uploads are off. The endpoint
       # holds the Cloudflare account ID, kept out of this public file. S3_REGION stays at its default, auto.
       # The worker needs the same four (it deletes files).

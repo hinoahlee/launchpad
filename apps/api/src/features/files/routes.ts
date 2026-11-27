@@ -133,8 +133,13 @@ export const fileRoutes =
 					return { error: "upload_incomplete" };
 				}
 				// The signed URL pins the size, so this is a bug or a bucket that ignores it.
+				// Deleted like DELETE /files/:id: the upload URL still works for a while, and a PUT through it
+				// would bring back an object with no row, so a second delete is queued for after it expires.
 				if (size !== file.sizeBytes) {
-					await app.db.delete(files).where(owned);
+					await deleteFileRow(app.db, {
+						organizationId,
+						fileId: file.id,
+					});
 					await storage.delete(file.storageKey);
 					reply.code(400);
 					return { error: "upload_size_mismatch" };

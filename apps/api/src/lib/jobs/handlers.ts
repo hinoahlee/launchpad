@@ -3,6 +3,7 @@ import { and, inArray, isNull, lt } from "drizzle-orm";
 import { renderEmail } from "#lib/email/render.tsx";
 import { suppressionReason } from "#lib/email/suppression.ts";
 import { organizationPrefix } from "#lib/storage/keys.ts";
+import { enqueue } from "./enqueue.ts";
 import { pruneDoneJobs } from "./queue.ts";
 import type { JobHandlers } from "./types.ts";
 
@@ -51,34 +52,32 @@ export const handlers: JobHandlers = {
 		await storage.delete(key);
 		log.info({ key }, "deleted a deleted file's object again");
 	},
-	// Objects first, then rows: if it stops halfway, the next run finishes.
-	"prune-uploads": async ({ olderThanHours }, { db, storage, log }) => {
+	// Rows first, each with a job that deletes its object, in one transaction: a late /complete either lands before
+	// (the row is no longer abandoned, so it stays) or finds no row. Deleting objects first could leave a completed
+	// row whose object is gone.
+	"prune-uploads": async ({ olderThanHours }, { db, log }) => {
 		const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
 		const abandoned = and(
 			isNull(files.uploadedAt),
 			lt(files.createdAt, cutoff),
 		);
-		const rows = await db
-			.select({ id: files.id, key: files.storageKey })
-			.from(files)
-			.where(abandoned)
-			.limit(PRUNE_BATCH);
-		if (rows.length === 0) return;
-		if (!storage) throw new Error(MISSING_STORAGE);
-		for (const row of rows) await storage.delete(row.key);
-		// `abandoned` again: keeps a row completed in the meantime.
-		await db.delete(files).where(
-			and(
-				inArray(
-					files.id,
-					rows.map((row) => row.id),
-				),
-				abandoned,
-			),
-		);
-		log.info(
-			{ deleted: rows.length, olderThanHours },
-			"pruned abandoned uploads",
-		);
+		const deleted = await db.transaction(async (tx) => {
+			const batch = tx
+				.select({ id: files.id })
+				.from(files)
+				.where(abandoned)
+				.limit(PRUNE_BATCH);
+			// `abandoned` again: a row completed since the select above stays.
+			const rows = await tx
+				.delete(files)
+				.where(and(inArray(files.id, batch), abandoned))
+				.returning({ key: files.storageKey });
+			for (const row of rows) {
+				await enqueue(tx, "delete-file-object", { key: row.key });
+			}
+			return rows.length;
+		});
+		if (deleted === 0) return;
+		log.info({ deleted, olderThanHours }, "pruned abandoned uploads");
 	},
 };

@@ -283,6 +283,43 @@ describe("fencing", () => {
 	});
 });
 
+describe("secret payload fields", () => {
+	const signInCode = () =>
+		enqueue(db, "send_email", {
+			template: "sign-in-code",
+			to: "a@example.com",
+			props: { code: "123456", expiresInMinutes: 10 },
+		});
+
+	it("drops a sign-in code once its email is sent, and keeps the rest", async () => {
+		const id = await signInCode();
+		expect(await completeJob(db, await claimOrThrow())).toBe(true);
+		expect((await getJob(id)).payload).toEqual({
+			template: "sign-in-code",
+			to: "a@example.com",
+			props: { expiresInMinutes: 10 },
+		});
+	});
+
+	it("drops it when the job fails for good, and keeps it for a retry", async () => {
+		const id = await signInCode();
+		expect(await failJob(db, await claimOrThrow(), "smtp down")).toBe("retry");
+		expect(JSON.stringify((await getJob(id)).payload)).toContain("123456");
+		await db.update(jobs).set({ runAfter: sql`now()` }).where(eq(jobs.id, id));
+		const job = await claimOrThrow();
+		expect(await failJob(db, job, "bad address", { permanent: true })).toBe(
+			"failed",
+		);
+		expect(JSON.stringify((await getJob(id)).payload)).not.toContain("123456");
+	});
+
+	it("leaves payloads without secrets as they were", async () => {
+		const id = await enqueue(db, "echo", { message: "hi" });
+		expect(await completeJob(db, await claimOrThrow())).toBe(true);
+		expect((await getJob(id)).payload).toEqual({ message: "hi" });
+	});
+});
+
 describe("releaseJob", () => {
 	it("hands the job back due now, without spending its attempt", async () => {
 		const id = await enqueue(db, "echo", { message: "interrupted" });

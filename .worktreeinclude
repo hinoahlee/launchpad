@@ -1,0 +1,2 @@
+# Gitignored files Claude Code copies into each new worktree (claude --worktree): the dev server needs them.
+apps/api/.env

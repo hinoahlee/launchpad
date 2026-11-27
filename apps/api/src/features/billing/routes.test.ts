@@ -116,6 +116,37 @@ describe("billing", () => {
 		expect(results.map((r) => r.statusCode)).toEqual([200, 200]);
 		const rows = await app.db.select().from(billingCustomers);
 		expect(rows).toHaveLength(1);
+		// Only the newest of the two Checkout sessions can still be paid.
+		expect(billing.openCheckouts.get(rows[0]?.stripeCustomerId ?? "")).toBe(1);
+	});
+
+	it("a new checkout expires the one left open in another tab", async () => {
+		const ada = await signIn("ada@example.com");
+		const org = await orgOf(ada);
+		await call("POST", "/checkout", org, ada);
+		await call("POST", "/checkout", org, ada);
+		await call("POST", "/checkout", org, ada);
+		expect(billing.openCheckouts.get((await customerOf(org)) ?? "")).toBe(1);
+	});
+
+	it("sync while another sync holds the customer: answers at once from our copy", async () => {
+		const ada = await signIn("ada@example.com");
+		const org = await orgOf(ada);
+		await call("POST", "/checkout", org, ada);
+		const customerId = (await customerOf(org)) ?? "";
+		billing.subscribe(customerId);
+		const before = billing.fetches;
+		await app.db.transaction(async (tx) => {
+			await tx
+				.select()
+				.from(billingCustomers)
+				.where(eq(billingCustomers.organizationId, org))
+				.for("update");
+			const res = await call("POST", "/sync", org, ada);
+			expect(res.statusCode).toBe(200);
+			expect(res.json()).toMatchObject({ subscribed: false });
+		});
+		expect(billing.fetches).toBe(before);
 	});
 
 	// Paid at Checkout, but the webhook hasn't arrived (or webhooks are off): our copy lags behind Stripe.
