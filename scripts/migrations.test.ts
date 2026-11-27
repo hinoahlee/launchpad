@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { editedMigrations, isMigration } from "./migrations.ts";
+import {
+	editedMigrations,
+	isMigration,
+	outOfOrderMigrations,
+} from "./migrations.ts";
 
 const MIGRATIONS = {
 	dir: "db/migrations/",
@@ -45,5 +49,21 @@ describe("editedMigrations", () => {
 		};
 		assert.deepEqual(editedMigrations([appended], MIGRATIONS), []);
 		assert.deepEqual(editedMigrations([rewritten], MIGRATIONS), [path]);
+	});
+});
+
+describe("outOfOrderMigrations", () => {
+	const journal = (...whens: number[]) =>
+		JSON.stringify({
+			entries: whens.map((when, idx) => ({ idx, when, tag: `000${idx}_m` })),
+		});
+
+	test("accepts entries in time order", () => {
+		assert.deepEqual(outOfOrderMigrations(journal(1, 2, 3)), []);
+	});
+
+	test("flags an entry not newer than the one before it", () => {
+		assert.deepEqual(outOfOrderMigrations(journal(1, 3, 2)), ["0002_m"]);
+		assert.deepEqual(outOfOrderMigrations(journal(1, 1)), ["0001_m"]);
 	});
 });

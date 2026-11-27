@@ -47,3 +47,16 @@ function onlyAppends(before = "", after = ""): boolean {
 		return false;
 	}
 }
+
+// Drizzle's migrator runs only entries newer than the newest one a database has applied, so an entry older than
+// the one before it (two branches generating migrations, merged in the other order) is skipped in production
+// while a fresh test database still runs it. Returns the tags of such entries.
+export function outOfOrderMigrations(journal: string): string[] {
+	const entries = JSON.parse(journal).entries as {
+		when: number;
+		tag: string;
+	}[];
+	return entries
+		.filter((entry, i) => i > 0 && entry.when <= (entries[i - 1]?.when ?? 0))
+		.map((entry) => entry.tag);
+}
